@@ -1,0 +1,77 @@
+<?php
+
+namespace App\Services\Emlo;
+
+use Illuminate\Support\Facades\DB;
+
+class EmloDatabaseLoader
+{
+    private static $segments = [];
+    private static $zeroValuedSegments = [];
+    private static $initialized = false;
+
+    /**
+     * Load data from database on application startup
+     *
+     * @param \Illuminate\Database\Connection|null $db
+     * @return void
+     */
+    public static function initialize($db = null)
+    {
+        // Skip if already initialized
+        if (self::$initialized) {
+            return;
+        }
+
+        // Get database connection if not provided
+        if ($db === null) {
+            $db = DB::connection();
+        }
+
+        // Fetch 127 rows sorted by id ascending
+        // Check if table exists before querying
+        if ($db->getSchemaBuilder()->hasTable('emlo_response_segments')) {
+            self::$segments = $db->table('emlo_response_segments')
+            ->select('name')
+            ->orderBy('number', 'ASC')
+            ->limit(127)
+            ->get()
+            ->toArray();
+
+            // Fetch 13 zero valued segment rows
+            self::$zeroValuedSegments = $db->table('emlo_response_segments')
+            ->select('name')
+            ->orderBy('number', 'ASC')
+            ->offset(127)
+            ->limit(13)
+            ->get()
+            ->toArray();
+        } else {
+            // Initialize with empty arrays if table doesn't exist
+            self::$segments = [];
+            self::$zeroValuedSegments = [];
+        }
+
+        self::$initialized = true;
+    }
+
+    /**
+     * Get the main examples data
+     *
+     * @return array
+     */
+    public static function getSegments()
+    {
+        return self::$segments;
+    }
+
+    /**
+     * Get the special examples data
+     *
+     * @return array
+     */
+    public static function getZeroValuedSegments()
+    {
+        return self::$zeroValuedSegments;
+    }
+}
