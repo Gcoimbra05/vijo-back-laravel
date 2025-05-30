@@ -116,8 +116,12 @@ class TwoFactorAuthController extends Controller
             ], 401);
         }
 
+        $plainToken = $token;
+        if (strpos($token, '|') !== false) {
+            [, $plainToken] = explode('|', $token, 2);
+        }
         $accessToken = PersonalAccessToken::select(['id', 'tokenable_id', 'created_at', 'tokenable_type'])
-            ->where('token', hash('sha256', $token))
+            ->where('token', hash('sha256', $plainToken))
             ->first();
 
         if (!$accessToken) {
