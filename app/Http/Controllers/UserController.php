@@ -601,7 +601,7 @@ class UserController extends Controller
                 "categories" => CategoryController::getCategories(),
                 "promotionalCatalogs" => self::getPromotionalCatalogs(),
                 "timezoneMenus" => SettingsController::getTimezones(),
-                "myJournals" => VideoRequestController::getMyVideoRequests(),
+                "myJournals" => VideoRequestController::getMyVideoRequests($request)->getData(),
                 "graphTypes" => [
                     "bar" => "Bar",
                     "area" => "Area",
@@ -636,7 +636,7 @@ class UserController extends Controller
                     "from_count" => 0
                 ],
                 "userPlan" => [
-                    "user_status" => SubscriptionController::getUserPlanStatus(),
+                    "user_status" => SubscriptionController::getUserPlanStatus()->getData()->results,
                 ],
                 "membershipPlan" => MembershipPlanController::getMembershipPlans(), // 'id, slug, title, description'
                 "plans" => [], // 'id, slug, name, description, payment_link'
