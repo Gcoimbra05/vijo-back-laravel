@@ -12,7 +12,7 @@ class MembershipPlanController extends Controller
     {
         $membership_plans = MembershipPlan::where('status', 1)
             ->orderBy('admin_order', 'ASC')
-            ->get(['id', 'name', 'description']);
+            ->get(['id', 'name', 'description', 'slug']);
 
         if ($membership_plans->isEmpty()) {
             $responseData = [
