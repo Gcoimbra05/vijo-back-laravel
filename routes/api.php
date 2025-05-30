@@ -39,6 +39,7 @@ Route::prefix('v2')->middleware(ForceJsonResponse::class)->group(function () {
     Route::get('/countries', [UserController::class, 'getCountries']);
     Route::get('/onboarding-contents', [UserController::class, 'getOnboardingContent']);
     Route::get('/information-contents', [UserController::class, 'getInformationContent']);
+    Route::get('/static-pages', [UserController::class, 'getStaticPages']);
 
     Route::middleware('auth:sanctum')->group(function () {
         Route::apiResource('users', UserController::class);
@@ -79,5 +80,5 @@ Route::prefix('v2')->middleware(ForceJsonResponse::class)->group(function () {
         Route::get('{request_id}/param/{param}', [EmloResponseService::class, 'getEmloResponseParamValueForId']);
         Route::get('param/{param}', [EmloController::class, 'getEmloResponseParamValue']);
     });
-    Route::apiResource('emlo-response', EmloController::class);  
+    Route::apiResource('emlo-response', EmloController::class);
 });
