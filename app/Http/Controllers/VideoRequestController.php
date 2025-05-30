@@ -764,19 +764,18 @@ class VideoRequestController extends Controller
         ]);
     }
 
-    public function getVideoGalleries(Request $request, $catalogId)
+    public function getVideoGalleries(Request $request)
     {
         $userId = Auth::id();
 
         $allRequests = VideoRequest::with(['latestVideo', 'catalog.category', 'user'])
-            ->where('catalog_id', $catalogId)
             ->where(function($query) use ($userId) {
                 $query->where('user_id', $userId)
                       ->orWhere('ref_user_id', $userId);
             })
             ->get();
 
-        $journals_data = $allRequests->map(function($req) {
+        $requestData = $allRequests->map(function($req) {
             $video = $req->latestVideo;
             $catalog = $req->catalog;
             $user = $req->user;
@@ -807,9 +806,7 @@ class VideoRequestController extends Controller
         return response()->json([
             'status' => true,
             'message' => '',
-            'results' => [
-                'journals_data' => $journals_data
-            ]
+            'results' => $requestData
         ]);
     }
 }
