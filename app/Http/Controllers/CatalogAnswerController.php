@@ -39,7 +39,6 @@ class CatalogAnswerController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'catalog_id' => 'required|integer|exists:catalogs,id',
             'request_id' => 'required|integer|exists:video_requests,id',
             'cred_score' => 'nullable|numeric',
             'metric1_answer' => 'nullable|string|max:50',
