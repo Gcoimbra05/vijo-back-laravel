@@ -52,11 +52,15 @@ class CatalogAnswerController extends Controller
             'metric3Range' => 'nullable|numeric',
             'metric3Significance' => 'nullable|integer',
             'n8n_executionId' => 'nullable|string|max:50',
+            'video_thumbnail' => 'nullable|string|max:255', #video1_thumb é um file
         ]);
 
         $data = $request->all();
         $data['user_id'] = Auth::id();
         $answer = CatalogAnswer::create($data);
+
+        # If you need to handle the video_thumbnail file, you can do it here
+        # o thumb será fornecido e será salvo na tabela do vídeo, e logo em seguida o vídeo será enviado. Então nem sempre podemos gerar o thumbnail
 
         return response()->json([
             'success' => true,

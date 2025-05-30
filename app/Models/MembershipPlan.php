@@ -15,6 +15,7 @@ class MembershipPlan extends Model implements AuditableContract
 
     protected $fillable = [
         'name',
+        'slug',
         'description',
         'payment_mode',
         'monthly_cost',

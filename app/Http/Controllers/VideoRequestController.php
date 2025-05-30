@@ -755,4 +755,53 @@ class VideoRequestController extends Controller
             ]
         ]);
     }
+
+    public function getVideoGalleries(Request $request, $catalogId)
+    {
+        $userId = Auth::id();
+
+        $allRequests = VideoRequest::with(['latestVideo', 'catalog.category', 'user'])
+            ->where('catalog_id', $catalogId)
+            ->where(function($query) use ($userId) {
+                $query->where('user_id', $userId)
+                      ->orWhere('ref_user_id', $userId);
+            })
+            ->get();
+
+        $journals_data = $allRequests->map(function($req) {
+            $video = $req->latestVideo;
+            $catalog = $req->catalog;
+            $user = $req->user;
+
+            return [
+                'id'                  => $req->id,
+                'user_id'             => $req->user_id,
+                'journal_title'       => $req->title ?? ($catalog->title ?? ''),
+                'ref_user_id'         => $req->ref_user_id ?? 0,
+                'journal_type'        => $req->type ?? 'daily',
+                'recommendation_id'   => $req->recommendation_id ?? '',
+                'category_name'       => $catalog && $catalog->category ? $catalog->category->name : '',
+                'makeJournalPrivate'  => $req->makeJournalPrivate ?? 0,
+                'rrc_video1'          => $video ? $video->video_name : '',
+                'rrc_video1_thumb'    => $video ? $video->thumbnail_name : '',
+                'video'               => $video ? $video->video_url : '',
+                'video_thumb'         => $video ? $video->thumbnail_url : '',
+                'recordedBy'          => $req->user_id == $req->ref_user_id ? 'self' : 'other',
+                'parent_catalog_id'   => $catalog->parent_catalog_id ?? 0,
+                'cp_id'               => $catalog->cp_id ?? 0,
+                'created_at'          => $req->created_at ? date('M d, Y', strtotime($req->created_at)) : '',
+                'mediaId'             => $video ? $video->id : 0,
+                'catalogEmoji'        => $catalog->emoji ?? '',
+                'user_name'           => $user ? ($user->name ?? trim(($user->first_name ?? '') . ' ' . ($user->last_name ?? ''))) : '',
+            ];
+        })->toArray();
+
+        return response()->json([
+            'status' => true,
+            'message' => '',
+            'results' => [
+                'journals_data' => $journals_data
+            ]
+        ]);
+    }
 }

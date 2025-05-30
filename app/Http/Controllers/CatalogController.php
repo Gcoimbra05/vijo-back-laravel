@@ -109,4 +109,14 @@ class CatalogController extends Controller
             'data' => null,
         ]);
     }
+
+    public function getCatalogsByCategory($categoryId)
+    {
+        $catalogs = Catalog::where('category_id', $categoryId)->with(['category'])->get();
+        return response()->json([
+            'success' => true,
+            'message' => 'Catalogs by category retrieved successfully.',
+            'data' => $catalogs,
+        ]);
+    }
 }

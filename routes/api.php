@@ -52,6 +52,7 @@ Route::prefix('v2')->middleware(ForceJsonResponse::class)->group(function () {
         Route::apiResource('subscriptions', SubscriptionController::class);
         Route::apiResource('videos', VideoController::class);
         Route::apiResource('video-requests', VideoRequestController::class);
+        Route::get('video-galleries', [VideoRequestController::class, 'getVideoGalleries']);
 
         Route::post('cancel-decline-request', [VideoRequestController::class, 'cancelDeclineRecordRequest']);
         Route::post('share-video-requests', [VideoRequestController::class, 'shareVideoRequests']);
@@ -64,6 +65,8 @@ Route::prefix('v2')->middleware(ForceJsonResponse::class)->group(function () {
         Route::post('save-video-request', [VideoRequestController::class, 'saveVideoRequest']);
 
         Route::apiResource('catalogs', CatalogController::class);
+        Route::get('catalogs/{id}', [CatalogController::class, 'getCatalogsByCategory']);
+
         Route::apiResource('categories', CategoryController::class);
         Route::apiResource('contacts', ContactController::class);
         Route::apiResource('groups', GroupController::class);
