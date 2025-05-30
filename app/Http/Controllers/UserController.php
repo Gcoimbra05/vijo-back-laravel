@@ -574,7 +574,8 @@ class UserController extends Controller
                 'description',
                 'is_premium as isPremium',
                 'emoji',
-                'category_id'
+                'category_id',
+                'video_type_id'
             ])
             ->map(function ($catalog) {
                 return [
@@ -584,6 +585,7 @@ class UserController extends Controller
                     'isPremium' => (string)($catalog->isPremium ?? 0),
                     'emoji' => $catalog->emoji,
                     'category_id' => $catalog->category_id,
+                    'video_type_id' => $catalog->video_type_id,
                 ];
             })
             ->toArray();

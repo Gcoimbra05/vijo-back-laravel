@@ -65,7 +65,7 @@ Route::prefix('v2')->middleware(ForceJsonResponse::class)->group(function () {
         Route::post('save-video-request', [VideoRequestController::class, 'saveVideoRequest']);
 
         Route::apiResource('catalogs', CatalogController::class);
-        Route::get('catalogs/{id}', [CatalogController::class, 'getCatalogsByCategory']);
+        Route::get('catalogs-by-category/{categoryId}', [CatalogController::class, 'getCatalogsByCategory']);
 
         Route::apiResource('categories', CategoryController::class);
         Route::apiResource('contacts', ContactController::class);

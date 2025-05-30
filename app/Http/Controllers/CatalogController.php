@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Catalog;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Facades\Log;
 
 class CatalogController extends Controller
 {
@@ -112,7 +113,8 @@ class CatalogController extends Controller
 
     public function getCatalogsByCategory($categoryId)
     {
-        $catalogs = Catalog::where('category_id', $categoryId)->with(['category'])->get();
+        $catalogs = Catalog::where('category_id', $categoryId)->get();
+
         return response()->json([
             'success' => true,
             'message' => 'Catalogs by category retrieved successfully.',

@@ -29,6 +29,10 @@ class VideoRequestController extends Controller
 
         $toRequests = VideoRequest::with('latestVideo')
             ->where('user_id', $userId)
+            ->where(function($query) {
+                $query->whereNotNull('contact_id')
+                      ->orWhereNotNull('group_id');
+            })
             ->get();
 
         $toRequestsData = [];
@@ -66,6 +70,10 @@ class VideoRequestController extends Controller
 
         $fromRequests = VideoRequest::with('latestVideo')
             ->where('ref_user_id', $userId)
+            ->where(function($query) {
+                $query->whereNotNull('contact_id')
+                      ->orWhereNotNull('group_id');
+            })
             ->get();
 
         $fromRequestsData = [];
