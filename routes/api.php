@@ -17,6 +17,7 @@ use App\Http\Controllers\VideoController;
 use App\Http\Middleware\ForceJsonResponse;
 use App\Services\Emlo\EmloResponseService;
 use App\Http\Controllers\LlmTemplateController;
+use App\Http\Controllers\SettingsController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v2')->middleware(ForceJsonResponse::class)->group(function () {
@@ -36,10 +37,10 @@ Route::prefix('v2')->middleware(ForceJsonResponse::class)->group(function () {
     });
 
     // fake routes (Static data)
-    Route::get('/countries', [UserController::class, 'getCountries']);
-    Route::get('/onboarding-contents', [UserController::class, 'getOnboardingContent']);
-    Route::get('/information-contents', [UserController::class, 'getInformationContent']);
-    Route::get('/static-pages', [UserController::class, 'getStaticPages']);
+    Route::get('/countries', [SettingsController::class, 'getCountries']);
+    Route::get('/onboarding-contents', [SettingsController::class, 'getOnboardingContent']);
+    Route::get('/information-contents', [SettingsController::class, 'getInformationContent']);
+    Route::get('/static-pages', [SettingsController::class, 'getStaticPages']);
 
     Route::middleware('auth:sanctum')->group(function () {
         Route::apiResource('users', UserController::class);
