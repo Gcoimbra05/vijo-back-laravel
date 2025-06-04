@@ -25,6 +25,8 @@ use Illuminate\Support\Facades\Route;
 
 
 Route::prefix('v2')->middleware(ForceJsonResponse::class)->group(function () {
+    Route::post('/resend_2fa', [TwoFactorAuthController::class, 'resend2fa']);
+
     Route::prefix('auth')->group(function () {
         Route::post('/sign-up', [UserController::class, 'store']);
         Route::post('/logout', [UserController::class, 'logout']);
@@ -37,7 +39,6 @@ Route::prefix('v2')->middleware(ForceJsonResponse::class)->group(function () {
         Route::post('/validate_2fa', [TwoFactorAuthController::class, 'verifyCode']);
         Route::post('/refresh-token', [TwoFactorAuthController::class, 'refreshToken']);
         Route::post('/validate-token', [TwoFactorAuthController::class, 'validateToken']);
-        Route::post('/resend_2fa', [TwoFactorAuthController::class, 'resend2fa']);
     });
 
     // fake routes (Static data)

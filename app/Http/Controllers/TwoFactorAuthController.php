@@ -205,7 +205,8 @@ class TwoFactorAuthController extends Controller
 
     public function resend2fa(Request $request)
     {
-        $otp_id = Session::get('otp_id');
+        $otp_id = $request->input('otp_id');
+
         if (!$otp_id) {
             return response()->json([
                 'status' => false,
@@ -260,9 +261,6 @@ class TwoFactorAuthController extends Controller
             $fullPhoneNumber = $user->country_code . $user->mobile;
             $this->twilio->sendSms($fullPhoneNumber, "Your 2FA authentication code: $otp");
         }
-
-        // Update otp_id in session
-        Session::put('otp_id', $newVerification->id);
 
         // Return JSON success response
         return response()->json([
