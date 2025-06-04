@@ -16,9 +16,13 @@ use App\Http\Controllers\TwoFactorAuthController;
 use App\Http\Controllers\VideoController;
 use App\Http\Middleware\ForceJsonResponse;
 use App\Services\Emlo\EmloResponseService;
+use App\Http\Controllers\EmloResponseParamSpecsController;
 use App\Http\Controllers\LlmTemplateController;
+use App\Http\Controllers\RuleEvaluationController;
 use App\Http\Controllers\SettingsController;
 use Illuminate\Support\Facades\Route;
+
+
 
 Route::prefix('v2')->middleware(ForceJsonResponse::class)->group(function () {
     Route::prefix('auth')->group(function () {
@@ -33,7 +37,7 @@ Route::prefix('v2')->middleware(ForceJsonResponse::class)->group(function () {
         Route::post('/validate_2fa', [TwoFactorAuthController::class, 'verifyCode']);
         Route::post('/refresh-token', [TwoFactorAuthController::class, 'refreshToken']);
         Route::post('/validate-token', [TwoFactorAuthController::class, 'validateToken']);
-        Route::post('/resend-2fa', [TwoFactorAuthController::class, 'resend2fa']);
+        Route::post('/resend_2fa', [TwoFactorAuthController::class, 'resend2fa']);
     });
 
     // fake routes (Static data)
@@ -55,6 +59,8 @@ Route::prefix('v2')->middleware(ForceJsonResponse::class)->group(function () {
         Route::apiResource('videos', VideoController::class);
         Route::apiResource('video-requests', VideoRequestController::class);
         Route::get('video-galleries', [VideoRequestController::class, 'getVideoGalleries']);
+        Route::get('video-detail/{id}', [VideoRequestController::class, 'getVideoDetail']);
+        Route::post('make-request', [VideoRequestController::class, 'makeVideoRequest']);
 
         Route::post('cancel-decline-request', [VideoRequestController::class, 'cancelDeclineRecordRequest']);
         Route::post('share-video-requests', [VideoRequestController::class, 'shareVideoRequests']);
@@ -72,14 +78,17 @@ Route::prefix('v2')->middleware(ForceJsonResponse::class)->group(function () {
         Route::apiResource('categories', CategoryController::class);
         Route::apiResource('contacts', ContactController::class);
         Route::apiResource('groups', GroupController::class);
+        Route::delete('groups/{group}/contacts/{contact}', [GroupController::class, 'removeContact']);
     });
 
     Route::match(['get', 'post'], 'webhook', [StripeWebhookController::class, 'handle']);
 
     Route::prefix('emlo-response')->group(function () {
         Route::get('all', [EmloController::class, 'getAllEmloResponses']);
+        Route::get('{request_id}/param/{param}/compare', [RuleEvaluationController::class, 'evaluateRules']);
         Route::get('{request_id}/param/{param}', [EmloResponseService::class, 'getEmloResponseParamValueForId']);
         Route::get('param/{param}', [EmloController::class, 'getEmloResponseParamValue']);
+        Route::get('param/{param}/specification', [EmloResponseParamSpecsController::class, 'showByParamName']);
     });
     Route::apiResource('emlo-response', EmloController::class);
 });

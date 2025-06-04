@@ -28,6 +28,7 @@ class Catalog extends Model implements AuditableContract
         'is_premium',
         'video_type_id',
         'is_multipart',
+        'admin_order'
     ];
 
     public function videoRequests()

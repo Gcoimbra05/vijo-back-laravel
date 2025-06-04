@@ -41,46 +41,6 @@ CREATE TABLE `cache_locks` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 
--- vijo_laravel_db.catalog_questions definição
-
-CREATE TABLE `catalog_questions` (
-  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
-  `catalog_id` int(10) unsigned NOT NULL DEFAULT 0,
-  `reference_type` tinyint(4) NOT NULL DEFAULT 0,
-  `metric1_title` varchar(255) DEFAULT NULL,
-  `metric1_question` varchar(255) DEFAULT NULL,
-  `metric1_question_option1` varchar(50) DEFAULT NULL,
-  `metric1_question_option2` varchar(50) DEFAULT NULL,
-  `metric1_question_option1val` int(11) NOT NULL DEFAULT 0,
-  `metric1_question_option2val` int(11) NOT NULL DEFAULT 0,
-  `metric1_question_label` int(11) NOT NULL DEFAULT 0,
-  `metric1_significance` tinyint(4) NOT NULL DEFAULT 0,
-  `metric2_title` varchar(255) DEFAULT NULL,
-  `metric2_question` varchar(255) DEFAULT NULL,
-  `metric2_question_option1` varchar(50) DEFAULT NULL,
-  `metric2_question_option2` varchar(50) DEFAULT NULL,
-  `metric2_question_option1val` int(11) NOT NULL DEFAULT 0,
-  `metric2_question_option2val` int(11) NOT NULL DEFAULT 0,
-  `metric2_question_label` int(11) NOT NULL DEFAULT 0,
-  `metric2_significance` tinyint(4) NOT NULL DEFAULT 0,
-  `metric3_title` varchar(255) DEFAULT NULL,
-  `metric3_question` varchar(255) DEFAULT NULL,
-  `metric3_question_option1` varchar(50) DEFAULT NULL,
-  `metric3_question_option2` varchar(50) DEFAULT NULL,
-  `metric3_question_option1val` int(11) NOT NULL DEFAULT 0,
-  `metric3_question_option2val` int(11) NOT NULL DEFAULT 0,
-  `metric3_question_label` int(11) NOT NULL DEFAULT 0,
-  `metric3_significance` tinyint(4) NOT NULL DEFAULT 0,
-  `video_question` varchar(255) DEFAULT NULL,
-  `metric4_significance` tinyint(4) NOT NULL DEFAULT 0,
-  `metric5_significance` tinyint(4) NOT NULL DEFAULT 0,
-  `status` tinyint(4) NOT NULL DEFAULT 1 COMMENT '0: Deactived, 1: Active, 2: Deleted, 3: Archieved',
-  `created_at` timestamp NULL DEFAULT NULL,
-  `updated_at` timestamp NULL DEFAULT NULL,
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-
 -- vijo_laravel_db.categories definição
 
 CREATE TABLE `categories` (
@@ -93,7 +53,7 @@ CREATE TABLE `categories` (
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 
 -- vijo_laravel_db.emlo_response_paths definição
@@ -173,6 +133,7 @@ CREATE TABLE `jobs` (
 CREATE TABLE `membership_plans` (
   `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `name` varchar(250) DEFAULT NULL,
+  `slug` varchar(255) NOT NULL,
   `description` varchar(250) DEFAULT NULL,
   `payment_mode` tinyint(4) NOT NULL DEFAULT 1 COMMENT '1: One Time, 2: Recurring',
   `monthly_cost` double NOT NULL DEFAULT 0,
@@ -181,7 +142,8 @@ CREATE TABLE `membership_plans` (
   `status` tinyint(4) NOT NULL DEFAULT 1 COMMENT '0: Deactivated, 1: Active, 2: Deleted',
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL,
-  PRIMARY KEY (`id`)
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `membership_plans_slug_unique` (`slug`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 
@@ -192,7 +154,7 @@ CREATE TABLE `migrations` (
   `migration` varchar(255) NOT NULL,
   `batch` int(11) NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=41 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=47 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 
 -- vijo_laravel_db.password_reset_tokens definição
@@ -239,6 +201,21 @@ CREATE TABLE `sessions` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 
+-- vijo_laravel_db.video_types definição
+
+CREATE TABLE `video_types` (
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `name` varchar(100) DEFAULT NULL,
+  `kpi_no` int(11) NOT NULL DEFAULT 0,
+  `metric_no` int(11) NOT NULL DEFAULT 0,
+  `video_no` int(11) NOT NULL DEFAULT 0,
+  `status` tinyint(4) NOT NULL DEFAULT 1 COMMENT '0: Deactived, 1: Active, 2: Deleted, 3: Archieved',
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+
 -- vijo_laravel_db.catalogs definição
 
 CREATE TABLE `catalogs` (
@@ -247,6 +224,8 @@ CREATE TABLE `catalogs` (
   `category_id` int(10) unsigned DEFAULT NULL,
   `is_promotional` tinyint(1) NOT NULL DEFAULT 0,
   `is_premium` tinyint(1) NOT NULL DEFAULT 0,
+  `video_type_id` int(10) unsigned NOT NULL DEFAULT 1,
+  `is_multipart` tinyint(1) NOT NULL DEFAULT 0,
   `title` varchar(100) DEFAULT NULL,
   `description` text DEFAULT NULL,
   `tags` varchar(255) DEFAULT NULL,
@@ -255,12 +234,15 @@ CREATE TABLE `catalogs` (
   `emoji` varchar(100) DEFAULT NULL,
   `is_deleted` tinyint(4) NOT NULL DEFAULT 0 COMMENT '0: Active, 1: Deleted',
   `status` tinyint(4) NOT NULL DEFAULT 1 COMMENT '0: Deactivated, 1: Active, 2: Deleted, 3: Archived',
+  'admin_order' int(11) NOT NULL DEFAULT 0 COMMENT 'Order of the catalog in admin panel',
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `catalogs_category_id_foreign` (`category_id`),
-  CONSTRAINT `catalogs_category_id_foreign` FOREIGN KEY (`category_id`) REFERENCES `categories` (`id`) ON DELETE SET NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+  KEY `catalogs_video_type_id_foreign` (`video_type_id`),
+  CONSTRAINT `catalogs_category_id_foreign` FOREIGN KEY (`category_id`) REFERENCES `categories` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `catalogs_video_type_id_foreign` FOREIGN KEY (`video_type_id`) REFERENCES `video_types` (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 
 -- vijo_laravel_db.users definição
@@ -308,6 +290,48 @@ CREATE TABLE `affiliates` (
   KEY `affiliates_user_id_foreign` (`user_id`),
   CONSTRAINT `affiliates_user_id_foreign` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+
+-- vijo_laravel_db.catalog_questions definição
+
+CREATE TABLE `catalog_questions` (
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `catalog_id` int(10) unsigned NOT NULL DEFAULT 0,
+  `reference_type` tinyint(4) NOT NULL DEFAULT 0,
+  `metric1_title` varchar(255) DEFAULT NULL,
+  `metric1_question` varchar(255) DEFAULT NULL,
+  `metric1_question_option1` varchar(50) DEFAULT NULL,
+  `metric1_question_option2` varchar(50) DEFAULT NULL,
+  `metric1_question_option1val` int(11) NOT NULL DEFAULT 0,
+  `metric1_question_option2val` int(11) NOT NULL DEFAULT 0,
+  `metric1_question_label` int(11) NOT NULL DEFAULT 0,
+  `metric1_significance` tinyint(4) NOT NULL DEFAULT 0,
+  `metric2_title` varchar(255) DEFAULT NULL,
+  `metric2_question` varchar(255) DEFAULT NULL,
+  `metric2_question_option1` varchar(50) DEFAULT NULL,
+  `metric2_question_option2` varchar(50) DEFAULT NULL,
+  `metric2_question_option1val` int(11) NOT NULL DEFAULT 0,
+  `metric2_question_option2val` int(11) NOT NULL DEFAULT 0,
+  `metric2_question_label` int(11) NOT NULL DEFAULT 0,
+  `metric2_significance` tinyint(4) NOT NULL DEFAULT 0,
+  `metric3_title` varchar(255) DEFAULT NULL,
+  `metric3_question` varchar(255) DEFAULT NULL,
+  `metric3_question_option1` varchar(50) DEFAULT NULL,
+  `metric3_question_option2` varchar(50) DEFAULT NULL,
+  `metric3_question_option1val` int(11) NOT NULL DEFAULT 0,
+  `metric3_question_option2val` int(11) NOT NULL DEFAULT 0,
+  `metric3_question_label` int(11) NOT NULL DEFAULT 0,
+  `metric3_significance` tinyint(4) NOT NULL DEFAULT 0,
+  `video_question` varchar(255) DEFAULT NULL,
+  `metric4_significance` tinyint(4) NOT NULL DEFAULT 0,
+  `metric5_significance` tinyint(4) NOT NULL DEFAULT 0,
+  `status` tinyint(4) NOT NULL DEFAULT 1 COMMENT '0: Deactived, 1: Active, 2: Deleted, 3: Archieved',
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `catalog_questions_catalog_id_foreign` (`catalog_id`),
+  CONSTRAINT `catalog_questions_catalog_id_foreign` FOREIGN KEY (`catalog_id`) REFERENCES `catalogs` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=54 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 
 -- vijo_laravel_db.contact_groups definição
@@ -460,6 +484,9 @@ CREATE TABLE `video_requests` (
   `ref_mobile` varchar(20) DEFAULT NULL,
   `ref_email` varchar(200) DEFAULT NULL,
   `ref_note` text DEFAULT NULL,
+  `title` varchar(255) DEFAULT NULL,
+  `tags` varchar(255) DEFAULT NULL,
+  `type` enum('daily','request') NOT NULL DEFAULT 'request',
   `status` enum('Pending','Accept','Approved','Reject','Not Right Now','Delete') NOT NULL DEFAULT 'Pending',
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL,

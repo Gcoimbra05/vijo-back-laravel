@@ -398,7 +398,7 @@ class UserController extends Controller
                 "categories" => CategoryController::getCategories(),
                 "promotionalCatalogs" => self::getPromotionalCatalogs(),
                 "timezoneMenus" => SettingsController::getTimezones(),
-                "myJournals" => VideoRequestController::getMyVideoRequests($request)->getData(),
+                "myJournals" => VideoRequestController::getMyVideoRequests(),
                 "graphTypes" => [
                     "bar" => "Bar",
                     "area" => "Area",

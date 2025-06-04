@@ -6,6 +6,18 @@ class ProcessLlamaStep extends VideoProcessingStep
 {
     protected function execute($context)
     {
+        if (!($context['videoRequest']->llm_template_id)){
+
+            $context['apiService']->sendWebhookNotification(
+                'AI processing skipped', 
+                $context['videoRequest']->id, 
+                'video_request', 
+                ['response' => 'Skipped AI processing']
+            );
+
+            return ['success' => true];
+        }
+
         $llamaResult = $context['llamaService']->processLlama(
             $context['videoRequest']->llm_template_id,
             $context['formattedTranscript']
