@@ -1095,6 +1095,32 @@ class SettingsController extends Controller
         return response()->json($responseData);
     }
 
+    public function getInsights ()
+    {
+        $responseData = [
+            'status' => true,
+            'message' => '',
+            'results' => [
+                'metric1_name' => 'Stress',
+                'metric2_name' => '',
+                'metric3_name' => '',
+                'metric1_type' => 'emotion',
+                'metric2_type' => '',
+                'metric3_type' => '',
+                'metric1_field' => 'jns_Stressed',
+                'metric2_field' => '',
+                'metric3_field' => '',
+                'all_video_data' => [],
+                'epa_chart_labels' => ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
+                'final_metric1_arr' => [0, 0, 0, 0, 0, 0, 0],
+                'final_metric2_arr' => [0, 0, 0, 0, 0, 0, 0],
+                'final_metric3_arr' => [0, 0, 0, 0, 0, 0, 0]
+            ]
+        ];
+
+        return response()->json($responseData);
+    }
+
     public function getStaticPages ()
     {
         $responseData = [

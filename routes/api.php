@@ -45,6 +45,7 @@ Route::prefix('v2')->middleware(ForceJsonResponse::class)->group(function () {
     Route::get('/onboarding-contents', [SettingsController::class, 'getOnboardingContent']);
     Route::get('/information-contents', [SettingsController::class, 'getInformationContent']);
     Route::get('/static-pages', [SettingsController::class, 'getStaticPages']);
+    Route::get('/insights', [SettingsController::class, 'getInsights']);
 
     Route::middleware('auth:sanctum')->group(function () {
         Route::apiResource('users', UserController::class);
