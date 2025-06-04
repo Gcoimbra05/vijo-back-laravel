@@ -46,7 +46,7 @@ Route::prefix('v2')->middleware(ForceJsonResponse::class)->group(function () {
     Route::get('/onboarding-contents', [SettingsController::class, 'getOnboardingContent']);
     Route::get('/information-contents', [SettingsController::class, 'getInformationContent']);
     Route::get('/static-pages', [SettingsController::class, 'getStaticPages']);
-    Route::get('/insights', [SettingsController::class, 'getInsights']);
+    Route::post('/insights', [SettingsController::class, 'getInsights']); // chart_type=bar&view_by=days_of_week&filter_by=daily&datatype=emotion&metric1=emotion%23%231&no_zero_record=0
 
     Route::middleware('auth:sanctum')->group(function () {
         Route::apiResource('users', UserController::class);
