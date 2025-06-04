@@ -11,7 +11,6 @@ use Illuminate\Support\Facades\DB;
 
 class VideoController extends Controller
 {
-    // Listar vídeos com paginação, busca e filtro por request_id
     public function index(Request $request)
     {
         $query = Video::query();
@@ -38,7 +37,6 @@ class VideoController extends Controller
         ]);
     }
 
-    // Visualizar um vídeo específico
     public function show($id)
     {
         $video = Video::find($id);
@@ -66,7 +64,6 @@ class VideoController extends Controller
         ]);
     }
 
-    // Criar um novo vídeo
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -97,7 +94,6 @@ class VideoController extends Controller
         ], 201);
     }
 
-    // Atualizar um vídeo existente
     public function update(Request $request, $id)
     {
         $video = Video::find($id);
@@ -144,7 +140,6 @@ class VideoController extends Controller
         ]);
     }
 
-    // Deletar um vídeo
     public function destroy($id)
     {
         $video = Video::find($id);
@@ -174,7 +169,6 @@ class VideoController extends Controller
         ]);
     }
 
-    // Upload e salvar vídeo
     public function uploadAndStore(Request $request)
     {
         $request->validate([
@@ -183,8 +177,7 @@ class VideoController extends Controller
             'video_duration' => 'nullable|integer',
         ]);
 
-        // Chama o método do MediaStorageController
-        $mediaController = app(\App\Http\Controllers\MediaStorageController::class);
+        $mediaController = app(MediaStorageController::class);
         $uploadResponse = $mediaController->uploadVideo($request);
 
         $uploadData = $uploadResponse->getData(true);
@@ -197,15 +190,28 @@ class VideoController extends Controller
             ], 422);
         }
 
-        $video = Video::create([
-            'request_id'     => $request->input('request_id'),
-            'video_name'     => $uploadData['video_name'],
-            'video_url'      => $uploadData['video_url'],
-            'video_duration' => $uploadData['video_duration'],
-            'thumbnail_name' => $uploadData['thumbnail_name'],
-            'thumbnail_url'  => $uploadData['thumbnail_url'],
-            'user_id'        => Auth::id(),
-        ]);
+        $video = Video::where('request_id', $request->input('request_id'))
+            ->whereNull('video_url')
+            ->whereIsNotNull('thumbnail_url')
+            ->first();
+
+        if ($video) {
+            $video->update([
+                'video_name'     => $uploadData['video_name'],
+                'video_url'      => $uploadData['video_url'],
+                'video_duration' => $uploadData['video_duration'],
+            ]);
+        } else {
+            $video = Video::create([
+                'request_id'     => $request->input('request_id'),
+                'video_name'     => $uploadData['video_name'],
+                'video_url'      => $uploadData['video_url'],
+                'video_duration' => $uploadData['video_duration'],
+                'thumbnail_name' => $uploadData['thumbnail_name'],
+                'thumbnail_url'  => $uploadData['thumbnail_url'],
+                'user_id'        => Auth::id(),
+            ]);
+        }
 
         return response()->json([
             'success' => true,

@@ -68,7 +68,7 @@ Route::prefix('v2')->middleware(ForceJsonResponse::class)->group(function () {
         Route::post('share-video-requests', [VideoRequestController::class, 'shareVideoRequests']);
         Route::post('process-video-request/{id}', [VideoRequestController::class, 'initProcess']);
         Route::get('related-requests/{id}', [VideoRequestController::class, 'getRelatedRequests']);
-        Route::post('delete-requests/{id}', [VideoRequestController::class, 'deleteVideoRequests']);
+        Route::delete('delete-requests/{id}', [VideoRequestController::class, 'deleteVideoRequests']);
 
         Route::post('start-video-request', [VideoRequestController::class, 'startVideoRequest']);
         Route::post('record-video-request', [CatalogAnswerController::class, 'store']);

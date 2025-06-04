@@ -41,6 +41,28 @@ CREATE TABLE `cache_locks` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 
+-- vijo_laravel_db.catalog_metric_question_labels definição
+
+CREATE TABLE `catalog_metric_question_labels` (
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `title` varchar(255) DEFAULT NULL,
+  `metricOption1Emoji` varchar(100) DEFAULT NULL,
+  `metricOption1Text` varchar(100) DEFAULT NULL,
+  `metricOption3Emoji` varchar(100) DEFAULT NULL,
+  `metricOption3Text` varchar(100) DEFAULT NULL,
+  `metricOption5Emoji` varchar(100) DEFAULT NULL,
+  `metricOption5Text` varchar(100) DEFAULT NULL,
+  `metricOption7Emoji` varchar(100) DEFAULT NULL,
+  `metricOption7Text` varchar(100) DEFAULT NULL,
+  `metricOption9Emoji` varchar(100) DEFAULT NULL,
+  `metricOption9Text` varchar(100) DEFAULT NULL,
+  `status` tinyint(4) NOT NULL DEFAULT 1 COMMENT '0: Deactived, 1: Active, 2: Deleted, 3: Archieved',
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+
 -- vijo_laravel_db.categories definição
 
 CREATE TABLE `categories` (
@@ -54,6 +76,20 @@ CREATE TABLE `categories` (
   `updated_at` timestamp NULL DEFAULT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+
+-- vijo_laravel_db.emlo_response_param_specs definição
+
+CREATE TABLE `emlo_response_param_specs` (
+  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  `param_name` text NOT NULL,
+  `description` text NOT NULL,
+  `min` int(11) NOT NULL,
+  `max` int(11) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 
 -- vijo_laravel_db.emlo_response_paths definição
@@ -154,7 +190,7 @@ CREATE TABLE `migrations` (
   `migration` varchar(255) NOT NULL,
   `batch` int(11) NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=47 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=52 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 
 -- vijo_laravel_db.password_reset_tokens definição
@@ -184,6 +220,19 @@ CREATE TABLE `personal_access_tokens` (
   UNIQUE KEY `personal_access_tokens_token_unique` (`token`),
   KEY `personal_access_tokens_tokenable_type_tokenable_id_index` (`tokenable_type`,`tokenable_id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+
+-- vijo_laravel_db.rules definição
+
+CREATE TABLE `rules` (
+  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  `name` text NOT NULL,
+  `param_name` text NOT NULL,
+  `active` tinyint(1) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 
 -- vijo_laravel_db.sessions definição
@@ -234,7 +283,7 @@ CREATE TABLE `catalogs` (
   `emoji` varchar(100) DEFAULT NULL,
   `is_deleted` tinyint(4) NOT NULL DEFAULT 0 COMMENT '0: Active, 1: Deleted',
   `status` tinyint(4) NOT NULL DEFAULT 1 COMMENT '0: Deactivated, 1: Active, 2: Deleted, 3: Archived',
-  'admin_order' int(11) NOT NULL DEFAULT 0 COMMENT 'Order of the catalog in admin panel',
+  `admin_order` int(10) unsigned NOT NULL DEFAULT 0,
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL,
   PRIMARY KEY (`id`),
@@ -243,6 +292,23 @@ CREATE TABLE `catalogs` (
   CONSTRAINT `catalogs_category_id_foreign` FOREIGN KEY (`category_id`) REFERENCES `categories` (`id`) ON DELETE SET NULL,
   CONSTRAINT `catalogs_video_type_id_foreign` FOREIGN KEY (`video_type_id`) REFERENCES `video_types` (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+
+-- vijo_laravel_db.rule_conditions definição
+
+CREATE TABLE `rule_conditions` (
+  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `rule_id` bigint(20) unsigned NOT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  `condition` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL CHECK (json_valid(`condition`)),
+  `message` text NOT NULL,
+  `order_index` int(11) NOT NULL,
+  `active` tinyint(1) NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `rule_conditions_rule_id_foreign` (`rule_id`),
+  CONSTRAINT `rule_conditions_rule_id_foreign` FOREIGN KEY (`rule_id`) REFERENCES `rules` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 
 -- vijo_laravel_db.users definição

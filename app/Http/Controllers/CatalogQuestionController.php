@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\CatalogMetricQuestionLabel;
 use App\Models\CatalogQuestion;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
@@ -148,10 +149,106 @@ class CatalogQuestionController extends Controller
         ]);
     }
 
-    public static function getQuestionsByCatalogId($catalogId)
+    public static function getQuestionsByCatalogId($catalog, $vtKpiMetrics)
     {
-        return CatalogQuestion::where('catalog_id', $catalogId)
-            ->get(['id', 'reference_type', 'video_question'])
-            ->toArray();
+        $fields = ['id', 'reference_type', 'video_question'];
+
+        if ($vtKpiMetrics >= 1) {
+            $fields = array_merge($fields, [
+                'metric1_title',
+                'metric1_question',
+                'metric1_question_option1',
+                'metric1_question_option2',
+                'metric1_question_option1val',
+                'metric1_question_option2val',
+                'metric1_question_label',
+            ]);
+        }
+
+        if ($vtKpiMetrics == 3) {
+            $fields = array_merge($fields, [
+                'metric2_title',
+                'metric2_question',
+                'metric2_question_option1',
+                'metric2_question_option2',
+                'metric2_question_option1val',
+                'metric2_question_option2val',
+                'metric2_question_label',
+                'metric3_title',
+                'metric3_question',
+                'metric3_question_option1',
+                'metric3_question_option2',
+                'metric3_question_option1val',
+                'metric3_question_option2val',
+                'metric3_question_label',
+            ]);
+        }
+
+        $question = CatalogQuestion::where('catalog_id', $catalog->id)
+            ->where('status', 1)
+            ->select($fields)
+            ->first();
+        $questions = $question ? $question->toArray() : [];
+
+        foreach ($questions as $k => $r) {
+            // Métrica 1
+            $metric1_question_label = $r['metric1_question_label'] ?? 0;
+            if ($metric1_question_label > 0) {
+                $label = CatalogMetricQuestionLabel::where('status', 1)->find($metric1_question_label);
+                if ($label) {
+                    $metric1_question_labels = [];
+                    foreach ([1, 3, 5, 7, 9] as $option) {
+                        $metric1_question_labels[] = [
+                            'emoji' => $label->{'metricOption' . $option . 'Emoji'},
+                            'text' => $label->{'metricOption' . $option . 'Text'},
+                            'question_emoji' => $label->{'metricOption' . $option . 'Emoji'},
+                            'value' => $option
+                        ];
+                    }
+                    $questions[$k]['metric1_question_labels'] = $metric1_question_labels;
+                }
+            }
+
+            // Métrica 2 e 3 só se kpi_metrics == 3
+            if ($vtKpiMetrics == 3) {
+                // Métrica 2
+                $metric2_question_label = $r['metric2_question_label'] ?? 0;
+                if ($metric2_question_label > 0) {
+                    $label = CatalogMetricQuestionLabel::where('status', 1)->find($metric2_question_label);
+                    if ($label) {
+                        $metric2_question_labels = [];
+                        foreach ([1, 3, 5, 7, 9] as $option) {
+                            $metric2_question_labels[] = [
+                                'emoji' => $label->{'metricOption' . $option . 'Emoji'},
+                                'text' => $label->{'metricOption' . $option . 'Text'},
+                                'question_emoji' => $label->{'metricOption' . $option . 'Emoji'},
+                                'value' => $option
+                            ];
+                        }
+                        $questions[$k]['metric2_question_labels'] = $metric2_question_labels;
+                    }
+                }
+
+                // Métrica 3
+                $metric3_question_label = $r['metric3_question_label'] ?? 0;
+                if ($metric3_question_label > 0) {
+                    $label = CatalogMetricQuestionLabel::where('status', 1)->find($metric3_question_label);
+                    if ($label) {
+                        $metric3_question_labels = [];
+                        foreach ([1, 3, 5, 7, 9] as $option) {
+                            $metric3_question_labels[] = [
+                                'emoji' => $label->{'metricOption' . $option . 'Emoji'},
+                                'text' => $label->{'metricOption' . $option . 'Text'},
+                                'question_emoji' => $label->{'metricOption' . $option . 'Emoji'},
+                                'value' => $option
+                            ];
+                        }
+                        $questions[$k]['metric3_question_labels'] = $metric3_question_labels;
+                    }
+                }
+            }
+        }
+
+        return $questions;
     }
 }

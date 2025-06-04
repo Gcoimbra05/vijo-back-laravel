@@ -3,9 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Models\CatalogAnswer;
+use App\Models\Video;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class CatalogAnswerController extends Controller
 {
@@ -40,6 +43,7 @@ class CatalogAnswerController extends Controller
     {
         $request->validate([
             'request_id' => 'required|integer|exists:video_requests,id',
+            'catalog_id' => 'required|integer|exists:catalogs,id',
             'cred_score' => 'nullable|numeric',
             'metric1_answer' => 'nullable|string|max:50',
             'metric1Range' => 'nullable|numeric',
@@ -51,15 +55,47 @@ class CatalogAnswerController extends Controller
             'metric3Range' => 'nullable|numeric',
             'metric3Significance' => 'nullable|integer',
             'n8n_executionId' => 'nullable|string|max:50',
-            'video_thumbnail' => 'nullable|string|max:255', #video1_thumb é um file
+            'video_thumbnail_file' => 'nullable|file|mimes:jpg,jpeg,png|max:2048',
         ]);
 
-        $data = $request->all();
+        $fields = [
+            'user_id',
+            'catalog_id',
+            'request_id',
+            'cred_score',
+            'metric1_answer',
+            'metric1Range',
+            'metric1Significance',
+            'metric2_answer',
+            'metric2Range',
+            'metric2Significance',
+            'metric3_answer',
+            'metric3Range',
+            'metric3Significance',
+            'n8n_executionId',
+        ];
+
+        $data = $request->only($fields);
         $data['user_id'] = Auth::id();
         $answer = CatalogAnswer::create($data);
 
-        # If you need to handle the video_thumbnail file, you can do it here
-        # o thumb será fornecido e será salvo na tabela do vídeo, e logo em seguida o vídeo será enviado. Então nem sempre podemos gerar o thumbnail
+        if ($request->hasFile('video_thumbnail_file')) {
+            $file = $request->file('video_thumbnail_file');
+            $fileName = Str::uuid() . '.' . $file->getClientOriginalExtension();
+
+            $disk = env('FILESYSTEM_DISK', 's3');
+            $thumbnailPath = 'thumbnails/' . $fileName;
+            Storage::disk($disk)->putFileAs('thumbnails', $file, $fileName);
+
+            $thumbnailUrl = Storage::disk($disk)->url($thumbnailPath);
+
+            Video::create([
+                'request_id'     => $request->input('request_id'),
+                'thumbnail_name' => $fileName,
+                'thumbnail_url'  => $thumbnailUrl,
+                'user_id'        => Auth::id(),
+            ]);
+        }
 
         return response()->json([
             'success' => true,

@@ -666,11 +666,18 @@ class VideoRequestController extends Controller
             'status' => 'Pending',
         ]);
 
-        $record_time = $catalog->max_record_time ?? '60';
-        $min_record_time = $catalog->min_record_time ?? '15';
-        $parent_catalog_id = $catalog->parent_catalog_id ?? '0';
+        $recordTime = $catalog->max_record_time ?? '60';
+        $minRecordTime = $catalog->min_record_time ?? '15';
+        $parentCatalogId = $catalog->parent_catalog_id ?? '0';
 
-        $questions = CatalogQuestionController::getQuestionsByCatalogId($catalogId);
+        $vtMetricNo = $vtKpiNo = $vtKpiMetrics = 0;
+        if ($catalog->videoType) {
+            $vtMetricNo = (int) ($catalog->videoType->metric_no ?? 0);
+            $vtKpiNo    = (int) ($catalog->videoType->kpi_no ?? 0);
+            $vtKpiMetrics = ($vtKpiNo > 0) ? floor($vtMetricNo / $vtKpiNo) : 0;
+        }
+
+        $questions = CatalogQuestionController::getQuestionsByCatalogId($catalog, $vtKpiMetrics);
 
         $userTags = [
             [
@@ -680,31 +687,23 @@ class VideoRequestController extends Controller
         ];
 
         $videoType = [
-            'metrics' => '0',
-            'kpis' => '1',
-            'kpi_metrics' => 0
+            'metrics' => $vtMetricNo,
+            'kpis' => $vtKpiNo,
+            'kpi_metrics' => $vtKpiMetrics
         ];
-
-        if ($catalog->videoType) {
-            $videoType = [
-                'metrics' => (string)($catalog->videoType->metric_no ?? 0),
-                'kpis' => (string)($catalog->videoType->kpi_no ?? 0),
-                'kpi_metrics' => (int)($catalog->videoType->video_no ?? 0)
-            ];
-        }
 
         return response()->json([
             'status' => true,
             'message' => '',
             'results' => [
-                'parent_catalog_id' => (string)$parent_catalog_id,
+                'parent_catalog_id' => (string)$parentCatalogId,
                 'catalog_id' => (string)$catalogId,
                 'request_id' => $videoRequest->id,
                 'record_date' => now()->toDateString(),
                 'video_types' => $videoType,
                 'video_type_id' => $catalog->video_type_id,
-                'min_record_time' => (string)$min_record_time,
-                'record_time' => (string)$record_time,
+                'min_record_time' => (string)$minRecordTime,
+                'record_time' => (string)$recordTime,
                 'questions' => $questions,
                 'userTags' => $userTags,
             ]
@@ -1050,10 +1049,10 @@ class VideoRequestController extends Controller
             }
 
             // Find ref_user_id if a user exists with the same mobile
-            $ref_user_id = null;
+            $refUserId = null;
             if ($row['mobile']) {
                 $refUser = User::where('mobile', $row['mobile'])->first();
-                $ref_user_id = $refUser ? $refUser->id : null;
+                $refUserId = $refUser ? $refUser->id : null;
             }
 
             $videoRequest = VideoRequest::create([
@@ -1067,7 +1066,7 @@ class VideoRequestController extends Controller
                 'ref_mobile'      => $row['mobile'],
                 'ref_email'       => $row['email'],
                 'ref_note'        => $note,
-                'ref_user_id'     => $ref_user_id,
+                'ref_user_id'     => $refUserId,
                 'status'          => 'Pending',
                 'type'            => 'request',
             ]);
