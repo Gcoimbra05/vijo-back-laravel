@@ -149,7 +149,7 @@ class CatalogQuestionController extends Controller
         ]);
     }
 
-    public static function getQuestionsByCatalogId($catalog, $vtKpiMetrics)
+    public static function getQuestionsByCatalogId($catalog, $vtKpiMetrics, $limit)
     {
         $fields = ['id', 'reference_type', 'video_question'];
 
@@ -187,7 +187,9 @@ class CatalogQuestionController extends Controller
         $question = CatalogQuestion::where('catalog_id', $catalog->id)
             ->where('status', 1)
             ->select($fields)
-            ->first();
+            ->orderBy('reference_type', 'ASC')
+            ->limit($limit)
+            ->get();
         $questions = $question ? $question->toArray() : [];
 
         foreach ($questions as $k => $r) {

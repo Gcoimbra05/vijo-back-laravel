@@ -677,7 +677,7 @@ class VideoRequestController extends Controller
             $vtKpiMetrics = ($vtKpiNo > 0) ? floor($vtMetricNo / $vtKpiNo) : 0;
         }
 
-        $questions = CatalogQuestionController::getQuestionsByCatalogId($catalog, $vtKpiMetrics);
+        $questions = CatalogQuestionController::getQuestionsByCatalogId($catalog, $vtKpiMetrics, $vtKpiNo);
 
         $userTags = [
             [
