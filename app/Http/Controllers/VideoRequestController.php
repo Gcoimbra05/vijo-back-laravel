@@ -61,6 +61,14 @@ class VideoRequestController extends Controller
 
             $isGrouped = ($contacts->count() + $groups->count()) > 1;
 
+            // add catalog details
+            $catalog = Catalog::select('emoji', 'title')
+                ->where('id', $request->catalog_id)
+                ->first();
+
+            $request->emoji = $catalog ? $catalog->emoji : '';
+            $request->catalog_title = $catalog ? $catalog->title : '';
+
             $toRequestsData[] = [
                 'request'    => $request,
                 'contacts'   => $contacts,
@@ -99,6 +107,13 @@ class VideoRequestController extends Controller
                 })
                 ->distinct()
                 ->get();
+
+            $catalog = Catalog::select('emoji', 'title')
+                ->where('id', $request->catalog_id)
+                ->first();
+
+            $request->emoji = $catalog ? $catalog->emoji : '';
+            $request->catalog_title = $catalog ? $catalog->title : '';
 
             $isGrouped = ($contacts->count() + $groups->count()) > 1;
 
@@ -643,7 +658,7 @@ class VideoRequestController extends Controller
                 'message' => 'Catalog not found.'
             ], 404);
         }
-        
+
         // Create the VideoRequest
         $videoRequest = VideoRequest::create([
             'user_id' => $userId,
@@ -1026,8 +1041,7 @@ class VideoRequestController extends Controller
                     } else {
                     $q->whereNull('group_id');
                     }
-            })
-            ->exists();
+            })->exists();
 
             if ($alreadyExists) {
                 $skippedContacts[] = $row['contact_id'];
@@ -1037,24 +1051,24 @@ class VideoRequestController extends Controller
             // Find ref_user_id if a user exists with the same mobile
             $ref_user_id = null;
             if ($row['mobile']) {
-            $refUser = User::where('mobile', $row['mobile'])->first();
-            $ref_user_id = $refUser ? $refUser->id : null;
+                $refUser = User::where('mobile', $row['mobile'])->first();
+                $ref_user_id = $refUser ? $refUser->id : null;
             }
 
             $videoRequest = VideoRequest::create([
-            'user_id'         => $userId,
-            'catalog_id'      => $catalogId,
-            'contact_id'      => $row['contact_id'],
-            'group_id'        => $row['group_id'],
-            'ref_first_name'  => $row['first_name'],
-            'ref_last_name'   => $row['last_name'],
-            'ref_country_code'=> $row['country_code'],
-            'ref_mobile'      => $row['mobile'],
-            'ref_email'       => $row['email'],
-            'ref_note'        => $note,
-            'ref_user_id'     => $ref_user_id,
-            'status'          => 'Pending',
-            'type'            => 'request',
+                'user_id'         => $userId,
+                'catalog_id'      => $catalogId,
+                'contact_id'      => $row['contact_id'],
+                'group_id'        => $row['group_id'],
+                'ref_first_name'  => $row['first_name'],
+                'ref_last_name'   => $row['last_name'],
+                'ref_country_code'=> $row['country_code'],
+                'ref_mobile'      => $row['mobile'],
+                'ref_email'       => $row['email'],
+                'ref_note'        => $note,
+                'ref_user_id'     => $ref_user_id,
+                'status'          => 'Pending',
+                'type'            => 'request',
             ]);
 
             $requestIds[] = $videoRequest->id;
