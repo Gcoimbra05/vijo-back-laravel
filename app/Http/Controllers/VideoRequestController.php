@@ -747,7 +747,7 @@ class VideoRequestController extends Controller
                 'isMultipart'     => (string)($catalog->is_multipart ?? 0),
                 'catalogPrograms' => [],
                 'catalogEmoji'    => $catalog->emoji ?? '',
-                'journal_type_id' => (string)($catalog->video_type_id ?? ''),
+                'video_type_id' => (string)($catalog->video_type_id ?? ''),
                 'metric_no'       => (string)$metric_no,
                 'kpi_no'          => (string)$kpi_no,
                 'dashboard_id'    => '',
@@ -1036,7 +1036,7 @@ class VideoRequestController extends Controller
             'final_video_transcript' => $journalEmotionalData['final_video_transcript'],
             'summaryReport' => $journalEmotionalData['summaryReport'],
             'gptSummary' => $journalEmotionalData['gptSummary'],
-            'journal_type_id'   => $catalog->video_type_id ?? '',
+            'video_type_id'   => $catalog->video_type_id ?? '',
             'catalog_id'        => $catalog->id ?? '',
             'catalog_name'      => $catalog->title ?? '',
             'created_at'        => $videoRequest->created_at ? $videoRequest->created_at->format('M d, Y') : '',
@@ -1268,7 +1268,7 @@ class VideoRequestController extends Controller
             'emotional_outcomes'=> '', // implementar se necessário
             'final_video_transcript' => '', // implementar se necessário
             'summaryReport'     => '', // implementar se necessário
-            'journal_type_id'   => $catalog->video_type_id ?? '',
+            'video_type_id'   => $catalog->video_type_id ?? '',
             'catalog_id'        => $catalog->id ?? '',
             'catalog_name'      => $catalog->title ?? '',
             'created_at'        => $videoRequest->created_at ? $videoRequest->created_at->format('M d, Y') : '',
