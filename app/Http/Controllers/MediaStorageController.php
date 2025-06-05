@@ -22,13 +22,12 @@ class MediaStorageController extends Controller
 
         // Prepare variables
         $file = $request->file('file');
-        $fileName = Str::uuid() . '.' . $file->getClientOriginalExtension();
+        $fileName = $file->getClientOriginalName();
         $fileExtension = $file->getClientOriginalExtension();
 
         $tempFolderPath = 'app' . DIRECTORY_SEPARATOR . 'temp';
 
-        $localVideoPath = storage_path($tempFolderPath . DIRECTORY_SEPARATOR . $fileName);
-        $file->move(storage_path($tempFolderPath), $fileName);
+        $localVideoPath = $request->file_path;
 
         $thumbnailName = Str::of($fileName)->basename('.' . $fileExtension) . '.jpg';
         $thumbnailPath = storage_path($tempFolderPath . DIRECTORY_SEPARATOR . $thumbnailName);
@@ -108,7 +107,7 @@ class MediaStorageController extends Controller
         } elseif ($request->has('csv_path')) {
             $localCsvPath = $request->csv_path;
         }
-        
+
         // Upload to S3 or local
         $disk = env('FILESYSTEM_DISK', 'local');
         $csvStoragePath = 'csvs/' . basename($localCsvPath);

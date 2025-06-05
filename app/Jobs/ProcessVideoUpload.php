@@ -33,7 +33,9 @@ class ProcessVideoUpload implements ShouldQueue
         $request = new Request([
             'request_id' => $this->videoRequestId,
             'video_duration' => $this->videoDuration,
+            'file_path' => $this->filePath,
         ]);
+
         $request->files->set('file', new UploadedFile(
             $this->filePath,
             $this->originalName,
