@@ -512,8 +512,7 @@ class VideoRequestController extends Controller
 
         // Fetch the main request
         $mainRequest = VideoRequest::where('id', $requestId)
-            ->where('status', 1)
-            ->where('read_status', '<>', 'Not Right Now')
+            ->where('status', '<>', 'Not Right Now')
             ->first();
 
         if (!$mainRequest) {
@@ -534,14 +533,13 @@ class VideoRequestController extends Controller
 
         // Fetch all related requests
         $relatedRequests = VideoRequest::where('catalog_id', $catalog_id)
-            ->where('status', 1)
             ->where('user_id', $userId)
             ->whereNotNull('ref_mobile')
             ->where(function($q) {
                 $q->whereNotNull('contact_id')
                   ->orWhereNotNull('group_id');
             })
-            ->where('read_status', '<>', 'Not Right Now')
+            ->where('status', '<>', 'Not Right Now')
             ->orderBy('ref_first_name')
             ->orderBy('ref_last_name')
             ->get();
@@ -585,7 +583,7 @@ class VideoRequestController extends Controller
                 'ref_mobile'      => $req->ref_mobile,
                 'ref_email'       => $req->ref_email,
                 'ref_note'        => $req->ref_note,
-                'read_status'     => $req->read_status,
+                'read_status'     => $req->status,
                 'created_at'      => $req->created_at,
                 'contacts'        => $contacts,
                 'groups'          => $groups,
@@ -614,7 +612,7 @@ class VideoRequestController extends Controller
         // Busca o request principal
         $mainRequest = VideoRequest::where('id', $requestId)
             ->where('status', 1)
-            ->where('read_status', '<>', 'Not Right Now')
+            ->where('status', '<>', 'Not Right Now')
             ->first();
 
         if (!$mainRequest) {
@@ -1214,6 +1212,87 @@ class VideoRequestController extends Controller
                 'catalog_id'       => $catalogId,
                 'request_ids'      => $requestIds,
                 'skipped_contacts' => $skippedContacts
+            ]
+        ]);
+    }
+
+    public function shareJournalDetails($share_id = null)
+    {
+        if (empty($share_id)) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Id parameter is required',
+                'results' => null
+            ], 400);
+        }
+
+        // Decodifica o share_id (base64)
+        // $share_id = base64_decode($share_id);
+
+        // Busca o VideoRequest compartilhado (usando o id do video_request)
+        $videoRequest = VideoRequest::with([
+            'catalog.category',
+            'latestVideo',
+            'user',
+            'contact',
+            'group'
+        ])->find($share_id);
+
+        if (!$videoRequest) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Journal not found or access denied.',
+                'results' => null
+            ], 404);
+        }
+
+        $catalog = $videoRequest->catalog;
+        $category = $catalog ? $catalog->category : null;
+        $video = $videoRequest->latestVideo;
+
+        // Dados principais do journal
+        $journalData = [
+            'id'                => $videoRequest->id,
+            'journal_title'     => $videoRequest->title ?? ($catalog->title ?? ''),
+            'recommendation_id' => $videoRequest->recommendation_id ?? '',
+            'category_name'     => $category ? $category->name : '',
+            'journal_tags'      => $videoRequest->tags ?? '',
+            'makeJournalPrivate'=> $videoRequest->makeJournalPrivate ?? 0,
+            'video'             => $video ? $video->video_url : '',
+            'video_thumb'       => $video ? $video->thumbnail_url : '',
+            'user_tags'         => '', // implementar se necessário
+            'outcomes'          => '', // implementar se necessário
+            'emotions'          => '', // implementar se necessário
+            'transcription'     => '', // implementar se necessário
+            'emotional_insights'=> '', // implementar se necessário
+            'emotional_outcomes'=> '', // implementar se necessário
+            'final_video_transcript' => '', // implementar se necessário
+            'summaryReport'     => '', // implementar se necessário
+            'journal_type_id'   => $catalog->video_type_id ?? '',
+            'catalog_id'        => $catalog->id ?? '',
+            'catalog_name'      => $catalog->title ?? '',
+            'created_at'        => $videoRequest->created_at ? $videoRequest->created_at->format('M d, Y') : '',
+            'contact'           => $videoRequest->contact ? [
+                'id'         => $videoRequest->contact->id,
+                'first_name' => $videoRequest->contact->first_name,
+                'last_name'  => $videoRequest->contact->last_name,
+                'email'      => $videoRequest->contact->email,
+                'mobile'     => $videoRequest->contact->mobile,
+            ] : null,
+            'group'          => $videoRequest->group ? [
+                'id'   => $videoRequest->group->id,
+                'name' => $videoRequest->group->name,
+            ] : null,
+        ];
+
+        // Retorno
+        return response()->json([
+            'status' => true,
+            'message' => '',
+            'results' => [
+                'journal_data' => [$journalData],
+                'contacts'     => $journalData['contact'] ? [$journalData['contact']] : [],
+                'groups'       => $journalData['group'] ? [$journalData['group']] : [],
             ]
         ]);
     }
