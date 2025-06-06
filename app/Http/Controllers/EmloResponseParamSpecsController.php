@@ -10,11 +10,13 @@ class EmloResponseParamSpecsController extends Controller
 {
     public function index()
     {
-        $categories = EmloResponseParamSpecs::with('emlo_response_param_specs')->get();
+        $specifications = EmloResponseParamSpecs::with('emlo_response_param_specs')->get();
         return response()->json([
-            'success' => true,
+            'status' => true,
             'message' => 'EMLO parameter specification retrieved successfully.',
-            'data' => $categories,
+            'results' => [
+                'specifications' => $specifications
+            ],
         ]);
     }
 
@@ -23,15 +25,17 @@ class EmloResponseParamSpecsController extends Controller
         $spec = EmloResponseParamSpecs::with('emlo_response_param_specs')->find($id);
         if (!$spec) {
             return response()->json([
-                'success' => false,
+                'status' => false,
                 'message' => 'EMLO parameter specification not found.',
-                'data' => null,
+                'results' => null,
             ], 404);
         }
         return response()->json([
-            'success' => true,
+            'status' => true,
             'message' => 'EMLO parameter specification retrieved successfully.',
-            'data' => $spec,
+            'results' => [
+                'specification' => $spec
+            ],
         ]);
     }
 
@@ -40,15 +44,17 @@ class EmloResponseParamSpecsController extends Controller
         $spec = EmloResponseParamSpecs::findByParamName($paramName);
         if (!$spec) {
             return response()->json([
-                'success' => false,
+                'status' => false,
                 'message' => 'EMLO parameter specification not found.',
-                'data' => null,
+                'results' => null,
             ], 404);
         }
         return response()->json([
-            'success' => true,
+            'status' => true,
             'message' => 'EMLO parameter specification retrieved successfully.',
-            'data' => $spec,
+            'results' => [
+                'specification' => $spec
+            ],
         ]);
     }
 
@@ -63,9 +69,9 @@ class EmloResponseParamSpecsController extends Controller
 
         $spec = EmloResponseParamSpecs::create($request->all());
         return response()->json([
-            'success' => true,
+            'status' => true,
             'message' => 'EMLO parameter specification created successfully.',
-            'data' => $spec->load('emlo_response_param_specs'),
+            'results' => $spec->load('emlo_response_param_specs'),
         ], 201);
     }
 
@@ -74,9 +80,9 @@ class EmloResponseParamSpecsController extends Controller
         $spec = EmloResponseParamSpecs::find($id);
         if (!$spec) {
             return response()->json([
-                'success' => false,
+                'status' => false,
                 'message' => 'EMLO parameter specification not found.',
-                'data' => null,
+                'results' => null,
             ], 404);
         }
 
@@ -89,9 +95,9 @@ class EmloResponseParamSpecsController extends Controller
 
         $spec->update($request->all());
         return response()->json([
-            'success' => true,
+            'status' => true,
             'message' => 'EMLO parameter specification updated successfully.',
-            'data' => $spec->load('catalogs'),
+            'results' => $spec->load('catalogs'),
         ]);
     }
 
@@ -100,16 +106,16 @@ class EmloResponseParamSpecsController extends Controller
         $spec = EmloResponseParamSpecs::find($id);
         if (!$spec) {
             return response()->json([
-                'success' => false,
+                'status' => false,
                 'message' => 'EMLO parameter specification not found.',
-                'data' => null,
+                'results' => null,
             ], 404);
         }
         $spec->delete();
         return response()->json([
-            'success' => true,
+            'status' => true,
             'message' => 'EMLO parameter specification deleted successfully.',
-            'data' => null,
+            'results' => null,
         ]);
     }
 }

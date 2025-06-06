@@ -1,11 +1,12 @@
 <?php
 
 use App\Http\Controllers\AffiliateController;
+use App\Http\Controllers\ReferralCodeController;
 use App\Http\Controllers\CatalogAnswerController;
 use App\Http\Controllers\CatalogController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\ContactController;
-use App\Http\Controllers\EmloController;
+
 use App\Http\Controllers\GroupController;
 use App\Http\Controllers\MembershipPlanController;
 use App\Http\Controllers\StripeWebhookController;
@@ -15,12 +16,15 @@ use App\Http\Controllers\VideoRequestController;
 use App\Http\Controllers\TwoFactorAuthController;
 use App\Http\Controllers\VideoController;
 use App\Http\Middleware\ForceJsonResponse;
-use App\Services\Emlo\EmloResponseService;
-use App\Http\Controllers\EmloResponseParamSpecsController;
+
 use App\Http\Controllers\LlmTemplateController;
 use App\Http\Controllers\RuleEvaluationController;
 use App\Http\Controllers\SettingsController;
 use Illuminate\Support\Facades\Route;
+
+use App\Http\Controllers\EmloResponseController;
+use App\Services\Emlo\EmloResponseService;
+use App\Http\Controllers\EmloResponseParamSpecsController;
 
 
 
@@ -54,8 +58,6 @@ Route::prefix('v2')->middleware(ForceJsonResponse::class)->group(function () {
         Route::post('update-guided-tours', [UserController::class, 'updateGuidedTour']);
         Route::get('subscription-plans', [UserController::class, 'getSubscriptionPlans']);
 
-        Route::apiResource('affiliates', AffiliateController::class);
-        Route::apiResource('llm-templates', LlmTemplateController::class);
         Route::apiResource('membership-plans', MembershipPlanController::class);
         Route::apiResource('subscriptions', SubscriptionController::class);
         Route::apiResource('videos', VideoController::class);
@@ -63,7 +65,9 @@ Route::prefix('v2')->middleware(ForceJsonResponse::class)->group(function () {
         Route::get('video-galleries', [VideoRequestController::class, 'getVideoGalleries']);
         Route::get('video-detail/{id}', [VideoRequestController::class, 'getVideoDetail']);
         Route::post('make-request', [VideoRequestController::class, 'makeVideoRequest']);
-        Route::get('share-journal-details/{id}', [VideoRequestController::class, 'shareJournalDetails']);
+        Route::get('shared-video-details/{id}', [VideoRequestController::class, 'shareJournalDetails']);
+        Route::post('share-video-contacts', [VideoRequestController::class, 'shareVideoToContactsAndGroups']);
+        Route::post('send-reminder', [VideoRequestController::class, 'sendReminder']);
 
         Route::post('cancel-decline-request', [VideoRequestController::class, 'cancelDeclineRecordRequest']);
         Route::post('share-video-requests', [VideoRequestController::class, 'shareVideoRequests']);
@@ -82,16 +86,21 @@ Route::prefix('v2')->middleware(ForceJsonResponse::class)->group(function () {
         Route::apiResource('contacts', ContactController::class);
         Route::apiResource('groups', GroupController::class);
         Route::delete('groups/{group}/contacts/{contact}', [GroupController::class, 'removeContact']);
+
+        Route::apiResource('referral-codes', ReferralCodeController::class);
+
+        // need to make these admin only
+        Route::apiResource('affiliates', AffiliateController::class);
+        Route::apiResource('llm-templates', LlmTemplateController::class);
     });
 
     Route::match(['get', 'post'], 'webhook', [StripeWebhookController::class, 'handle']);
 
     Route::prefix('emlo-response')->group(function () {
-        Route::get('all', [EmloController::class, 'getAllEmloResponses']);
-        Route::get('{request_id}/param/{param}/compare', [RuleEvaluationController::class, 'evaluateRules']);
-        Route::get('{request_id}/param/{param}', [EmloResponseService::class, 'getEmloResponseParamValueForId']);
-        Route::get('param/{param}', [EmloController::class, 'getEmloResponseParamValue']);
-        Route::get('param/{param}/specification', [EmloResponseParamSpecsController::class, 'showByParamName']);
+        Route::get('{request_id}/{param}/compare', [RuleEvaluationController::class, 'evaluateRules']);
+        Route::get('{param}/specification', [EmloResponseParamSpecsController::class, 'showByParamName']);
+        Route::get('{request_id}/{param}', [EmloResponseService::class, 'getEmloResponseParamValueForId']);
+        Route::get('{param}', [EmloResponseController::class, 'getEmloResponseParamValue']);
+
     });
-    Route::apiResource('emlo-response', EmloController::class);
 });

@@ -9,12 +9,19 @@ use Illuminate\Support\Facades\Auth;
 
 class LlmTemplateController extends Controller
 {
-    /**
-     * Get all templates for the authenticated user.
-     */
     public function index(Request $request)
     {
         $userId = Auth::id();
+        if (!$userId) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Unauthorized access.',
+                'results' => [
+                    'llm_templates' => null
+                ],
+            ], 401);
+        }
+
         $search = $request->query('search');
         $perPage = $request->query('limit', 15);
         $page = (int) $request->query('page', 1);
@@ -27,45 +34,42 @@ class LlmTemplateController extends Controller
         }
 
         return response()->json([
-            'success' => true,
+            'status' => true,
             'message' => 'Llm templates retrieved successfully.',
-            'data' => $llmTemplates,
-            'meta' => [
-                'total' => LlmTemplate::countUserTemplates($userId),
-                'per_page' => $perPage,
-                'current_page' => $page,
-            ]
+            'results' => [
+                    'llm_templates' => $llmTemplates
+            ],
         ]);
     }
 
-    /**
-     * Get a specific template for the authenticated user.
-     */
     public function show($id)
     {
         $llmTemplate = LlmTemplate::findUserTemplate($id, Auth::id());
         
         if (!$llmTemplate) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Llm template not found.',
-                'data' => null,
-            ], 404);
+            $responseData = [
+                'status'  => false,
+                'message' => "Llm template not found.",
+                'results' => [
+                    'llm_template' => null
+                ]
+            ];
+        } else {
+            $responseData = [
+                'status'  => true,
+                'message' => "Llm template retrieved successfully.",
+                'results' => [
+                    'llm_template' => $llmTemplate
+                ]
+            ];
         }
-        
-        return response()->json([
-            'success' => true,
-            'message' => 'Llm template retrieved successfully.',
-            'data' => $llmTemplate,
-        ]);
+
+        return response()->json($responseData);
     }
 
-    /**
-     * Create a new template for the authenticated user.
-     */
     public function store(Request $request)
     {
-        $validated = $request->validate([
+        $request->validate([
             'name' => 'required|string',
             'llm' => 'required|string|max:10',
             'system_prompt' => 'required|string',
@@ -74,83 +78,91 @@ class LlmTemplateController extends Controller
             'llm_response_max_length' => 'required|integer|max:5000'
         ]);
 
-        $llmTemplate = LlmTemplate::createForUser(
-            Auth::id(),
-            $validated['name'],
-            $validated['llm'],
-            $validated['system_prompt'],
-            $validated['examples'],
-            $validated['llm_temperature'],
-            $validated['llm_response_max_length'],
-        );
+        $data = $request->all();
+        $data['user_id'] = Auth::id();
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Llm template created successfully.',
-            'data' => ['id' => $llmTemplate->id],
-        ], 201);
+        $llmTemplate = LlmTemplate::create($data);
+
+        if($llmTemplate){
+            $responseData = [
+                'status'  => true,
+                'message' => "Llm template created successfully.",
+                'results' => [
+                    'llm_template' => $llmTemplate
+                ]
+            ];
+        } else {
+            $responseData = [
+                'status'  => false,
+                'message' => "Failed to create llm template.",
+                'results' => [
+                    'llm_template' => null
+                ]
+            ];
+        }
+
+        return response()->json($responseData, $llmTemplate ? 201 : 400);
+        
     }
 
-    /**
-     * Update a template for the authenticated user.
-     */
     public function update(Request $request, $id)
     {
-        $validated = $request->validate([
-            'system_prompt' => 'required|string',
-            'llm' => 'required|string|max:10',
+        $request->validate([
+            'system_prompt' => 'sometimes|string',
+            'llm' => 'sometimes|string|max:10',
         ]);
 
-        $updated = LlmTemplate::updateUserTemplate($id, Auth::id(), $validated);
-        
-        if (!$updated) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Llm template not found.',
-                'data' => null,
-            ], 404);
+        $llmTemplate = LlmTemplate::find($id);
+
+        if (!$llmTemplate) {
+            $responseData = [
+                'status'  => false,
+                'message' => "Llm template not found.",
+                'results' => [
+                    'llm_template' => null
+                ]
+            ];
+            return response()->json($responseData, 404);
         }
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Llm template updated successfully.',
-            'data' => ['id' => (int) $id],
-        ]);
+        $llmTemplate->update($request->all());
+
+        $responseData = [
+            'status'  => true,
+            'message' => "Llm template updated successfully.",
+            'results' => [
+                'llm_template' => $llmTemplate
+            ]
+        ];
+
+        return response()->json($responseData);
     }
 
-    /**
-     * Delete a template for the authenticated user.
-     */
     public function destroy($id)
     {
-        $deleted = LlmTemplate::deleteUserTemplate($id, Auth::id());
-        
-        if (!$deleted) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Llm template not found.',
-                'data' => null,
-            ], 404);
+        $llmTemplate = LlmTemplate::find($id);
+
+        if (!$llmTemplate) {
+            $responseData = [
+                'status'  => false,
+                'message' => "Llm template not found.",
+                'results' => [
+                    'llm_template' => null
+                ]
+            ];
+            return response()->json($responseData, 404);
         }
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Llm template deleted successfully.',
-            'data' => null,
-        ]);
-    }
+        $llmTemplate->delete();
 
-    /**
-     * Get templates by LLM type for the authenticated user.
-     */
-    public function getByLlm(Request $request, $llmType)
-    {
-        $templates = LlmTemplate::getTemplatesByLlm(Auth::id(), $llmType);
+        $responseData = [
+            'status'  => true,
+            'message' => "Llm template deleted successfully.",
+            'results' => [
+                'llm_template' => null
+            ]
+        ];
 
-        return response()->json([
-            'success' => true,
-            'message' => "Templates for {$llmType} retrieved successfully.",
-            'data' => $templates,
-        ]);
+        return response()->json($responseData, 200);
     }
 }

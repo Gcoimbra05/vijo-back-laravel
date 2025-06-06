@@ -16,6 +16,8 @@ class Affiliate extends Model implements AuditableContract
     protected $fillable = [
         'user_id',
         'status',
+        'type',
+        'creator_id'
     ];
 
     public function user()

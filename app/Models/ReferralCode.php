@@ -17,7 +17,6 @@ class ReferralCode extends Model implements AuditableContract
         'affiliate_id',
         'code',
         'commission',
-        'number_uses',
         'max_number_uses',
         'discount',
         'start_date',
@@ -27,5 +26,17 @@ class ReferralCode extends Model implements AuditableContract
     public function affiliate()
     {
         return $this->belongsTo(Affiliate::class);
+    }
+
+    public static function generateReferralCode()
+    {
+        // Generate random bytes
+        $bytes = random_bytes(5); // 5 bytes = 10 hex characters
+        
+        // Convert to hexadecimal (will be alphanumeric)
+        $code = bin2hex($bytes);
+        
+        // Return uppercase
+        return strtoupper($code);
     }
 }

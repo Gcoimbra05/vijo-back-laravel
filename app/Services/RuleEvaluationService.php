@@ -12,7 +12,6 @@ class RuleEvaluationService
 {
     public function evaluateRules(int $requestId, string $paramName): array
     {
-       
         $paramsWValues = [];
         $emloResponseService = app(EmloResponseService::class);
 

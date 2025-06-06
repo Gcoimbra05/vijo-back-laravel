@@ -752,7 +752,7 @@ class VideoRequestController extends Controller
                 'kpi_no'          => (string)$kpi_no,
                 'dashboard_id'    => '',
                 'kpi_metrics'     => $kpi_metrics,
-            ];
+            };
         })->toArray();
 
         return $results;
@@ -1294,6 +1294,259 @@ class VideoRequestController extends Controller
                 'contacts'     => $journalData['contact'] ? [$journalData['contact']] : [],
                 'groups'       => $journalData['group'] ? [$journalData['group']] : [],
             ]
+        ]);
+    }
+
+    public function shareVideoToContactsAndGroups(Request $request)
+    {
+        $userId = Auth::id();
+
+        $validated = $request->validate([
+            'contact_ids' => 'nullable|array',
+            'contact_ids.*' => 'integer|exists:contacts,id',
+            'group_ids' => 'nullable|array',
+            'group_ids.*' => 'integer|exists:contact_groups,id',
+            'request_id' => 'required|integer|min:1|exists:video_requests,id',
+            'videoUrl' => 'required|string',
+        ]);
+
+        $originalRequestId = $validated['request_id'];
+        $contactIds = $validated['contact_ids'] ?? [];
+        $groupIds = $validated['group_ids'] ?? [];
+        $videoUrl = base64_decode($validated['videoUrl']);
+
+        // Find the original request to copy relevant data
+        $originalRequest = VideoRequest::find($originalRequestId);
+        if (!$originalRequest) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Original video request not found.'
+            ], 404);
+        }
+
+        // Build contact list from IDs and groups
+        $phoneNumbers = [];
+
+        if (!empty($contactIds)) {
+            $contacts = Contact::whereIn('id', $contactIds)->get();
+            foreach ($contacts as $contact) {
+                $phoneNumbers[] = [
+                    'contact_id'   => $contact->id,
+                    'country_code' => $contact->country_code,
+                    'mobile'       => $contact->mobile,
+                    'email'        => $contact->email,
+                    'first_name'   => $contact->first_name,
+                    'last_name'    => $contact->last_name,
+                    'group_id'     => null
+                ];
+            }
+        }
+
+        if (!empty($groupIds)) {
+            $groupContacts = Contact::whereHas('groups', function($q) use ($groupIds) {
+                $q->whereIn('contact_groups.id', $groupIds);
+            })->get();
+
+            foreach ($groupContacts as $contact) {
+                foreach ($contact->groups as $group) {
+                    if (in_array($group->id, $groupIds)) {
+                        $phoneNumbers[] = [
+                            'contact_id'   => $contact->id,
+                            'country_code' => $contact->country_code,
+                            'mobile'       => $contact->mobile,
+                            'email'        => $contact->email,
+                            'first_name'   => $contact->first_name,
+                            'last_name'    => $contact->last_name,
+                            'group_id'     => $group->id
+                        ];
+                    }
+                }
+            }
+        }
+
+        $phoneNumbers = collect($phoneNumbers)->unique(function($item) {
+            return $item['contact_id'] . '-' . ($item['group_id'] ?? '0');
+        })->values();
+
+        foreach ($phoneNumbers as $row) {
+            $countryCode = $row['country_code'];
+            $mobile = $row['mobile'];
+            $email = $row['email'];
+
+            // Find ref_user_id if a user exists with the same mobile/email
+            $refUserId = null;
+            $refEmail = $email;
+            if (!empty($mobile)) {
+                $refUser = User::where('mobile', $mobile)->orWhere('email', $email)->first();
+                if ($refUser) {
+                    $refUserId = $refUser->id;
+                    if (empty($refEmail)) {
+                        $refEmail = $refUser->email;
+                    }
+                }
+            }
+
+            // Do not allow sharing with yourself
+            if ($userId == $refUserId) {
+                continue;
+            }
+
+            // Check if the share already exists (type = 'share')
+            $alreadyExists = VideoRequest::where('catalog_id', $originalRequest->catalog_id)
+                ->where('user_id', $userId)
+                ->when(!is_null($row['contact_id']), function ($q) use ($row) {
+                    $q->where('contact_id', $row['contact_id']);
+                }, function ($q) {
+                    $q->whereNull('contact_id');
+                })
+                ->when(!is_null($row['group_id']), function ($q) use ($row) {
+                    $q->where('group_id', $row['group_id']);
+                }, function ($q) {
+                    $q->whereNull('group_id');
+                })
+                ->where('type', 'share')
+                ->when(!is_null($refUserId), function ($q) use ($refUserId) {
+                    $q->where('ref_user_id', $refUserId);
+                }, function ($q) {
+                    $q->whereNull('ref_user_id');
+                })
+                ->exists();
+
+            if ($alreadyExists) {
+                continue;
+            }
+
+            // Create the share as a new VideoRequest (type = 'share')
+            $shareRequest = VideoRequest::create([
+                'user_id'         => $userId,
+                'catalog_id'      => $originalRequest->catalog_id,
+                'contact_id'      => $row['contact_id'],
+                'group_id'        => $row['group_id'],
+                'ref_user_id'     => $refUserId,
+                'ref_first_name'  => $row['first_name'] ?? null,
+                'ref_last_name'   => $row['last_name'] ?? null,
+                'ref_country_code'=> $countryCode,
+                'ref_mobile'      => $mobile,
+                'ref_email'       => $refEmail,
+                'ref_note'        => $originalRequest->ref_note,
+                'title'           => $originalRequest->title,
+                'tags'            => $originalRequest->tags,
+                'type'            => 'share',
+                'status'          => 'Pending',
+            ]);
+
+            $fullName = trim(($row['first_name'] ?? '') . ' ' . ($row['last_name'] ?? ''));
+            $url = rtrim($videoUrl, "/") . '/' . base64_encode($shareRequest->id);
+
+            // Send email notification
+            if (!empty($refEmail)) {
+                try {
+                    Mail::raw("Hello {$fullName}, you have received a shared video. Access: {$url}", function ($message) use ($refEmail) {
+                        $message->to($refEmail)
+                            ->subject('A video was shared with you');
+                    });
+                } catch (\Exception $e) {
+                    // Log::error('Error sending email: ' . $e->getMessage());
+                }
+            }
+
+            // Send SMS notification
+            if (!empty($countryCode) && !empty($mobile)) {
+                try {
+                    $twilio = new \App\Services\TwilioService();
+                    $twilio->sendSms('+' . $countryCode . $mobile, "Hello {$fullName}, you have received a shared video. Access: {$url}");
+                } catch (\Exception $e) {
+                    // Log::error('Error sending SMS: ' . $e->getMessage());
+                }
+            }
+        }
+
+        return response()->json([
+            'status'  => true,
+            'message' => "Video shared successfully with your contacts."
+        ]);
+    }
+
+    public function sendReminder(Request $request)
+    {
+        $userId = Auth::id();
+        $request_id = $request->input('request_id');
+
+        if ($request_id <= 0) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Request ID is required'
+            ], 400);
+        }
+
+        // Find the main VideoRequest
+        $mainRequest = VideoRequest::find($request_id);
+        if (!$mainRequest) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Video request not found.'
+            ], 404);
+        }
+
+        // Check if it belongs to the logged-in user
+        if ($mainRequest->user_id !== $userId) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Unauthorized access to this request.'
+            ], 403);
+        }
+
+        // Find all related pending VideoRequests (contacts and groups)
+        $pendingRequests = VideoRequest::where('catalog_id', $mainRequest->catalog_id)
+            ->where('user_id', $mainRequest->user_id)
+            ->where('status', 'Pending')
+            ->where('type', 'share')
+            ->where(function($q) {
+                $q->whereNotNull('contact_id')
+                ->orWhereNotNull('group_id');
+            })
+            ->get();
+
+        if ($pendingRequests->isEmpty()) {
+            return response()->json([
+                'status' => false,
+                'message' => 'No pending contacts or groups found for the given request ID.'
+            ]);
+        }
+
+        foreach ($pendingRequests as $req) {
+            $fullName = trim(($req->ref_first_name ?? '') . ' ' . ($req->ref_last_name ?? ''));
+            $note = $req->ref_note ?? '';
+
+            // Send reminder email
+            if (!empty($req->ref_email)) {
+                try {
+                    $subject = 'Reminder: You have a pending video to record';
+                    $message = "Hello {$fullName},\n\nYou have not yet responded to the video request. {$note}";
+                    Mail::raw($message, function ($mail) use ($req, $subject) {
+                        $mail->to($req->ref_email)
+                            ->subject($subject);
+                    });
+                } catch (\Exception $e) {
+                    // Log::error('Error sending reminder email: ' . $e->getMessage());
+                }
+            }
+
+            // Send reminder SMS
+            if (!empty($req->ref_country_code) && !empty($req->ref_mobile)) {
+                try {
+                    $twilio = new \App\Services\TwilioService();
+                    $smsMessage = "Hello {$fullName}, you have a pending video to record. {$note}";
+                    $twilio->sendSms('+' . $req->ref_country_code . $req->ref_mobile, $smsMessage);
+                } catch (\Exception $e) {
+                    // Log::error('Error sending reminder SMS: ' . $e->getMessage());
+                }
+            }
+        }
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Reminders sent successfully to pending contacts and groups.'
         ]);
     }
 }

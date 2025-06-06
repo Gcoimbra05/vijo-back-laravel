@@ -15,8 +15,11 @@ class ProcessCsvStep extends VideoProcessingStep
             return ['success' => false, 'error' => 'CSV creation: ' . $csvResult['error']];
         }
 
+        $responseData = json_decode($context['responseResult']->getContent(), true);
+        $responseId = $responseData['id'];
+
         $request = new Request([
-            'response_id' => $context['responseResult']['id'],
+            'response_id' => $responseId,
             'csv_path' => $csvResult['csvFilePath'],
         ]);
 

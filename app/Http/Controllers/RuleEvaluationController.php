@@ -17,7 +17,6 @@ class RuleEvaluationController extends Controller
 
     public function evaluateRules(int $requestId, string $paramName)
     {
-
         if ($requestId <= 0) {
             return response()->json([
                 'status' => false,

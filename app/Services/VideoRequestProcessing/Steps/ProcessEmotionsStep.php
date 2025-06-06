@@ -4,6 +4,7 @@ namespace App\Services\VideoRequestProcessing\Steps;
 
 use App\Models\Video;
 use App\Models\EmloResponse;
+use Illuminate\Http\Request;
 
 class ProcessEmotionsStep extends VideoProcessingStep
 {
@@ -30,16 +31,20 @@ class ProcessEmotionsStep extends VideoProcessingStep
 
         $context['apiService']->sendWebhookNotification('emotional analysis complete', $context['videoRequest']->id, 'video_request');
         
-        $emloResponse = new EmloResponse();
         $rawResponse = json_encode($emotionData->response);
-        $responseResult = $emloResponse->store($rawResponse, $context['videoRequest']->id);
-        $context['emloResponseService']->extractAndStorePathValues($rawResponse, $responseResult['id']);
+
+        $emloResponseController = app(\App\Http\Controllers\EmloResponseController::class);
+        $newRequest = new Request([
+            'request_id' => $context['videoRequest']->id,
+            'raw_response' => $rawResponse
+        ]);
+        $response = $emloResponseController->store($newRequest);
 
         return [
             'success' => true,
             'context' => [
                 'emotionData' => $emotionData,
-                'responseResult' => $responseResult,
+                'responseResult' => $response,
                 'videoS3ObjectUrl' => $videoS3ObjectUrl
             ]
         ];

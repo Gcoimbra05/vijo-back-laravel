@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Log;
 
 use App\Models\VideoRequest;
 use App\Services\ApiService;
-use App\Services\Emlo\EmloResponseService;
+use App\Services\Emlo\EmloHelperService;
 use App\Services\TranscriptionService;
 use App\Services\Emlo\EmloCsvService;
 use App\Services\LlamaService;
@@ -43,7 +43,7 @@ class ProcessVideoRequest implements ShouldQueue
     /**
      * Execute the job.
      * @param  ApiService  $apiService
-     * @param  EmloResponseService  $emloResponseService
+     * @param  EmloHelperService  $emloHelperService
      * @param  TranscriptionService  $transcriptionService
      * @param  EmloCsvService  $emloCsvService
      * @param  LlamaService $llamaService
@@ -51,7 +51,7 @@ class ProcessVideoRequest implements ShouldQueue
      */
     public function handle(
         ApiService $apiService,
-        EmloResponseService $emloResponseService,
+        EmloHelperService $emloHelperService,
         TranscriptionService $transcriptionService,
         EmloCsvService $emloCsvService,
         LlamaService $llamaService
@@ -62,14 +62,14 @@ class ProcessVideoRequest implements ShouldQueue
         $context = [
             'videoRequest' => $this->videoRequest,
             'apiService' => $apiService,
-            'emloResponseService' => $emloResponseService,
+            'emloHelperService' => $emloHelperService,
             'transcriptionService' => $transcriptionService,
             'emloCsvService' => $emloCsvService,
             'llamaService' => $llamaService,
         ];
 
         $pipeline = new VideoProcessingPipeline();
-        $result = $pipeline->process($context);
+        $pipeline->process($context);
 
         // The pipeline handles all error cases automatically
         // Success case is also handled in the pipeline's then() callback
