@@ -790,7 +790,7 @@ class VideoRequestController extends Controller
 
         return response()->json([
             'status' => true,
-            'message' => '',
+            'message' => 'Journal saved successfully.',
             'results' => [
                 'request_id' => (string)$videoRequest->id
             ]
