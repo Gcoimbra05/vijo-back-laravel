@@ -68,6 +68,9 @@ Route::prefix('v2')->middleware(ForceJsonResponse::class)->group(function () {
         Route::get('shared-video-details/{id}', [VideoRequestController::class, 'shareJournalDetails']);
         Route::post('share-video-contacts', [VideoRequestController::class, 'shareVideoToContactsAndGroups']);
         Route::post('send-reminder', [VideoRequestController::class, 'sendReminder']);
+        Route::post('unshare-video', [VideoRequestController::class, 'unshareVideoRequest']);
+        Route::get('request-details/{id}', [VideoRequestController::class, 'getRequestDetails']);
+        Route::get('response-request-details/{id}', [VideoRequestController::class, 'getResponseRequestDetails']);
 
         Route::post('cancel-decline-request', [VideoRequestController::class, 'cancelDeclineRecordRequest']);
         Route::post('share-video-requests', [VideoRequestController::class, 'shareVideoRequests']);

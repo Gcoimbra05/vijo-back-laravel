@@ -16,6 +16,7 @@ use App\Models\Catalog;
 use App\Models\CatalogQuestion;
 use App\Models\Contact;
 use App\Models\ContactGroup;
+use App\Models\Tag;
 use App\Models\User;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
@@ -68,6 +69,7 @@ class VideoRequestController extends Controller
 
             $request->emoji = $catalog ? $catalog->emoji : '';
             $request->catalog_title = $catalog ? $catalog->title : '';
+            $request->created_at = $request->created_at->format('M d, Y');
 
             $toRequestsData[] = [
                 'request'    => $request,
@@ -114,7 +116,8 @@ class VideoRequestController extends Controller
 
             $request->emoji = $catalog ? $catalog->emoji : '';
             $request->catalog_title = $catalog ? $catalog->title : '';
-
+            // ajuste o campo createdat para o formato May 29, 2025
+            $request->created_at = $request->created_at->format('M d, Y');
             $isGrouped = ($contacts->count() + $groups->count()) > 1;
 
             $fromRequestsData[] = [
@@ -611,7 +614,6 @@ class VideoRequestController extends Controller
 
         // Busca o request principal
         $mainRequest = VideoRequest::where('id', $requestId)
-            ->where('status', 1)
             ->where('status', '<>', 'Not Right Now')
             ->first();
 
@@ -752,7 +754,7 @@ class VideoRequestController extends Controller
                 'kpi_no'          => (string)$kpi_no,
                 'dashboard_id'    => '',
                 'kpi_metrics'     => $kpi_metrics,
-            };
+            ];
         })->toArray();
 
         return $results;
@@ -790,7 +792,7 @@ class VideoRequestController extends Controller
 
         return response()->json([
             'status' => true,
-            'message' => 'Journal saved successfully.',
+            'message' => '',
             'results' => [
                 'request_id' => (string)$videoRequest->id
             ]
@@ -1174,7 +1176,7 @@ class VideoRequestController extends Controller
                 'ref_note'        => $note,
                 'ref_user_id'     => $refUserId,
                 'status'          => 'Pending',
-                'type'            => 'request',
+                'type'            => 'share',
             ]);
 
             $requestIds[] = $videoRequest->id;
@@ -1547,6 +1549,248 @@ class VideoRequestController extends Controller
         return response()->json([
             'status' => true,
             'message' => 'Reminders sent successfully to pending contacts and groups.'
+        ]);
+    }
+
+    public function unshareVideoRequest(Request $request, $id = null)
+    {
+        $userId = Auth::id();
+
+        $validated = $request->validate([
+            'contact_id' => 'nullable|integer|exists:contacts,id',
+            'group_id'   => 'nullable|integer|exists:contact_groups,id',
+        ]);
+
+        $contactId = $validated['contact_id'] ?? null;
+        $groupId   = $validated['group_id'] ?? null;
+
+        if (empty($contactId) && empty($groupId)) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Either contact_id or group_id must be provided.'
+            ], 400);
+        }
+
+        // The $id is the original video_request (journal_id)
+        $mainRequest = VideoRequest::find($id);
+        if (!$mainRequest) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Video request not found.'
+            ], 404);
+        }
+
+        // Only allow if the user is the owner of the request
+        if ($mainRequest->user_id !== $userId) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Unauthorized access.'
+            ], 403);
+        }
+
+        // Build the base query for shares (type = 'share')
+        $query = VideoRequest::where('catalog_id', $mainRequest->catalog_id)
+            ->where('user_id', $userId)
+            ->where('type', 'share');
+
+        if (!empty($contactId)) {
+            $query->where('contact_id', $contactId);
+        }
+        if (!empty($groupId)) {
+            $query->where('group_id', $groupId);
+        }
+
+        $deleted = $query->delete();
+
+        if ($deleted) {
+            return response()->json([
+                'status' => true,
+                'message' => 'Video unshared successfully.'
+            ]);
+        } else {
+            return response()->json([
+                'status' => false,
+                'message' => 'No shared video found for the provided parameters.'
+            ], 404);
+        }
+    }
+
+    public function getRequestDetails(Request $request, $requestId)
+    {
+        $userId = Auth::id();
+
+        if (!$requestId || !is_numeric($requestId)) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Request ID is required.',
+                'results' => null
+            ], 400);
+        }
+
+        $videoRequest = VideoRequest::with(['catalog', 'user', 'contact', 'group'])
+            ->find($requestId);
+
+        if (!$videoRequest) {
+            return response()->json([
+            'status' => false,
+            'message' => 'Video request not found.',
+            'results' => null
+            ], 404);
+        }
+
+        // Verifica se o request pertence ao usuário logado
+        if ($videoRequest->user_id !== $userId && $videoRequest->ref_user_id !== $userId) {
+            return response()->json([
+            'status' => false,
+            'message' => 'Unauthorized access to this request.',
+            'results' => null
+            ], 403);
+        }
+
+        $catalog = $videoRequest->catalog;
+        $user = $videoRequest->user;
+
+        // Contacts: requests with same catalog_id, same user_id, filled contact_id and null group_id
+        $contacts = [];
+        if ($videoRequest->contact_id) {
+            $contact = Contact::select('id as contact_id', 'first_name', 'last_name', 'email', 'mobile')
+                ->where('id', $videoRequest->contact_id)
+                ->first();
+            if ($contact) {
+                $contacts[] = [
+                    'contact_id' => (string)$contact->contact_id,
+                    'first_name' => $contact->first_name,
+                    'last_name'  => $contact->last_name,
+                    'email'      => $contact->email,
+                    'mobile'     => $contact->mobile,
+                ];
+            }
+        }
+
+        // Groups: requests with same catalog_id, same user_id, filled group_id
+        $groups = [];
+        if ($videoRequest->group_id) {
+            $group = ContactGroup::select('id as group_id', 'name as group_name')
+                ->where('id', $videoRequest->group_id)
+                ->first();
+            if ($group) {
+                $groups[] = [
+                    'group_id'   => (string)$group->group_id,
+                    'group_name' => $group->group_name,
+                ];
+            }
+        }
+
+        $results = [
+            'request_id'         => (string)$videoRequest->id,
+            'ref_first_name'     => $videoRequest->ref_first_name ?? '',
+            'ref_last_name'      => $videoRequest->ref_last_name ?? '',
+            'video_type'         => $videoRequest->type ?? '',
+            'catalog_id'         => (string)($videoRequest->catalog_id ?? ''),
+            'dashboard_id'       => '', // Preencha se houver dashboard_id no seu sistema
+            'ref_country_code'   => (string)($videoRequest->ref_country_code ?? ''),
+            'ref_mobile'         => $videoRequest->ref_mobile ?? '',
+            'ref_email'          => $videoRequest->ref_email ?? '',
+            'ref_note'           => $videoRequest->ref_note ?? '',
+            'read_status'        => $videoRequest->status ?? '',
+            'created_at'         => $videoRequest->created_at ? $videoRequest->created_at->format('M d, Y') : '',
+            'record_category'    => '0', // Ajuste se houver lógica para categoria de gravação
+            'catalog_title'      => $catalog->title ?? '',
+            'catalog_description'=> $catalog->description ?? '',
+            'min_record_time'    => (string)($catalog->min_record_time ?? ''),
+            'record_time'        => (string)($catalog->max_record_time ?? ''),
+            'isPremium'          => (string)($catalog->is_premium ?? '0'),
+            'user_first_name'    => $user->first_name ?? '',
+            'user_last_name'     => $user->last_name ?? '',
+            'catalogEmoji'       => $catalog->emoji ?? '',
+            'video_type_id'      => (string)($catalog->video_type_id ?? ''),
+            'emoji'              => $catalog->emoji ?? null,
+            'contacts'           => $contacts,
+            'groups'             => $groups,
+            'userTags'           => [
+                [
+                    'id' => '200',
+                    'name' => 'Mindset'
+                ]
+            ],
+        ];
+
+        return response()->json([
+            'status' => true,
+            'message' => '',
+            'results' => $results
+        ]);
+    }
+
+    public function getResponseRequestDetails(Request $request, $requestId = null)
+    {
+        if (empty($requestId) || !is_numeric($requestId)) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Id parameter is required',
+                'results' => null
+            ], 400);
+        }
+
+        // Fetch the VideoRequest with catalog and user
+        $videoRequest = VideoRequest::with(['catalog', 'user'])
+            ->find($requestId);
+
+        if (!$videoRequest) {
+            return response()->json([
+                'status' => false,
+                'message' => 'No record found',
+                'results' => null
+            ], 404);
+        }
+
+        $catalog = $videoRequest->catalog;
+
+        // Fetch the first video question from the catalog (if any)
+        $videoQuestion = null;
+        $question = CatalogQuestion::where('catalog_id', $videoRequest->catalog_id)
+            ->where('status', 1)
+            ->where('reference_type', 0)
+            ->first();
+        if ($question) {
+            $videoQuestion = $question->video_question;
+        }
+
+        // Fetch catalog tags (userTags)
+        $userTags = [];
+        if (!empty($catalog->tags)) {
+            $tagIds = array_filter(explode(',', $catalog->tags));
+            $userTags = Tag::whereIn('id', $tagIds)
+                ->where('status', 1)
+                ->where('type', 'journalTag')
+                ->get(['id', 'name'])
+                ->map(function($tag) {
+                    return [
+                        'id' => (string)$tag->id,
+                        'name' => $tag->name
+                    ];
+                })->toArray();
+        }
+
+        $results = [
+            'catalog_id'        => (string)$videoRequest->catalog_id,
+            'ref_country_code'  => (string)($videoRequest->ref_country_code ?? ''),
+            'ref_mobile'        => $videoRequest->ref_mobile ?? '',
+            'dashboard_id'      => '', // Fill if you have dashboard_id
+            'request_id'        => (string)$videoRequest->id,
+            'video_type'        => $videoRequest->type ?? '',
+            'record_category'   => '0', // Adjust if you have logic for recording category
+            'min_record_time'   => (string)($catalog->min_record_time ?? ''),
+            'record_time'       => (string)($catalog->max_record_time ?? ''),
+            'video_type_id'     => (string)($catalog->video_type_id ?? ''),
+            'video_question'    => $videoQuestion,
+            'userTags'          => $userTags,
+        ];
+
+        return response()->json([
+            'status' => true,
+            'message' => '',
+            'results' => $results
         ]);
     }
 }
