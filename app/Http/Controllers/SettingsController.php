@@ -929,67 +929,40 @@ class SettingsController extends Controller
                         "id" => "1",
                         "pageSlug" => "home",
                         "pageName" => "Home",
-                        "title" => "YOUR LIFE, YOUR STORY",
+                        "title" => "Your Life today is May 16 ",
                         "subtitle" => "Let's VIJO!",
-                        "description" => "Safely record your thoughts, ideas, and memories. Reflect, share, and track your emotional well-being.",
+                        "description" => "Capture life's precious moments with VIJO—your personal time capsule for memories, emotions, and growth. ",
                         "message" => ""
                     ],
                     [
                         "id" => "2",
-                        "pageSlug" => "sign_in_welcome",
-                        "pageName" => "Sign In - Welcome Screen",
-                        "title" => "Welcome Back!",
-                        "subtitle" => "Welcome back to VIJO!",
-                        "description" => "We’re here to support your journey of self-discovery, reflection, and growth. Let’s begin by learning a little about you.",
+                        "pageSlug" => "sign_in_phone_number",
+                        "pageName" => "Sign In - Phone Number",
+                        "title" => "Step",
+                        "subtitle" => "What is your mobile number?",
+                        "description" => "We'll send you a verification code to make sure it's really you.",
                         "message" => ""
                     ],
                     [
                         "id" => "3",
-                        "pageSlug" => "sign_in_email_address",
-                        "pageName" => "Sign In - Email Address",
-                        "title" => "Step",
-                        "subtitle" => "What is your email address?",
-                        "description" => "We’ll send you a verification code to make sure it’s really you.",
-                        "message" => ""
-                    ],
-                    [
-                        "id" => "4",
-                        "pageSlug" => "sign_in_password",
-                        "pageName" => "Sign In - Password",
-                        "title" => "Step",
-                        "subtitle" => "Enter Your Password",
-                        "description" => "",
-                        "message" => ""
-                    ],
-                    [
-                        "id" => "5",
-                        "pageSlug" => "sign_in_forgot_password",
-                        "pageName" => "Sign In - Forgot Password",
-                        "title" => "Step",
-                        "subtitle" => "Forgot Your Password?",
-                        "description" => "",
-                        "message" => ""
-                    ],
-                    [
-                        "id" => "6",
                         "pageSlug" => "sign_in_verification_code",
                         "pageName" => "Sign In - Verification Code",
                         "title" => "Step",
                         "subtitle" => "Enter Your Verification Code",
-                        "description" => "You should have received a 6-digit code on your phone.",
+                        "description" => "You should have received a 6-digit code to your phone.",
                         "message" => ""
                     ],
                     [
-                        "id" => "7",
+                        "id" => "4",
                         "pageSlug" => "sign_up_welcome",
                         "pageName" => "Sign Up - Welcome Screen",
-                        "title" => "Registration",
+                        "title" => "Register",
                         "subtitle" => "Welcome to VIJO!  ",
                         "description" => "We're here to support your journey of self-discovery, reflection, and growth. Let's begin by learning a little about you.",
                         "message" => "We're here to support your journey of self-discovery, reflection, and growth. Let's begin by learning a little about you."
                     ],
                     [
-                        "id" => "8",
+                        "id" => "5",
                         "pageSlug" => "sign_up_personal_information",
                         "pageName" => "Sign Up - Personal Information",
                         "title" => "Register",
@@ -998,7 +971,7 @@ class SettingsController extends Controller
                         "message" => ""
                     ],
                     [
-                        "id" => "9",
+                        "id" => "6",
                         "pageSlug" => "sign_up_email_address",
                         "pageName" => "Sign Up - Email Address",
                         "title" => "Register",
@@ -1007,16 +980,16 @@ class SettingsController extends Controller
                         "message" => ""
                     ],
                     [
-                        "id" => "10",
+                        "id" => "7",
                         "pageSlug" => "sign_up_phone_number",
                         "pageName" => "Sign Up - Phone Number",
                         "title" => "Register",
                         "subtitle" => "Enter Your Mobile Number ",
-                        "description" => "Get a magic link to login to the mobile app and began capturing your story.",
+                        "description" => "We'll send you a verification code to make sure it's really you.",
                         "message" => ""
                     ],
                     [
-                        "id" => "11",
+                        "id" => "8",
                         "pageSlug" => "sign_up_verification_code",
                         "pageName" => "Sign Up - Verification Code",
                         "title" => "Register",
@@ -1025,16 +998,16 @@ class SettingsController extends Controller
                         "message" => ""
                     ],
                     [
-                        "id" => "12",
+                        "id" => "9",
                         "pageSlug" => "membership_listing",
                         "pageName" => "Membership - Listing",
-                        "title" => "Unlock Premium Content with VIJO +Plus.",
+                        "title" => "Unlock Premium Content with VIJO +Plus",
                         "subtitle" => "Unlock Premium Content with VIJO +Plus.",
                         "description" => "Upgrade from freemium to premium for special guides, complete VIJO history, and comprehensive emotional insights.",
                         "message" => ""
                     ],
                     [
-                        "id" => "13",
+                        "id" => "10",
                         "pageSlug" => "membership-plans",
                         "pageName" => "Membership-Plans",
                         "title" => "Unlock Premium Content with VIJO +Plus",
@@ -1043,14 +1016,14 @@ class SettingsController extends Controller
                         "message" => ""
                     ],
                     [
-                        "id" => "14",
+                        "id" => "11",
                         "pageSlug" => "share_vijo",
                         "pageName" => "Share Vijo",
                         "title" => "Share Your VIJO",
                         "subtitle" => "Share your story",
                         "description" => "Sharing a precious memory with loved ones strengthens your bond, fosters emotional connection, and creates a sense of belonging.",
                         "message" => ""
-                    ],
+                    ]
                 ],
                 "onboardingEmoji" => "1f3a5"
             ]
