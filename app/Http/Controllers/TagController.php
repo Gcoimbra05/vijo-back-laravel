@@ -159,6 +159,14 @@ class TagController extends Controller
             ->get(['id', 'name'])
             ->toArray();
 
-        return array_merge($catalogTags, $customTags);
+        $mergeTags = array_merge($catalogTags, $customTags);
+        $catalogTags = array_map(function ($tag) {
+            return [
+                'id' => (string)$tag['id'],
+                'name' => $tag['name'],
+            ];
+        }, $mergeTags);
+
+        return $catalogTags;
     }
 }
