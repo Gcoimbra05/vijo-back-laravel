@@ -800,6 +800,8 @@ class VideoRequestController extends Controller
         $userId = Auth::id();
 
         $allRequests = VideoRequest::with(['latestVideo', 'catalog.category', 'user'])
+            ->where('user_id', $userId)
+            ->whereNotNull('title')
             ->where(function($query) use ($userId) {
                 $query->where('user_id', $userId)
                       ->orWhere('ref_user_id', $userId);
