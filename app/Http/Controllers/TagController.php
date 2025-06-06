@@ -108,6 +108,11 @@ class TagController extends Controller
         }
         $userId = Auth::id() ?? 0;
         $tagIds = [];
+
+        if (empty($tags) || !is_array($tags)) {
+            return $tagIds; // Return empty array if no tags provided
+        }
+
         foreach ($tags as $tag) {
             $tag = trim($tag);
             if (empty($tag)) {
