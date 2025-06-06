@@ -140,4 +140,25 @@ class TagController extends Controller
 
         return $tagIds;
     }
+
+    public static function getUserTags($categoryId = 0, $userId = null)
+    {
+        if (!$userId) {
+            $userId = Auth::id();
+        }
+
+        $catalogTags = Tag::where('type', 'journalTag')
+            ->where('category_id', $categoryId)
+            ->where('status', 1)
+            ->get(['id', 'name'])
+            ->toArray();
+
+        $customTags = Tag::where('type', 'custom')
+            ->where('created_by_user', $userId)
+            ->where('status', 1)
+            ->get(['id', 'name'])
+            ->toArray();
+
+        return array_merge($catalogTags, $customTags);
+    }
 }

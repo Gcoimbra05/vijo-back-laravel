@@ -31,6 +31,7 @@ class VideoRequestController extends Controller
 
         $toRequests = VideoRequest::with('latestVideo')
             ->where('user_id', $userId)
+            ->whereNotNull('title')
             ->where(function($query) {
                 $query->whereNotNull('contact_id')
                       ->orWhereNotNull('group_id');
@@ -681,12 +682,7 @@ class VideoRequestController extends Controller
 
         $questions = CatalogQuestionController::getQuestionsByCatalogId($catalog, $vtKpiMetrics, $vtKpiNo);
 
-        $userTags = [
-            [
-                'id' => '200',
-                'name' => 'Mindset'
-            ]
-        ];
+        $userTags = TagController::getUserTags($catalog->category_id, $userId);
 
         $videoType = [
             'metrics' => $vtMetricNo,
@@ -823,7 +819,7 @@ class VideoRequestController extends Controller
                 'journal_type'        => $req->type ?? 'daily',
                 'recommendation_id'   => $req->recommendation_id ?? '',
                 'category_name'       => $catalog && $catalog->category ? $catalog->category->name : '',
-                'makeJournalPrivate'  => $req->makeJournalPrivate ?? 0,
+                'is_private'          => $req->is_private ?? 0,
                 'rrc_video1'          => $video ? $video->video_name : '',
                 'rrc_video1_thumb'    => $video ? $video->thumbnail_name : '',
                 'video'               => $video ? $video->video_url : '',
@@ -1015,6 +1011,8 @@ class VideoRequestController extends Controller
             'gptSummary' => "The journal entry captures a moment of professional triumph as the author successfully resolved a complex technical issue that had been impacting a key feature. There's a clear sense of satisfaction and validation, especially when sharing the solution with colleagues and receiving recognition. The experience seems to have reinforced the author's career choice and passion for problem-solving. Looking ahead, they're motivated to improve team processes and take on new challenges. Overall, this represents a positive peak experience in their professional journey, balancing the difficulties of technical work with the rewards of overcoming obstacles."
         ];
 
+        $userTags = TagController::getUserTags($catalog->category_id, $userId);
+
         $data = [
             'id'                => $videoRequest->id,
             'user_id'           => $videoRequest->user_id,
@@ -1024,21 +1022,21 @@ class VideoRequestController extends Controller
             'recommendation_id' => $videoRequest->recommendation_id ?? '',
             'category_name'     => $category ? $category->name : '',
             'journal_tags'      => $videoRequest->tags ?? '',
-            'makeJournalPrivate'=> $videoRequest->makeJournalPrivate ?? 0,
+            'is_private'        => $videoRequest->is_private ?? 0,
             'rrc_video1'        => $video ? $video->video_name : '',
             'rrc_video1_thumb'  => $video ? $video->thumbnail_name : '',
             'video'             => $video ? $video->video_url : '',
             'video_thumb'       => $video ? $video->thumbnail_url : '',
-            'user_tags'         => '',
+            'user_tags'         => $userTags,
             'outcomes'          => '',
             'emotions'          => '',
             'transcription'     => $transcriptions,
             'emotional_insights' => $journalEmotionalData['emotional_insights'],
             'emotional_outcomes' => $journalEmotionalData['emotional_outcomes'],
             'final_video_transcript' => $journalEmotionalData['final_video_transcript'],
-            'summaryReport' => $journalEmotionalData['summaryReport'],
-            'gptSummary' => $journalEmotionalData['gptSummary'],
-            'video_type_id'   => $catalog->video_type_id ?? '',
+            'summaryReport'     => $journalEmotionalData['summaryReport'],
+            'gptSummary'        => $journalEmotionalData['gptSummary'],
+            'video_type_id'     => $catalog->video_type_id ?? '',
             'catalog_id'        => $catalog->id ?? '',
             'catalog_name'      => $catalog->title ?? '',
             'created_at'        => $videoRequest->created_at ? $videoRequest->created_at->format('M d, Y') : '',
@@ -1252,24 +1250,26 @@ class VideoRequestController extends Controller
         $category = $catalog ? $catalog->category : null;
         $video = $videoRequest->latestVideo;
 
-        // Dados principais do journal
+        $userTags = TagController::getUserTags($catalog->category_id);
+
+        // Main journal data
         $journalData = [
             'id'                => $videoRequest->id,
             'journal_title'     => $videoRequest->title ?? ($catalog->title ?? ''),
             'recommendation_id' => $videoRequest->recommendation_id ?? '',
             'category_name'     => $category ? $category->name : '',
             'journal_tags'      => $videoRequest->tags ?? '',
-            'makeJournalPrivate'=> $videoRequest->makeJournalPrivate ?? 0,
+            'is_private'        => $videoRequest->is_private ?? 0,
             'video'             => $video ? $video->video_url : '',
             'video_thumb'       => $video ? $video->thumbnail_url : '',
-            'user_tags'         => '', // implementar se necessário
-            'outcomes'          => '', // implementar se necessário
-            'emotions'          => '', // implementar se necessário
-            'transcription'     => '', // implementar se necessário
-            'emotional_insights'=> '', // implementar se necessário
-            'emotional_outcomes'=> '', // implementar se necessário
-            'final_video_transcript' => '', // implementar se necessário
-            'summaryReport'     => '', // implementar se necessário
+            'user_tags'         => $userTags,
+            'outcomes'          => '', // implement if needed
+            'emotions'          => '', // implement if needed
+            'transcription'     => '', // implement if needed
+            'emotional_insights'=> '', // implement if needed
+            'emotional_outcomes'=> '', // implement if needed
+            'final_video_transcript' => '', // implement if needed
+            'summaryReport'     => '', // implement if needed
             'video_type_id'   => $catalog->video_type_id ?? '',
             'catalog_id'        => $catalog->id ?? '',
             'catalog_name'      => $catalog->title ?? '',
@@ -1680,6 +1680,7 @@ class VideoRequestController extends Controller
                 ];
             }
         }
+        $userTags = TagController::getUserTags($catalog->category_id, $userId);
 
         $results = [
             'request_id'         => (string)$videoRequest->id,
@@ -1707,12 +1708,7 @@ class VideoRequestController extends Controller
             'emoji'              => $catalog->emoji ?? null,
             'contacts'           => $contacts,
             'groups'             => $groups,
-            'userTags'           => [
-                [
-                    'id' => '200',
-                    'name' => 'Mindset'
-                ]
-            ],
+            'userTags'           => $userTags,
         ];
 
         return response()->json([

@@ -27,7 +27,11 @@ class VideoRequest extends Model implements AuditableContract
         'group_id',
         'status',
         'error',
-        'llm_template_id'
+        'llm_template_id',
+        'is_private',
+        'title',
+        'tags',
+        'type',
     ];
 
     public function user()
