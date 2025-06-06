@@ -33,7 +33,16 @@ class TwoFactorAuthController extends Controller
 
         $user = User::where('mobile', $request->mobile)->where('country_code', $request->country_code)->first();
         if (!$user) {
-            return response()->json(['message' => 'User not found'], 404);
+            return response()->json([
+                'status' => false,
+                'errors' => [
+                    'statusCode' => 404,
+                    'title' => 'Not Found',
+                    'detail' => [
+                        'message' => 'No account exists with the provided details. Please check your details or sign up for a new account.'
+                    ]
+                ]
+            ], 404);
         }
 
         $code = rand(100000, 999999);
@@ -71,7 +80,13 @@ class TwoFactorAuthController extends Controller
         if (!$verification) {
             return response()->json([
                 'status' => false,
-                'message' => 'Invalid or expired code.',
+                'errors' => [
+                    'statusCode' => 400,
+                    'title' => 'Invalid Code',
+                    'detail' => [
+                        'message' => 'The provided code is either invalid, expired, or has already been used.'
+                    ]
+                ]
             ], 400);
         }
 
@@ -80,7 +95,13 @@ class TwoFactorAuthController extends Controller
         if (!$user) {
             return response()->json([
                 'status' => false,
-                'message' => 'User not found.',
+                'errors' => [
+                    'statusCode' => 404,
+                    'title' => 'Not Found',
+                    'detail' => [
+                        'message' => 'User not found.',
+                    ]
+                ]
             ], 404);
         }
 
@@ -112,7 +133,13 @@ class TwoFactorAuthController extends Controller
         if (!$token) {
             return response()->json([
                 'status' => false,
-                'message' => 'No token provided.',
+                'errors' => [
+                    'statusCode' => 401,
+                    'title' => 'Unauthorized',
+                    'detail' => [
+                        'message' => 'No token provided.',
+                    ]
+                ]
             ], 401);
         }
 
@@ -127,7 +154,13 @@ class TwoFactorAuthController extends Controller
         if (!$accessToken) {
             return response()->json([
                 'status' => false,
-                'message' => 'Invalid or expired token.',
+                'errors' => [
+                    'statusCode' => 401,
+                    'title' => 'Unauthorized',
+                    'detail' => [
+                        'message' => 'Invalid or expired token.',
+                    ]
+                ],
             ], 401);
         }
 
@@ -135,7 +168,13 @@ class TwoFactorAuthController extends Controller
         if (!$user || !$user->refresh_token) {
             return response()->json([
                 'status' => false,
-                'message' => 'Refresh token not found.',
+                'errors' => [
+                    'statusCode' => 401,
+                    'title' => 'Unauthorized',
+                    'detail' => [
+                        'message' => 'Refresh token not found.',
+                    ]
+                ]
             ], 401);
         }
 
@@ -182,7 +221,13 @@ class TwoFactorAuthController extends Controller
         if (!$accessToken) {
             return response()->json([
                 'status' => false,
-                'message' => 'Invalid or expired token.',
+                'errors' => [
+                    'statusCode' => 401,
+                    'title' => 'Unauthorized',
+                    'detail' => [
+                        'message' => 'Invalid or expired token.',
+                    ]
+                ]
             ], 401);
         }
 
