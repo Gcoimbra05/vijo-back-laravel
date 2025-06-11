@@ -53,7 +53,7 @@ class TwoFactorAuthController extends Controller
         ]);
 
         $fullPhoneNumber = $request->country_code . $request->mobile;
-        $this->twilio->sendSms($fullPhoneNumber, "Your verification code is: $code");
+        $this->twilio->sendSms($fullPhoneNumber, "Vijo: Your Life, Your Story \n{$code} is your verification code.");
 
         return response()->json([
             "status" => true,
