@@ -804,8 +804,9 @@ class VideoRequestController extends Controller
             ->whereNotNull('title')
             ->where(function($query) use ($userId) {
                 $query->where('user_id', $userId)
-                      ->orWhere('ref_user_id', $userId);
-            })
+                    ->orWhere('ref_user_id', $userId);
+                })
+            ->orderBy('created_at', 'desc')
             ->get();
 
         $requestData = $allRequests->map(function($req) {
