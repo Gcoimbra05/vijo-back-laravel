@@ -10,6 +10,7 @@ use Illuminate\Queue\SerializesModels;
 use Illuminate\Http\Request;
 use App\Http\Controllers\VideoController;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Log;
 
 class ProcessVideoUpload implements ShouldQueue
 {
@@ -30,6 +31,13 @@ class ProcessVideoUpload implements ShouldQueue
 
     public function handle()
     {
+        Log::info('Processing video upload', [
+            'videoRequestId' => $this->videoRequestId,
+            'filePath' => $this->filePath,
+            'videoDuration' => $this->videoDuration,
+            'originalName' => $this->originalName,
+        ]);
+
         $request = new Request([
             'request_id' => $this->videoRequestId,
             'video_duration' => $this->videoDuration,

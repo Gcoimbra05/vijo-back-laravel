@@ -178,7 +178,8 @@ class VideoRequestController extends Controller
 
         if ($request->hasFile('file')) {
             $file = $request->file('file');
-            $filename = uniqid() . '.' . $file->guessExtension();
+            $fileExtension = $file->guessExtension() ?: 'mp4';
+            $filename = uniqid() . '.' . $fileExtension;
             $tmpPath = $file->storeAs('temp', $filename, 'local');
             $fullTmpPath = storage_path('app/' . $tmpPath);
 
@@ -220,7 +221,8 @@ class VideoRequestController extends Controller
 
         if ($request->hasFile('file')) {
             $file = $request->file('file');
-            $filename = uniqid() . '.' . $file->guessExtension();
+            $fileExtension = $file->guessExtension() ?: 'mp4';
+            $filename = uniqid() . '.' . $fileExtension;
             $tmpPath = $file->storeAs('temp', $filename, 'local');
             $fullTmpPath = storage_path('app/' . $tmpPath);
 
@@ -630,11 +632,14 @@ class VideoRequestController extends Controller
         VideoRequest::where('catalog_id', $catalog_id)
             ->where('user_id', $userId)
             ->whereNotNull('ref_mobile')
+            ->where('type', 'share')
             ->where(function($q) {
                 $q->whereNotNull('contact_id')
                   ->orWhereNotNull('group_id');
             })
             ->delete();
+
+        $mainRequest->delete();
 
         return response()->json([
             'status' => true,
@@ -974,8 +979,8 @@ class VideoRequestController extends Controller
                     'Hesitation'
                 ],
             ],
-
-            'emotional_outcomes' => [
+        ];
+            /* 'emotional_outcomes' => [
                 [
                     'outcome_type' => 'professional growth',
                     'strength' => 'high',
@@ -1011,8 +1016,8 @@ class VideoRequestController extends Controller
                 ]
             ],
 
-            'gptSummary' => "The journal entry captures a moment of professional triumph as the author successfully resolved a complex technical issue that had been impacting a key feature. There's a clear sense of satisfaction and validation, especially when sharing the solution with colleagues and receiving recognition. The experience seems to have reinforced the author's career choice and passion for problem-solving. Looking ahead, they're motivated to improve team processes and take on new challenges. Overall, this represents a positive peak experience in their professional journey, balancing the difficulties of technical work with the rewards of overcoming obstacles."
-        ];
+            'gptSummary' => "The journal entry captures a moment of professional triumph as the author successfully resolved a complex technical issue that had been impacting a key feature. There's a clear sense of satisfaction and validation, especially when sharing the solution with colleagues and receiving recognition. The experience seems to have reinforced the author's career choice and passion for problem-solving. Looking ahead, they're motivated to improve team processes and take on new challenges. Overall, this represents a positive peak experience in their professional journey, balancing the difficulties of technical work with the rewards of overcoming obstacles." */
+
 
         $userTags = TagController::getUserTags($catalog->category_id, $userId);
 

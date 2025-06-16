@@ -179,7 +179,7 @@ class VideoController extends Controller
 
         $mediaController = app(MediaStorageController::class);
         $uploadResponse = $mediaController->uploadVideo($request);
-
+        $videoRequestId = $request->input('request_id');
         $uploadData = $uploadResponse->getData(true);
 
         if (empty($uploadData['success']) || !$uploadData['success']) {
@@ -190,28 +190,34 @@ class VideoController extends Controller
             ], 422);
         }
 
-        $video = Video::where('request_id', $request->input('request_id'))
+        $video = Video::where('request_id', $videoRequestId)
             ->whereNull('video_url')
-            ->whereIsNotNull('thumbnail_url')
+            ->whereNotNull('thumbnail_url')
             ->first();
 
         if ($video) {
+            $videoPath = env('APP_URL') . '/videos/' . $uploadData['video_name'];
             $video->update([
                 'video_name'     => $uploadData['video_name'],
-                'video_url'      => $uploadData['video_url'],
+                'video_url'      => $videoPath,
                 'video_duration' => $uploadData['video_duration'],
             ]);
         } else {
+            $videoPath = env('APP_URL') . '/videos/' . $uploadData['video_name'];
+            $thumbnailPath = env('APP_URL') . '/thumbnails/' . $uploadData['thumbnail_name'];
             $video = Video::create([
-                'request_id'     => $request->input('request_id'),
+                'request_id'     => $videoRequestId,
                 'video_name'     => $uploadData['video_name'],
-                'video_url'      => $uploadData['video_url'],
+                'video_url'      => $videoPath,
                 'video_duration' => $uploadData['video_duration'],
                 'thumbnail_name' => $uploadData['thumbnail_name'],
-                'thumbnail_url'  => $uploadData['thumbnail_url'],
+                'thumbnail_url'  => $thumbnailPath,
                 'user_id'        => Auth::id(),
             ]);
         }
+
+        $videoRequestController = new VideoRequestController();
+        $videoRequestController->initProcess($request, $videoRequestId);
 
         return response()->json([
             'success' => true,

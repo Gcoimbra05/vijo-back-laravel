@@ -9,6 +9,7 @@ use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Twilio\Rest\Media;
 
 class CatalogAnswerController extends Controller
 {
@@ -55,7 +56,7 @@ class CatalogAnswerController extends Controller
             'metric3Range' => 'nullable|numeric',
             'metric3Significance' => 'nullable|integer',
             'n8n_executionId' => 'nullable|string|max:50',
-            'video_thumbnail_file' => 'nullable|file|mimes:jpg,jpeg,png|max:2048',
+            'video_thumbnail_file' => 'nullable|file|mimes:jpg,jpeg,png',
         ]);
 
         $fields = [
@@ -87,14 +88,27 @@ class CatalogAnswerController extends Controller
             $thumbnailPath = 'thumbnails/' . $fileName;
             Storage::disk($disk)->putFileAs('thumbnails', $file, $fileName);
 
-            $thumbnailUrl = Storage::disk($disk)->url($thumbnailPath);
-
+            $thumbnailPath = env('APP_URL') . '/thumbnails/' . $fileName;
             Video::create([
                 'request_id'     => $request->input('request_id'),
                 'thumbnail_name' => $fileName,
-                'thumbnail_url'  => $thumbnailUrl,
+                'thumbnail_url'  => $thumbnailPath,
                 'user_id'        => Auth::id(),
             ]);
+            /* 
+            WORKING IN PROGRESS
+
+            $thumb = MediaStorageController::uploadThumbnail($request);
+            if ($thumb['success']) {
+                $thumbnailPath = env('APP_URL') . '/thumbnails/' . $thumb['thumbnail_name'];
+
+                Video::create([
+                    'request_id'     => $request->input('request_id'),
+                    'thumbnail_name' => $thumb['thumbnail_name'] ?? null,
+                    'thumbnail_url'  => $thumbnailPath,
+                    'user_id'        => Auth::id(),
+                ]);
+            } */
         }
 
         return response()->json([
