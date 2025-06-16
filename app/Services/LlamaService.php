@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\LlmTemplate;
 use App\Services\ApiService;
+use Illuminate\Support\Facades\Log;
 
 class LlamaService
 {
@@ -56,6 +57,8 @@ class LlamaService
 
         $response = $this->apiService->sendPost(env('LLAMA_SERVER_URL'), $payload);
         $responseData = $response->getData();
+
+        Log::info('Response Data JSON: ' . json_encode($responseData, JSON_PRETTY_PRINT));
         
         // Check if the request was successful
         if ($responseData->success !== true) {
@@ -64,7 +67,7 @@ class LlamaService
         }
         
         // Return just the data portion of the response
-        return ['success' => true, 'response' => $responseData->response];
+        return ['success' => true, 'response' => $responseData->response->response];
     }
 
 }

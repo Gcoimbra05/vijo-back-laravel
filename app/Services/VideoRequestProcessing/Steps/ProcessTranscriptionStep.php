@@ -1,6 +1,8 @@
 <?php
 
 namespace App\Services\VideoRequestProcessing\Steps;
+use App\Models\Transcript;
+use Illuminate\Support\Facades\Log;
 
 class ProcessTranscriptionStep extends VideoProcessingStep
 {
@@ -23,6 +25,8 @@ class ProcessTranscriptionStep extends VideoProcessingStep
             $transcriptionResult
         );
 
+        $this->storeTranscripts($context['videoRequest']->id, $transcriptionResult, $formattedTranscript);
+
         $context['apiService']->sendWebhookNotification(
             'transcription complete', 
             $context['videoRequest']->id, 
@@ -37,5 +41,14 @@ class ProcessTranscriptionStep extends VideoProcessingStep
                 'transcriptionResult' => $transcriptionResult
             ]
         ];
+    }
+
+    private function storeTranscripts($requestId, $transcriptContent, $transcriptWEmotions)
+    {
+
+        $transcriptText = $transcriptContent['results']['transcripts'][0]['transcript'];
+        $data = ['request_id' => $requestId, 'text' => $transcriptText, 'text_w_segment_emotions' => $transcriptWEmotions];
+        Transcript::create($data);
+    
     }
 }

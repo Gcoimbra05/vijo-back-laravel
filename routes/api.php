@@ -105,5 +105,6 @@ Route::prefix('v2')->middleware(ForceJsonResponse::class)->group(function () {
         Route::get('{request_id}/{param}', [EmloResponseService::class, 'getEmloResponseParamValueForId']);
         Route::get('{param}', [EmloResponseController::class, 'getEmloResponseParamValue']);
 
+        Route::get('{request_id}/param-group/{param_group}', [EmloResponseService::class, 'getEmloResponseParamGroupValue']);
     });
 });

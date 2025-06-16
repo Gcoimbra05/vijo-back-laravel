@@ -87,11 +87,11 @@ class EmloResponseService
     /**
      * Get EMLO response parameter values for a specific request ID and path key
      */
-    public function getEmloResponseParamValueForId($request_id, $path_key, $limit = null, $offset = null, $orderColumn = 'created_at', $orderDirection = 'DESC', $start_time = null, $end_time = null)
+    public static function getEmloResponseParamValueForId($request_id, $path_key, $limit = null, $offset = null, $orderColumn = 'created_at', $orderDirection = 'DESC', $start_time = null, $end_time = null)
     {
         try {
             $responseResult = EmloResponse::getEmloResponseByRequestId($request_id);
-            if ($responseResult == null || !isset($responseResult['status']) || !$responseResult['status']) {
+            if ($responseResult == null || !isset($responseResult['success']) || !$responseResult['success']) {
                 return [
                     'status' => false,
                     'message' => 'EMLO response not found for request_id'
@@ -154,5 +154,63 @@ class EmloResponseService
                 'message' => 'Failed to retrieve response values: ' . $e->getMessage()
             ];
         }
+    }
+
+    public function getEmloResponseParamGroupValue($requestId, $paramGroup) {
+ 
+        $emloResponseService = app(EmloResponseService::class);
+        $formattedParams = [];
+
+        $params = EmloResponsePath::select('path_key')
+            ->whereRaw('LOWER(path_key) LIKE LOWER(?)', ['%' . $paramGroup . '%'])
+            ->get();
+            
+        foreach($params as $param) {
+            $paramValue = $emloResponseService->getEmloResponseParamValueForId($requestId, $param->path_key);
+            
+            // Add directly to the array (flat structure)
+            $formattedParams[] = [
+                'param' => $param->path_key,
+                'value' => $paramValue
+            ];
+        }
+        
+        usort($formattedParams, function($a, $b) {
+            $valueA = $this->extractNumericValue($a['value']);
+            $valueB = $this->extractNumericValue($b['value']);
+                       
+            // Sort descending (highest first)
+            return $valueB <=> $valueA;
+        });
+            
+        return $formattedParams;
+    }
+
+    private function extractNumericValue($valueData) {
+        if (!isset($valueData['results']['param_value'][0])) {
+            Log::debug('No param_value found, returning 0');
+            return 0;
+        }
+        
+        $paramValue = $valueData['results']['param_value'][0];
+        
+        // Try numeric_value first, then parse string_value
+        if ($paramValue['numeric_value'] !== null) {
+            $numericValue = (float) $paramValue['numeric_value'];
+            Log::debug('Using numeric_value', ['value' => $numericValue]);
+            return $numericValue;
+        }
+        
+        if ($paramValue['string_value'] !== null) {
+            $stringValue = (float) $paramValue['string_value'];
+            Log::debug('Using string_value converted to numeric', [
+                'original' => $paramValue['string_value'],
+                'converted' => $stringValue
+            ]);
+            return $stringValue;
+        }
+        
+        Log::debug('No numeric value found, returning 0');
+        return 0;
     }
 }

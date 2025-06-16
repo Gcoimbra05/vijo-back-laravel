@@ -6,8 +6,11 @@ use Illuminate\Routing\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\EmloResponse;
+use App\Models\EmloResponsePath;
 use App\Services\Emlo\EmloResponseService;
 use App\Services\Emlo\EmloHelperService;
+use function PHPUnit\Framework\isEmpty;
+use Illuminate\Support\Facades\Log;
 
 class EmloResponseController extends Controller {
 
@@ -134,6 +137,9 @@ public function index()
 
     public function getEmloResponseParamValue(Request $request, $param_name)
     {
+
+
+
         // Get query parameters
         $response_id = $request->query('response_id');
         $start_time = $request->query('start_time');

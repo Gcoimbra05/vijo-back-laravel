@@ -2,6 +2,8 @@
 
 namespace App\Services\VideoRequestProcessing\Steps;
 
+use App\Models\LlmResponse;
+
 class ProcessLlamaStep extends VideoProcessingStep
 {
     protected function execute($context)
@@ -27,6 +29,8 @@ class ProcessLlamaStep extends VideoProcessingStep
             return ['success' => false, 'error' => 'Llama processing: ' . $llamaResult['error']];
         }
 
+        $this->storeLlmResponse($context['videoRequest']->id, $llamaResult['response']);
+
         $context['apiService']->sendWebhookNotification(
             'AI processing complete', 
             $context['videoRequest']->id, 
@@ -35,5 +39,11 @@ class ProcessLlamaStep extends VideoProcessingStep
         );
 
         return ['success' => true];
+    }
+
+    private function storeLlmResponse($requestId, $llmResponse)
+    {
+        $data = ['request_id' => $requestId, 'text' => $llmResponse];
+        LlmResponse::create($data);
     }
 }

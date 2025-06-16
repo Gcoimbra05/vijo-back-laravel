@@ -16,7 +16,7 @@ class ProcessCsvStep extends VideoProcessingStep
         }
 
         $responseData = json_decode($context['responseResult']->getContent(), true);
-        $responseId = $responseData['id'];
+        $responseId = $responseData['results']['emlo_response']['id'];
 
         $request = new Request([
             'response_id' => $responseId,

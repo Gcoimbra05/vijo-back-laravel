@@ -82,7 +82,8 @@ class CatalogAnswerController extends Controller
 
         if ($request->hasFile('video_thumbnail_file')) {
             $file = $request->file('video_thumbnail_file');
-            $fileName = Str::uuid() . '.' . $file->getClientOriginalExtension();
+            $fileExtension = $file->guessExtension() ?: 'jpg';
+            $fileName = uniqid() . '.' . $fileExtension;
 
             $disk = env('FILESYSTEM_DISK', 's3');
             $thumbnailPath = 'thumbnails/' . $fileName;
