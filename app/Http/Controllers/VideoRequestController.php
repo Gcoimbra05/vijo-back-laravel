@@ -957,7 +957,7 @@ class VideoRequestController extends Controller
             'video_thumb'       => $video ? $video->thumbnail_url : '',
             'user_tags'         => $userTags,
             'transcription'     => $transcriptions,
-            'emotional_insights' => $formattedEmotions['emotional_insights'] ?? [],
+            'emotional_insights' => isset($formattedEmotions['emotional_insights']) ? $formattedEmotions['emotional_insights'] : [],
             'emotional_outcomes' => [], // $journalEmotionalData['emotional_outcomes'],
             'final_video_transcript' => [], // $journalEmotionalData['final_video_transcript'],
             'summaryReport'     => [], // $journalEmotionalData['summaryReport'],
@@ -1740,7 +1740,7 @@ class VideoRequestController extends Controller
 
         $emotionLabels = [
             'EDP-Anticipation' => 'Anticipation',
-            'EDP-Concentrated' => 'Focus Level', 
+            'EDP-Concentrated' => 'Focus Level',
             'EDP-Confident' => 'Confidence',
             'EDP-Emotional' => 'Emotion Pulse',
             'EDP-Energetic' => 'Energy Boost',
@@ -1752,91 +1752,91 @@ class VideoRequestController extends Controller
             'clStress' => 'Stress Recovery',
             'overallCognitiveActivity' => 'Mind Meter'
         ];
-        
+
         // this gives the 8 EDP emotions, hit the designated endpoint for structure example
         $emotions = EmloResponseService::getEmloResponseParamValueForId($requestId, 'EDP');
         $oCA = EmloResponseService::getEmloResponseParamValueForId($requestId, 'overallCognitiveActivity.averageLevel');
         $clStress = EmloResponseService::getEmloResponseParamValueForId($requestId, 'clStress.clStress');
-        
+
         Log::info('oca is: ' . json_encode($oCA));
         Log::info('clStress is: ' . json_encode($clStress));
-        
+
         // Check if we have the expected structure
         if (!isset($emotions['status']) || !$emotions['status']) {
             return [];
         }
-        
+
         if (!isset($emotions['results']['param_value'][0]['string_value'])) {
             return [];
         }
-        
+
         // Get the JSON string and decode it
         $emotionsJson = $emotions['results']['param_value'][0]['string_value'];
         $emotionsArray = json_decode($emotionsJson, true);
-        
+
         if (!$emotionsArray) {
             return [];
         }
-        
+
         // Helper function to extract value from param_value
         $getParamValue = function($data) {
             if (!isset($data['status']) || !$data['status'] || !isset($data['results']['param_value'][0])) {
                 return null;
             }
-            
+
             $paramValue = $data['results']['param_value'][0];
-            
+
             // Check for numeric_value first, then string_value
             if ($paramValue['numeric_value'] !== null) {
                 return (float)$paramValue['numeric_value'];
             } elseif ($paramValue['string_value'] !== null) {
                 return (float)$paramValue['string_value'];
             }
-            
+
             return null;
         };
-        
+
         // Add the two additional emotions to the array
         $ocaValue = $getParamValue($oCA);
         if ($ocaValue !== null) {
             $emotionsArray['overallCognitiveActivity'] = $ocaValue;
         }
-        
+
         $stressValue = $getParamValue($clStress);
         if ($stressValue !== null) {
             $emotionsArray['clStress'] = $stressValue;
         }
-        
+
         // Sort emotions by score (highest first)
         arsort($emotionsArray);
-        
+
         // Prepare arrays for series, average, and labels
         $series = [];
         $average = [];
         $labels = [];
         $emotionalInsights = [];
-        
+
         // Convert to the desired format with numeric string keys
         $index = 0;
         foreach ($emotionsArray as $emotionKey => $score) {
-                      
+
             // Add to numbered insights
             $emotionalInsights[(string)$index] = [
                 'emotion' => $emotionKey,
                 'score' => round($score / 100, 2) // convert to decimal (79 -> 0.79)
             ];
-            
+
             // Add to series, average, and labels arrays
             $series[] = (string)$score;
             $average[] = (string)round($score * 0.8); // Example: average is 80% of current score
-            
+
             // Use predefined label or fallback to formatted emotion name
             $displayLabel = $emotionLabels[$emotionKey];
             $labels[] = $displayLabel;
-            
+
             $index++;
         }
-        
+
         // Combine everything into the final structure
         $result = [
             'emotional_insights' => array_merge($emotionalInsights, [
@@ -1845,7 +1845,7 @@ class VideoRequestController extends Controller
                 'labels' => $labels
             ])
         ];
-        
+
         return $result;
     }
 
