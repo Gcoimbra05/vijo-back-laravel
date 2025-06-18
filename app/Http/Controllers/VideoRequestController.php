@@ -833,7 +833,7 @@ class VideoRequestController extends Controller
             $catalog = $req->catalog;
             $user = $req->user;
             $videoTags = $req->tags ? explode(',', $req->tags) : [];
-            $tags = Tag::whereIn('id', $videoTags)->pluck('name')->toArray();
+            $tags = Tag::whereIn('id', $videoTags)->get(['id', 'name'])->toArray();
 
             return [
                 'id'                  => $req->id,
@@ -949,11 +949,8 @@ class VideoRequestController extends Controller
             ->first()?->text ?? '';
 
         $videoTags = $videoRequest->tags ? explode(',', $videoRequest->tags) : [];
-        $userTags = Tag::whereIn('id', $videoTags)
-            ->pluck('name')
-            ->toArray();
+        $userTags = Tag::whereIn('id', $videoTags)->get(['id', 'name'])->toArray();
         Log::info('User tags for video request', $userTags);
-
 
         $transcriptions = [
             [
