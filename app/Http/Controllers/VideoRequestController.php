@@ -832,6 +832,8 @@ class VideoRequestController extends Controller
             $video = $req->latestVideo;
             $catalog = $req->catalog;
             $user = $req->user;
+            $videoTags = $req->tags ? explode(',', $req->tags) : [];
+            $tags = Tag::whereIn('id', $videoTags)->pluck('name')->toArray();
 
             return [
                 'id'                  => $req->id,
@@ -853,6 +855,7 @@ class VideoRequestController extends Controller
                 'mediaId'             => $video ? $video->id : 0,
                 'catalogEmoji'        => $catalog->emoji ?? '',
                 'user_name'           => $user ? ($user->name ?? trim(($user->first_name ?? '') . ' ' . ($user->last_name ?? ''))) : '',
+                'tags'                => $tags ?? [],
             ];
         })->toArray();
 
