@@ -928,7 +928,8 @@ class VideoRequestController extends Controller
         $video = $videoRequest->latestVideo;
 
         $transcriptions = Transcript::select('id', 'text', 'text_w_segment_emotions')
-                                        ->where('request_id', $id)->first();
+            ->where('request_id', $id)
+            ->first();
 
         $transcriptions = [
             'id' => $transcriptions->id ?? 0,
@@ -944,7 +945,120 @@ class VideoRequestController extends Controller
             ->where('request_id', $videoRequest->id)
             ->first()?->text ?? '';
 
-        $userTags = TagController::getUserTags($catalog->category_id, $userId);
+        $videoTags = $videoRequest->tags ? explode(',', $videoRequest->tags) : [];
+        $userTags = Tag::whereIn('id', $videoTags)
+            ->pluck('name')
+            ->toArray();
+        Log::info('User tags for video request', $userTags);
+
+
+        $transcriptions = [
+            [
+                'id' => 1,
+                'text' => 'Today was an incredible day at work. I finally solved that technical problem that had been bothering me for weeks.',
+                'thumb' => 'https://placehold.co/300x200/0066cc/ffffff?text=Work+Day',
+                'emoji' => 'U+1F4AA', // Flexed Biceps
+                'emotion_score' => 0.85,
+                'answer' => 'Breakthrough at work',
+                'emotion' => 'proud'
+            ],
+            [
+                'id' => 2,
+                'text' => 'I had a meaningful conversation with an old friend. We reconnected after years and it felt like no time had passed.',
+                'thumb' => 'https://placehold.co/300x200/ff9900/ffffff?text=Friendship',
+                'emoji' => 'U+1F64F', // Folded Hands
+                'emotion_score' => 0.92,
+                'answer' => 'Reconnecting',
+                'emotion' => 'happy'
+            ],
+            [
+                'id' => 3,
+                'text' => 'The presentation didn\'t go as planned. I was nervous and forgot some key points. I need to practice more next time.',
+                'thumb' => 'https://placehold.co/300x200/cc3300/ffffff?text=Presentation',
+                'emoji' => 'U+1F4C4', // Page Facing Up
+                'emotion_score' => 0.31,
+                'answer' => 'Presentation struggles',
+                'emotion' => 'disappointed'
+            ]
+        ];
+
+        $journalEmotionalData = [
+            'emotional_insights' => [
+                [
+                    'emotion' => 'confidence',
+                    'score' => 0.82,
+                    'description' => 'Your confidence appears to be strong when discussing your work achievements and problem-solving abilities. You express satisfaction in overcoming technical challenges.'
+                ],
+                [
+                    'emotion' => 'determination',
+                    'score' => 0.76,
+                    'description' => 'There\'s a notable sense of determination in your approach to difficult tasks, showing persistence even when facing obstacles.'
+                ],
+                [
+                    'emotion' => 'curiosity',
+                    'score' => 0.69,
+                    'description' => 'You demonstrate intellectual curiosity, particularly about learning new technologies and exploring different solutions to problems.'
+                ],
+                [
+                    'emotion' => 'anxiety',
+                    'score' => 0.34,
+                    'description' => 'Some mild anxiety appears when mentioning deadlines and expectations, though it doesn\'t seem to overwhelm your overall positive outlook.'
+                ],
+
+                'series' => ['82', '76', '69', '34', '22', '18', '12', '5'],
+                'average' => ['65', '58', '52', '42', '38', '25', '22', '10'],
+                'labels' => [
+                    'Confidence',
+                    'Determination',
+                    'Curiosity',
+                    'Anxiety',
+                    'Frustration',
+                    'Doubt',
+                    'Uncertainty',
+                    'Hesitation'
+                ],
+            ],
+        ];
+
+        $staticData = [
+            'emotional_outcomes' => [
+                [
+                    'outcome_type' => 'professional growth',
+                    'strength' => 'high',
+                    'description' => 'Your emotional state indicates strong potential for continued professional development. The confidence you express in your abilities suggests you\'re likely to take on increasingly challenging projects.'
+                ],
+                [
+                    'outcome_type' => 'work satisfaction',
+                    'strength' => 'medium-high',
+                    'description' => 'Your emotional response to work accomplishments suggests good job satisfaction, though there may be room to find even greater fulfillment through more diverse projects.'
+                ],
+                [
+                    'outcome_type' => 'stress management',
+                    'strength' => 'medium',
+                    'description' => 'While you generally handle work pressure well, developing additional stress management techniques might help during particularly demanding periods.'
+                ]
+            ],
+
+            'final_video_transcript' => "Today was a really productive day at work. I finally managed to solve that bug that's been affecting our main feature for the past week. It turned out to be related to an edge case in data validation that nobody had anticipated. I spent most of the morning digging through the codebase and eventually found where the problem was happening. The fix itself was actually pretty simple once I understood the root cause.\n\nI felt really good about sharing the solution with my team during our afternoon standup. My project manager was particularly impressed with how quickly I was able to isolate the issue. This kind of problem-solving is exactly why I enjoy software development so much - there's always a puzzle to solve, and finding the solution is incredibly satisfying.\n\nI'm looking forward to tackling our next sprint planning tomorrow. I have some ideas about how we can improve our testing process to catch these kinds of issues earlier in the development cycle. Overall, today reminded me why I chose this career path - the challenges are real, but overcoming them is so rewarding.",
+
+            'summaryReport' => [
+                'key_points' => [
+                    "Successfully debugged a critical issue affecting a main product feature",
+                    "Solution involved identifying an unexpected edge case in data validation",
+                    "Shared findings with team during afternoon standup meeting",
+                    "Received positive feedback from project manager",
+                    "Planning to suggest improvements to testing processes"
+                ],
+                'mood_analysis' => "Primarily positive with high satisfaction from problem-solving success. Confident and optimistic about future work.",
+                'time_references' => [
+                    'past' => ["debugging experience", "discovering solution"],
+                    'present' => ["feeling accomplished", "enjoying development work"],
+                    'future' => ["sprint planning", "improving testing processes"]
+                ]
+            ],
+
+            'gptSummary' => "The journal entry captures a moment of professional triumph as the author successfully resolved a complex technical issue that had been impacting a key feature. There's a clear sense of satisfaction and validation, especially when sharing the solution with colleagues and receiving recognition. The experience seems to have reinforced the author's career choice and passion for problem-solving. Looking ahead, they're motivated to improve team processes and take on new challenges. Overall, this represents a positive peak experience in their professional journey, balancing the difficulties of technical work with the rewards of overcoming obstacles."
+        ];
 
         $data = [
             'id'                => $videoRequest->id,
@@ -963,9 +1077,10 @@ class VideoRequestController extends Controller
             'user_tags'         => $userTags,
             'transcription'     => $transcriptions,
             'emotional_insights' => isset($formattedEmotions['emotional_insights']) ? $formattedEmotions['emotional_insights'] : [],
-            'emotional_outcomes' => [], // $journalEmotionalData['emotional_outcomes'],
-            'final_video_transcript' => [], // $journalEmotionalData['final_video_transcript'],
-            'summaryReport'     => [], // $journalEmotionalData['summaryReport'],
+            'emotional_insights_static' => $journalEmotionalData['emotional_insights'],
+            'emotional_outcomes' => $staticData['emotional_outcomes'],
+            'final_video_transcript' => $staticData['final_video_transcript'],
+            'summaryReport'     => $staticData['summaryReport'],
             'gptSummary'        => $llmResponse,
             'video_type_id'     => $catalog->video_type_id ?? '',
             'catalog_id'        => $catalog->id ?? '',
