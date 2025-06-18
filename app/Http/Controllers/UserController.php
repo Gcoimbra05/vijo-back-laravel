@@ -426,6 +426,7 @@ class UserController extends Controller
                     "lva" => "Normalized",
                     "raw" => "Raw"
                 ],
+                "userTags" => TagController::getUserTags(),
                 "insightFilters" => SettingsController::getInsightFilters(),
                 "current_date" => now()->toDateString(),
                 "responceCount" => [

@@ -87,6 +87,7 @@ Route::prefix('v2')->middleware(ForceJsonResponse::class)->group(function () {
 
         Route::apiResource('categories', CategoryController::class);
         Route::apiResource('contacts', ContactController::class);
+        Route::post('contacts/multiple', [ContactController::class, 'createMultiple']);
         Route::apiResource('groups', GroupController::class);
         Route::delete('groups/{group}/contacts/{contact}', [GroupController::class, 'removeContact']);
 

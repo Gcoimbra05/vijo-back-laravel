@@ -55,7 +55,15 @@ class LlamaService
             'max_length' => $llm_response_max_length,
         ];
 
-        $response = $this->apiService->sendPost(env('LLAMA_SERVER_URL'), $payload);
+        $llamaServerUrl = config('services.llama.server_url');
+        Log::info('Sending request to Llama server', [
+            'llama_server_url' => $llamaServerUrl,
+        ]);
+        if (!$llamaServerUrl) {
+            return ['success' => false,
+                    'error' => 'Llama server URL is not configured'];
+        }
+        $response = $this->apiService->sendPost($llamaServerUrl, $payload);
         $responseData = $response->getData();
 
         Log::info('Response Data JSON: ' . json_encode($responseData, JSON_PRETTY_PRINT));

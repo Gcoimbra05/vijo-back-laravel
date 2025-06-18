@@ -58,7 +58,7 @@ class MediaStorageController extends Controller
         }
 
         // Upload to S3 or local
-        $disk = env('FILESYSTEM_DISK', 'local');
+        $disk = config('filesystems.default', 's3');
         $videoStoragePath = 'videos/' . basename($outputFile);
         $thumbnailStoragePath = 'thumbnails/' . $thumbnailName;
         Log::info('Uploading video to disk: ' . $disk);
@@ -120,7 +120,7 @@ class MediaStorageController extends Controller
             $img->save($fullPath, $quality, $image->extension() === 'png' ? 'png' : 'jpg');
         }
 
-        $disk = env('FILESYSTEM_DISK', 's3');
+        $disk = config('filesystems.default', 's3');
         $thumbnailPath = 'thumbnails/' . $fileName;
         Storage::disk($disk)->putFileAs('thumbnails', $file, $fileName);
 
@@ -152,7 +152,7 @@ class MediaStorageController extends Controller
         }
 
         // Upload to S3 or local
-        $disk = env('FILESYSTEM_DISK', 'local');
+        $disk = config('filesystems.default', 's3');
         $csvStoragePath = 'csvs/' . basename($localCsvPath);
         Log::info('Uploading csv to disk: ' . $disk);
         $csvUrl = '';
@@ -233,7 +233,8 @@ class MediaStorageController extends Controller
             } */
 
         $path = $type . "/" . $filename;
-        if (env('FILESYSTEM_DISK') === 's3') {
+        $disk = config('filesystems.default', 's3');
+        if ($disk === 's3') {
             // Check if the file exists on S3
             if (!Storage::disk('s3')->exists($path)) {
                 Log::info('File not found on S3: ' . $path);

@@ -45,4 +45,12 @@ return [
         'token' => env('TWILIO_AUTH_TOKEN'),
         'from' => env('TWILIO_PHONE_NUMBER'),
     ],
+
+    'emlo' => [
+        'server_url' => env('EMLO_SERVER_URL'),
+    ],
+    'llma' => [
+        'server_url' => env('LLAMA_SERVER_URL'),
+    ],
+    'webhook_url' => env('WEBHOOK_URL'),
 ];

@@ -30,9 +30,9 @@ class ApiService
 
     public function sendWebhookNotification($eventType, $resourceId, $resourceType = 'video_request', array $additionalData = [])
     {
-        $webhookUrl = env("WEBHOOK_URL");
+        $webhookUrl = config('services.webhook_url');
         $payload = array_merge(['event' => $eventType, "{$resourceType}_id" => $resourceId], $additionalData);
-        
+
         Log::info('Sending webhook notification', [
             "{$resourceType}_id" => $resourceId,
             'event_type' => $eventType,

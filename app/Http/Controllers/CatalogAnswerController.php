@@ -7,6 +7,7 @@ use App\Models\Video;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Twilio\Rest\Media;
@@ -42,6 +43,12 @@ class CatalogAnswerController extends Controller
 
     public function store(Request $request)
     {
+        Log::info('Creating catalog answer', [
+            'user_id' => Auth::id(),
+            'request_id' => $request->input('request_id'),
+            'catalog_id' => $request->input('catalog_id'),
+        ]);
+
         $request->validate([
             'request_id' => 'required|integer|exists:video_requests,id',
             'catalog_id' => 'required|integer|exists:catalogs,id',
@@ -56,7 +63,7 @@ class CatalogAnswerController extends Controller
             'metric3Range' => 'nullable|numeric',
             'metric3Significance' => 'nullable|integer',
             'n8n_executionId' => 'nullable|string|max:50',
-            'video_thumbnail_file' => 'nullable|file|mimes:jpg,jpeg,png',
+            'video_thumbnail_file' => 'nullable|file',
         ]);
 
         $fields = [
@@ -82,20 +89,24 @@ class CatalogAnswerController extends Controller
 
         if ($request->hasFile('video_thumbnail_file')) {
             $file = $request->file('video_thumbnail_file');
+            Log::info('extension', ['extension' => $file->getClientOriginalExtension()]);
             $fileExtension = $file->guessExtension() ?: 'jpg';
+            Log::info('fileExtension', ['fileExtension' => $fileExtension]);
             $fileName = uniqid() . '.' . $fileExtension;
 
             $disk = env('FILESYSTEM_DISK', 's3');
-            $thumbnailPath = 'thumbnails/' . $fileName;
-            Storage::disk($disk)->putFileAs('thumbnails', $file, $fileName);
 
+            Storage::disk($disk)->putFileAs('thumbnails', $file, $fileName);
             $thumbnailPath = env('APP_URL') . '/thumbnails/' . $fileName;
+            Log::info('Thumbnail uploaded', ['thumbnail_path' => $thumbnailPath]);
+
             Video::create([
                 'request_id'     => $request->input('request_id'),
                 'thumbnail_name' => $fileName,
                 'thumbnail_url'  => $thumbnailPath,
                 'user_id'        => Auth::id(),
             ]);
+
             /* 
             WORKING IN PROGRESS
 
@@ -111,6 +122,12 @@ class CatalogAnswerController extends Controller
                 ]);
             } */
         }
+
+        Log::info('Catalog answer created', [
+            'answer_id' => $answer->id,
+            'request_id' => $answer->request_id,
+            'user_id' => Auth::id(),
+        ]);
 
         return response()->json([
             'success' => true,

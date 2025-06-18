@@ -196,15 +196,15 @@ class VideoController extends Controller
             ->first();
 
         if ($video) {
-            $videoPath = env('APP_URL') . '/videos/' . $uploadData['video_name'];
+            $videoPath = config('app.url') . '/videos/' . $uploadData['video_name'];
             $video->update([
                 'video_name'     => $uploadData['video_name'],
                 'video_url'      => $videoPath,
                 'video_duration' => $uploadData['video_duration'],
             ]);
         } else {
-            $videoPath = env('APP_URL') . '/videos/' . $uploadData['video_name'];
-            $thumbnailPath = env('APP_URL') . '/thumbnails/' . $uploadData['thumbnail_name'];
+            $videoPath = config('app.url') . '/videos/' . $uploadData['video_name'];
+            $thumbnailPath = config('app.url') . '/thumbnails/' . $uploadData['thumbnail_name'];
             $video = Video::create([
                 'request_id'     => $videoRequestId,
                 'video_name'     => $uploadData['video_name'],

@@ -13,12 +13,20 @@ class TranscriptionService
 
     public function __construct()
     {
+        $awsDefaultRegion = config('filesystems.disks.s3.region');
+        $awsAccessKeyId = config('services.ses.key');
+        $awsSecretKeyId = config('services.ses.secret');
+        if (!$awsDefaultRegion || !$awsAccessKeyId || !$awsSecretKeyId) {
+            Log::error('AWS Transcribe configuration is missing. Please check your .env file or config/services.php');
+            throw new \Exception('AWS Transcribe configuration is missing.');
+        }
+
         $this->client = new TranscribeServiceClient([
             'version' => 'latest',
-            'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
+            'region' => $awsDefaultRegion,
             'credentials' => [
-                'key' => env('AWS_ACCESS_KEY_ID'),
-                'secret' => env('AWS_SECRET_ACCESS_KEY'),
+                'key' => $awsAccessKeyId,
+                'secret' => $awsSecretKeyId,
             ]
         ]);
     }

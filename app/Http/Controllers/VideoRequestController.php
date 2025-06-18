@@ -658,6 +658,7 @@ class VideoRequestController extends Controller
 
     public function startVideoRequest(Request $request)
     {
+        Log::info('Starting video request process');
         $userId = Auth::id();
         $catalogId = $request->input('catalog_id');
 
@@ -667,6 +668,7 @@ class VideoRequestController extends Controller
                 'message' => 'Catalog ID is required.'
             ], 400);
         }
+        Log::info('Catalog ID: ' . $catalogId);
 
         $catalog = Catalog::with(['parentCatalog', 'category', 'videoType'])->find($catalogId);
         if (!$catalog) {
@@ -675,7 +677,7 @@ class VideoRequestController extends Controller
                 'message' => 'Catalog not found.'
             ], 404);
         }
-
+        Log::info('Catalog found: ' . $catalog->title);
         // Create the VideoRequest
         $videoRequest = VideoRequest::create([
             'user_id' => $userId,
@@ -693,7 +695,7 @@ class VideoRequestController extends Controller
             $vtKpiNo    = (int) ($catalog->videoType->kpi_no ?? 0);
             $vtKpiMetrics = ($vtKpiNo > 0) ? floor($vtMetricNo / $vtKpiNo) : 0;
         }
-
+        Log::info('Video Type Metrics: ' . $vtMetricNo . ', KPIs: ' . $vtKpiNo . ', KPI Metrics: ' . $vtKpiMetrics);
         $questions = CatalogQuestionController::getQuestionsByCatalogId($catalog, $vtKpiMetrics, $vtKpiNo);
 
         $userTags = TagController::getUserTags($catalog->category_id, $userId);
@@ -703,6 +705,7 @@ class VideoRequestController extends Controller
             'kpis' => $vtKpiNo,
             'kpi_metrics' => $vtKpiMetrics
         ];
+        Log::info('Video Type: ', $videoType);
 
         return response()->json([
             'status' => true,
@@ -772,8 +775,9 @@ class VideoRequestController extends Controller
 
     public function saveVideoRequest(Request $request)
     {
+        Log::info('Saving video request with ID: ' . $request->input('request_id'));
         $request->validate([
-            'request_id' => 'required|integer|min:1',
+            'request_id' => 'required|integer',
         ]);
 
         $requestId = $request->input('request_id');
@@ -793,12 +797,13 @@ class VideoRequestController extends Controller
                 'message' => 'Video request not found.'
             ], 404);
         }
-
+        Log::info('Video request found: ' . $videoRequest->id);
         $tags = TagController::handleProvidedTags($tags, $categoryId);
 
         $videoRequest->title = $journalName;
         $videoRequest->tags = implode(',', $tags);
         $videoRequest->save();
+        Log::info('Video request updated with title: ' . $journalName . ' and tags: ' . implode(',', $tags));
 
         return response()->json([
             'status' => true,

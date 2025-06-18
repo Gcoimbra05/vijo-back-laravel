@@ -5,6 +5,7 @@ namespace App\Services\VideoRequestProcessing\Steps;
 use App\Models\Video;
 use App\Models\EmloResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class ProcessEmotionsStep extends VideoProcessingStep
 {
@@ -14,7 +15,20 @@ class ProcessEmotionsStep extends VideoProcessingStep
         $videoUrl = $video->video_url;
         $parsed = parse_url($videoUrl);
         $path = ltrim($parsed['path'], '/');
-        $videoS3ObjectUrl = 'https://s3.' . env('AWS_DEFAULT_REGION') . '.amazonaws.com/' . env('AWS_BUCKET') . '/' . $path;
+        $awsDefaultRegion = config('filesystems.disks.s3.region');
+        $awsBucket = config('filesystems.disks.s3.bucket');
+        Log::info('Processing emotions for video', [
+            'video_id' => $video->id,
+            'video_url' => $videoUrl,
+            'aws_region' => $awsDefaultRegion,
+            'aws_bucket' => $awsBucket,
+            'path' => $path
+        ]);
+        if (!$awsDefaultRegion || !$awsBucket) {
+            return ['success' => false, 'error' => 'AWS S3 configuration is missing'];
+        }
+
+        $videoS3ObjectUrl = 'https://s3.' . $awsDefaultRegion . '.amazonaws.com/' . $awsBucket . '/' . $path;
 
         $emloPayload = [
             'url' => $videoS3ObjectUrl,
@@ -22,7 +36,15 @@ class ProcessEmotionsStep extends VideoProcessingStep
             'sensitivity' => 'normal'
         ];
 
-        $emotions = $context['apiService']->sendPost(env('EMLO_SERVER_URL'), $emloPayload);
+        $emloServerUrl = config('services.emlo.server_url') ?? '';
+        Log::info('Sending video to EMLO server for emotion analysis', [
+            'emlo_server_url' => $emloServerUrl,
+            'payload' => $emloPayload
+        ]);
+        if (empty($emloServerUrl)) {
+            return ['success' => false, 'error' => 'EMLO server URL is not configured'];
+        }
+        $emotions = $context['apiService']->sendPost($emloServerUrl, $emloPayload);
         $emotionData = $emotions->getData();
 
         if ($emotionData->success !== true) {
@@ -30,7 +52,6 @@ class ProcessEmotionsStep extends VideoProcessingStep
         }
 
         $context['apiService']->sendWebhookNotification('emotional analysis complete', $context['videoRequest']->id, 'video_request');
-        
         $rawResponse = json_encode($emotionData->response);
 
         $emloResponseController = app(\App\Http\Controllers\EmloResponseController::class);

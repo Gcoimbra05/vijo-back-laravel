@@ -12,6 +12,16 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        //
+        $this->call([
+            AdditionalRulesSeeder::class,
+            EmloResponseParamSpecsSeeder::class,
+            EmloResponsePathsSeeder::class,
+            EmloResponseSegmentSeeder::class,
+            EmloResponseSegmentsSeeder::class,
+            # LlmTemplatesSeeder::class,
+            RuleConditionSeeder::class,
+            RuleSeeder::class,
+            VideoRequestsSeeder::class,
+        ]);
     }
 }
