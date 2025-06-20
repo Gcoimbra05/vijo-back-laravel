@@ -13,6 +13,7 @@ class StripeWebhookController extends Controller
 {
     public function handle(Request $request)
     {
+        Log::info('Stripe Webhook Received: ' . $request->getContent());
         $stripeSecret = config('services.stripe.secret');
         $webhookSecret = config('services.stripe.webhook_secret');
 

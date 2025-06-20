@@ -24,6 +24,7 @@ use Illuminate\Support\Facades\Route;
 
 use App\Http\Controllers\EmloResponseController;
 use App\Services\Emlo\EmloResponseService;
+use App\Services\Emlo\EmloInsightsService;
 use App\Http\Controllers\EmloResponseParamSpecsController;
 
 
@@ -101,6 +102,8 @@ Route::prefix('v2')->middleware(ForceJsonResponse::class)->group(function () {
     Route::match(['get', 'post'], 'webhook', [StripeWebhookController::class, 'handle']);
 
     Route::prefix('emlo-response')->group(function () {
+        Route::get('get-emotion-insights/{param}', [EmloInsightsService::class, 'getInsightsData']);
+
         Route::get('{request_id}/{param}/compare', [RuleEvaluationController::class, 'evaluateRules']);
         Route::get('{param}/specification', [EmloResponseParamSpecsController::class, 'showByParamName']);
         Route::get('{request_id}/{param}', [EmloResponseService::class, 'getEmloResponseParamValueForId']);

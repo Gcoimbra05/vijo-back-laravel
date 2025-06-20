@@ -2,15 +2,31 @@
 
 namespace App\Services\VideoRequestProcessing\Steps;
 use App\Models\Transcript;
+use App\Models\Video;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 
 class ProcessTranscriptionStep extends VideoProcessingStep
 {
     protected function execute($context)
     {
+        $video = Video::firstWhere('request_id', $context['videoRequest']->id);
+
+        $disk = config('filesystems.default', 's3');
+        $videoStoragePath = 'videos/' . $video->video_name;
+        $videoUrl = Storage::disk($disk)->url($videoStoragePath);
+        if (!$videoUrl) {
+            return ['success' => false, 'error' => 'Video URL not found'];
+        }
+
+        Log::info('Processing transcription for video', [
+            'video_id' => $video->id,
+            'video_url' => $videoUrl
+        ]);
+
         $transcriptionResult = $context['transcriptionService']->transcribeSync(
-            'test_job' . $context['videoRequest']->id,
-            env('S3_VIDEO_URL'),
+            'test_job' . date('YmdHis'),
+            $videoUrl,
             'en-US',
             10,
             10

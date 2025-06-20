@@ -7,6 +7,9 @@ use App\Models\EmloResponsePath;
 use App\Models\EmloResponseValue;
 use Illuminate\Support\Facades\Log;
 
+use function PHPUnit\Framework\assertNotEmpty;
+use function PHPUnit\Framework\isEmpty;
+
 class EmloResponseService
 {   
     /**
@@ -69,6 +72,8 @@ class EmloResponseService
             }
             
             $result = $query->get()->toArray();
+
+            Log:info("the result is: " . json_encode($result));
             
             return [
                 'status' => true,
@@ -212,5 +217,41 @@ class EmloResponseService
         
         Log::debug('No numeric value found, returning 0');
         return 0;
+    }
+
+    public static function calculateParamAverage($paramValue) {
+        $sum = 0;
+        $validCount = 0;
+
+        foreach($paramValue as $singleParam) {
+            $valueToAdd = null;
+            
+            // Check numeric_value first
+            if (!empty($singleParam['numeric_value'])) {
+                $valueToAdd = $singleParam['numeric_value'];
+            } 
+            // Check string_value as fallback
+            elseif (!empty($singleParam['string_value'])) {
+                $valueToAdd = (float)$singleParam['string_value'];
+            }
+            
+            // Only add if we have a valid value
+            if ($valueToAdd !== null) {
+                $sum += $valueToAdd;
+                $validCount++;
+            }
+        }
+
+        // Avoid division by zero
+        if ($validCount === 0) {
+            Log::warning("No valid values found for averaging");
+            return null;
+        }
+
+        $average = $sum / $validCount;
+        Log::info("The count is: " . $validCount);
+        Log::info("The average is: " . $average);
+
+        return $average;
     }
 }

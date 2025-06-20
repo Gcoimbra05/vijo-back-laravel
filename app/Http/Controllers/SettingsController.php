@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Http\Request;
+use App\Services\Emlo\EmloInsightsService;
 use Illuminate\Routing\Controller;
 
 class SettingsController extends Controller
@@ -74,789 +76,45 @@ class SettingsController extends Controller
                 [
                     "id" => "1",
                     "metric_id" => "emotion##1",
-                    "name" => "Stress",
+                    'emotionCode' => 'EDP-Anticipation',
+                    "name" => "Anticipation",
                     "emotionEmoji" => null
                 ],
                 [
                     "id" => "24",
                     "metric_id" => "emotion##24",
+                    'emotionCode' => 'EDP-Anticipation',
                     "name" => "High JQ",
                     "emotionEmoji" => null
                 ],
                 [
                     "id" => "22",
                     "metric_id" => "emotion##22",
+                    'emotionCode' => 'EDP-Anticipation',
                     "name" => "Low JQ",
                     "emotionEmoji" => null
                 ],
                 [
                     "id" => "3",
                     "metric_id" => "emotion##3",
+                    'emotionCode' => 'EDP-Anticipation',
                     "name" => "Excitement",
                     "emotionEmoji" => null
                 ],
                 [
                     "id" => "6",
                     "metric_id" => "emotion##6",
+                    'emotionCode' => 'EDP-Anticipation',
                     "name" => "Confidence",
                     "emotionEmoji" => null
                 ],
                 [
                     "id" => "5",
                     "metric_id" => "emotion##5",
+                    'emotionCode' => 'EDP-Anticipation',
                     "name" => "Risk",
                     "emotionEmoji" => null
                 ],
-                [
-                    "id" => "2",
-                    "metric_id" => "emotion##2",
-                    "name" => "Energy",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "4",
-                    "metric_id" => "emotion##4",
-                    "name" => "Uncertainty",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "7",
-                    "metric_id" => "emotion##7",
-                    "name" => "Happiness",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "8",
-                    "metric_id" => "emotion##8",
-                    "name" => "Upset",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "13",
-                    "metric_id" => "emotion##13",
-                    "name" => "Hesitation",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "15",
-                    "metric_id" => "emotion##15",
-                    "name" => "Passion",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "9",
-                    "metric_id" => "emotion##9",
-                    "name" => "Anger",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "16",
-                    "metric_id" => "emotion##16",
-                    "name" => "Personality",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "10",
-                    "metric_id" => "emotion##10",
-                    "name" => "Emotional",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "12",
-                    "metric_id" => "emotion##12",
-                    "name" => "Anticipation",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "11",
-                    "metric_id" => "emotion##11",
-                    "name" => "Concentration",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "14",
-                    "metric_id" => "emotion##14",
-                    "name" => "Thinking",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "29",
-                    "metric_id" => "emotion##29",
-                    "name" => "OCA",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "17",
-                    "metric_id" => "emotion##17",
-                    "name" => "Uneasy",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "18",
-                    "metric_id" => "emotion##18",
-                    "name" => "Energetic Logical",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "19",
-                    "metric_id" => "emotion##19",
-                    "name" => "Energetic Emotional",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "20",
-                    "metric_id" => "emotion##20",
-                    "name" => "Stressed Emotional",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "21",
-                    "metric_id" => "emotion##21",
-                    "name" => "Stressed Logical",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "23",
-                    "metric_id" => "emotion##23",
-                    "name" => "Median JQ",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "25",
-                    "metric_id" => "emotion##25",
-                    "name" => "Risk 1",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "26",
-                    "metric_id" => "emotion##26",
-                    "name" => "Risk 2",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "35",
-                    "metric_id" => "emotion##35",
-                    "name" => "LVAEmoStress",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "66",
-                    "metric_id" => "emotion##66",
-                    "name" => "SPBth",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "70",
-                    "metric_id" => "emotion##70",
-                    "name" => "SPBtl_DIF",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "57",
-                    "metric_id" => "emotion##57",
-                    "name" => "SOS",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "37",
-                    "metric_id" => "emotion##37",
-                    "name" => "LVAENRStress",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "81",
-                    "metric_id" => "emotion##81",
-                    "name" => "nCHL",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "34",
-                    "metric_id" => "emotion##34",
-                    "name" => "LVAGLBStress",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "65",
-                    "metric_id" => "emotion##65",
-                    "name" => "SPBT",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "33",
-                    "metric_id" => "emotion##33",
-                    "name" => "LVARiskStress",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "53",
-                    "metric_id" => "emotion##53",
-                    "name" => "MaxVolAmp",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "58",
-                    "metric_id" => "emotion##58",
-                    "name" => "SPJ",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "38",
-                    "metric_id" => "emotion##38",
-                    "name" => "LVAMentalEffort",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "67",
-                    "metric_id" => "emotion##67",
-                    "name" => "SPBtl",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "54",
-                    "metric_id" => "emotion##54",
-                    "name" => "P1",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "55",
-                    "metric_id" => "emotion##55",
-                    "name" => "P2",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "56",
-                    "metric_id" => "emotion##56",
-                    "name" => "P3",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "39",
-                    "metric_id" => "emotion##39",
-                    "name" => "LVASOSStress",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "79",
-                    "metric_id" => "emotion##79",
-                    "name" => "SPJcomp",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "27",
-                    "metric_id" => "emotion##27",
-                    "name" => "EmoBalance",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "71",
-                    "metric_id" => "emotion##71",
-                    "name" => "SPBth_DIF",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "28",
-                    "metric_id" => "emotion##28",
-                    "name" => "Imagin",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "30",
-                    "metric_id" => "emotion##30",
-                    "name" => "ExtremeEmotion",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "31",
-                    "metric_id" => "emotion##31",
-                    "name" => "CogHighLowBalance",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "32",
-                    "metric_id" => "emotion##32",
-                    "name" => "Dissat",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "36",
-                    "metric_id" => "emotion##36",
-                    "name" => "LVACOGStress",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "40",
-                    "metric_id" => "emotion##40",
-                    "name" => "AVJ",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "41",
-                    "metric_id" => "emotion##41",
-                    "name" => "CHL",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "42",
-                    "metric_id" => "emotion##42",
-                    "name" => "Fant",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "43",
-                    "metric_id" => "emotion##43",
-                    "name" => "Fcen",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "44",
-                    "metric_id" => "emotion##44",
-                    "name" => "Fflic",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "45",
-                    "metric_id" => "emotion##45",
-                    "name" => "Fmain",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "46",
-                    "metric_id" => "emotion##46",
-                    "name" => "FmainPos",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "47",
-                    "metric_id" => "emotion##47",
-                    "name" => "Fq",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "48",
-                    "metric_id" => "emotion##48",
-                    "name" => "FsubCog",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "49",
-                    "metric_id" => "emotion##49",
-                    "name" => "FsubEmo",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "50",
-                    "metric_id" => "emotion##50",
-                    "name" => "Fx",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "51",
-                    "metric_id" => "emotion##51",
-                    "name" => "JQ",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "52",
-                    "metric_id" => "emotion##52",
-                    "name" => "LJ",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "59",
-                    "metric_id" => "emotion##59",
-                    "name" => "SPJhl",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "60",
-                    "metric_id" => "emotion##60",
-                    "name" => "SPJll",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "61",
-                    "metric_id" => "emotion##61",
-                    "name" => "SPJsh",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "62",
-                    "metric_id" => "emotion##62",
-                    "name" => "SPJsl",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "63",
-                    "metric_id" => "emotion##63",
-                    "name" => "SPT",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "64",
-                    "metric_id" => "emotion##64",
-                    "name" => "SPST",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "68",
-                    "metric_id" => "emotion##68",
-                    "name" => "SPSth",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "69",
-                    "metric_id" => "emotion##69",
-                    "name" => "SPStl",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "72",
-                    "metric_id" => "emotion##72",
-                    "name" => "SPJsav",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "73",
-                    "metric_id" => "emotion##73",
-                    "name" => "SPJlav",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "74",
-                    "metric_id" => "emotion##74",
-                    "name" => "VOL1",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "75",
-                    "metric_id" => "emotion##75",
-                    "name" => "VOL2",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "76",
-                    "metric_id" => "emotion##76",
-                    "name" => "intCHL",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "77",
-                    "metric_id" => "emotion##77",
-                    "name" => "SPTJtot",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "78",
-                    "metric_id" => "emotion##78",
-                    "name" => "SPJdist",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "80",
-                    "metric_id" => "emotion##80",
-                    "name" => "JHLratio",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "82",
-                    "metric_id" => "emotion##82",
-                    "name" => "CHLdif",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "83",
-                    "metric_id" => "emotion##83",
-                    "name" => "CCCHL",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "84",
-                    "metric_id" => "emotion##84",
-                    "name" => "sptBdiff",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "85",
-                    "metric_id" => "emotion##85",
-                    "name" => "HASv",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "86",
-                    "metric_id" => "emotion##86",
-                    "name" => "JQcl",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "87",
-                    "metric_id" => "emotion##87",
-                    "name" => "AVJcl",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "88",
-                    "metric_id" => "emotion##88",
-                    "name" => "AF1",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "89",
-                    "metric_id" => "emotion##89",
-                    "name" => "AF2",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "90",
-                    "metric_id" => "emotion##90",
-                    "name" => "AF3",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "91",
-                    "metric_id" => "emotion##91",
-                    "name" => "AF4",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "92",
-                    "metric_id" => "emotion##92",
-                    "name" => "AF5",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "93",
-                    "metric_id" => "emotion##93",
-                    "name" => "AF6",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "94",
-                    "metric_id" => "emotion##94",
-                    "name" => "AF7",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "95",
-                    "metric_id" => "emotion##95",
-                    "name" => "AF8",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "96",
-                    "metric_id" => "emotion##96",
-                    "name" => "AF9",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "97",
-                    "metric_id" => "emotion##97",
-                    "name" => "AF10",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "98",
-                    "metric_id" => "emotion##98",
-                    "name" => "emoEnergyBalance",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "99",
-                    "metric_id" => "emotion##99",
-                    "name" => "mentalEffort",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "100",
-                    "metric_id" => "emotion##100",
-                    "name" => "atmosphere",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "101",
-                    "metric_id" => "emotion##101",
-                    "name" => "emoPlayerEnergy",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "102",
-                    "metric_id" => "emotion##102",
-                    "name" => "emoPlayerJoy",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "103",
-                    "metric_id" => "emotion##103",
-                    "name" => "emoPlayerSad",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "104",
-                    "metric_id" => "emotion##104",
-                    "name" => "emoPlayerAggression",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "105",
-                    "metric_id" => "emotion##105",
-                    "name" => "emoPlayerStress",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "106",
-                    "metric_id" => "emotion##106",
-                    "name" => "emoPlayerRisk",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "107",
-                    "metric_id" => "emotion##107",
-                    "name" => "finalRiskLevel",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "108",
-                    "metric_id" => "emotion##108",
-                    "name" => "EDP-Energetic",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "109",
-                    "metric_id" => "emotion##109",
-                    "name" => "EDP-Passionate",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "110",
-                    "metric_id" => "emotion##110",
-                    "name" => "EDP-Emotional",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "111",
-                    "metric_id" => "emotion##111",
-                    "name" => "EDP-Uneasy",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "112",
-                    "metric_id" => "emotion##112",
-                    "name" => "EDP-Stressful",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "113",
-                    "metric_id" => "emotion##113",
-                    "name" => "EDP-Thoughtful",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "114",
-                    "metric_id" => "emotion##114",
-                    "name" => "EDP-Confident",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "115",
-                    "metric_id" => "emotion##115",
-                    "name" => "EDP-Concentrated",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "116",
-                    "metric_id" => "emotion##116",
-                    "name" => "EDP-Anticipation",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "117",
-                    "metric_id" => "emotion##117",
-                    "name" => "EDP-Hesitation",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "118",
-                    "metric_id" => "emotion##118",
-                    "name" => "callPriority",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "119",
-                    "metric_id" => "emotion##119",
-                    "name" => "callPriorityAgent",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "120",
-                    "metric_id" => "emotion##120",
-                    "name" => "sampleSize",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "121",
-                    "metric_id" => "emotion##121",
-                    "name" => "cPor",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "122",
-                    "metric_id" => "emotion##122",
-                    "name" => "offlineLVAValue",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "123",
-                    "metric_id" => "emotion##123",
-                    "name" => "offlineLVARiskStress",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "124",
-                    "metric_id" => "emotion##124",
-                    "name" => "offlineLVARiskProbability",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "125",
-                    "metric_id" => "emotion##125",
-                    "name" => "offlineLVARiskEmotionStress",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "126",
-                    "metric_id" => "emotion##126",
-                    "name" => "offlineLVARiskCognitiveStress",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "127",
-                    "metric_id" => "emotion##127",
-                    "name" => "offlineLVARiskGlobalStress",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "128",
-                    "metric_id" => "emotion##128",
-                    "name" => "offlineLVARiskFrgStress",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "129",
-                    "metric_id" => "emotion##129",
-                    "name" => "offlineLVARiskSubjectiveEffortLevel",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "130",
-                    "metric_id" => "emotion##130",
-                    "name" => "offlineLVARiskDeceptionPatterns",
-                    "emotionEmoji" => null
-                ],
-                [
-                    "id" => "131",
-                    "metric_id" => "emotion##131",
-                    "name" => "Self Honesty",
-                    "emotionEmoji" => null
-                ]
             ],
             "outcome_datasets" => [
                 [
@@ -1068,9 +326,70 @@ class SettingsController extends Controller
         return response()->json($responseData);
     }
 
-    public function getInsights ()
+    public function getInsights(Request $request)
     {
+        $emotion = $request->get('emotion', 'EDP-Anticipation');
+/*         $options = [
+            'EDP-Anticipation',
+            'EDP-Concentrated',
+            'EDP-Confident',
+            'EDP-Emotional',
+            'EDP-Energetic',
+            'EDP-Hesitation',
+            'EDP-Passionate',
+            'EDP-Stressful',
+            'EDP-Thoughtful',
+            'EDP-Uneasy',
+        ];
+
+        $emlo = new EmloInsightsService();
+        $emlo->getInsightsData(
+            $request,
+            'EDP-Anticipation'
+        ); */
+
         $responseData = [
+            "data" => [
+                [
+                    "name" => "EDP-Anticipation",
+                    "period" => "2025-06-06",
+                    "period_display" => "Jun 6, 2025",
+                    "avg" => 40,
+                    "min" => 40,
+                    "max" => 40,
+                    "request_count" => 2,
+                    "sort_order" => "2025-06-06"
+                ],
+                [
+                    "name" => "EDP-Passionate",
+                    "period" => "2025-06-10",
+                    "period_display" => "Jun 10, 2025",
+                    "avg" => 40,
+                    "min" => 40,
+                    "max" => 40,
+                    "request_count" => 8,
+                    "sort_order" => "2025-06-10"
+                ],
+                [
+                    "name" => "EDP-Passionate",
+                    "period" => "2025-06-11",
+                    "period_display" => "Jun 11, 2025",
+                    "avg" => 40,
+                    "min" => 40,
+                    "max" => 40,
+                    "request_count" => 15,
+                    "sort_order" => "2025-06-11"
+                ]
+            ],
+            "aggregation" => "daily",
+            "time_range" => "last_6_months",
+            "period" => [
+                "start" => "2024-12-01T00:00:00.000000Z",
+                "end" => "2025-06-30T23:59:59.999999Z"
+            ]
+        ];
+
+        /* $responseData = [
             'status' => true,
             'message' => '',
             'results' => [
@@ -1089,7 +408,7 @@ class SettingsController extends Controller
                 'final_metric2_arr' => [0, 0, 0, 0, 0, 0, 0],
                 'final_metric3_arr' => [0, 0, 0, 0, 0, 0, 0]
             ]
-        ];
+        ]; */
 
         return response()->json($responseData);
     }

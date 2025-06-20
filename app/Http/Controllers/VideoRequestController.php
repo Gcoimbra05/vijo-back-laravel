@@ -930,18 +930,29 @@ class VideoRequestController extends Controller
         $category = $catalog ? $catalog->category : null;
         $video = $videoRequest->latestVideo;
 
-        $transcriptions = Transcript::select('id', 'text', 'text_w_segment_emotions')
-            ->where('request_id', $id)
-            ->first();
+        $transcription = Transcript::select('id', 'text', 'text_w_segment_emotions')
+                                ->where('request_id', $id)->first();
 
-        $transcriptions = [
-            'id' => $transcriptions->id ?? 0,
-            'text' => $transcriptions->text ?? '',
-        ];
+        $transcriptions = null;
+        if ($transcription) {
+            $transcriptions = [
+                'id' => $transcription->id ?? 0,
+                'text' => $transcription->text ?? '',
+                'thumb' => 'https://placehold.co/300x200/0066cc/ffffff?text=Work+Day',
+                'emoji' => 'U+1F4AA',
+                'emotion_score' => 0.85,
+                'answer' => 'Breakthrough at work',
+                'emotion' => 'proud'
+            ];
+        }
 
         Log::info('Transcriptions result', $transcriptions);
 
-        $formattedEmotions = $this->getFormattedEmotions($videoRequest->id);
+        // Stu wants to lock statistics behind paywalls, so we need to be able to provide the time range
+        $start_time = $request->query('start_time');
+        $end_time = $request->query('end_time');
+
+        $formattedEmotions = $this->getFormattedEmotions($videoRequest->id, $start_time, $end_time);
         Log::info('formattedEmotions result', $formattedEmotions);
 
         $llmResponse = LlmResponse::select('text')
@@ -952,7 +963,7 @@ class VideoRequestController extends Controller
         $userTags = Tag::whereIn('id', $videoTags)->get(['id', 'name'])->toArray();
         Log::info('User tags for video request', $userTags);
 
-        $transcriptions = [
+        /* $transcriptions = [
             [
                 'id' => 1,
                 'text' => 'Today was an incredible day at work. I finally solved that technical problem that had been bothering me for weeks.',
@@ -980,7 +991,7 @@ class VideoRequestController extends Controller
                 'answer' => 'Presentation struggles',
                 'emotion' => 'disappointed'
             ]
-        ];
+        ]; */
 
         $journalEmotionalData = [
             'emotional_insights' => [
@@ -1856,42 +1867,53 @@ class VideoRequestController extends Controller
         ]);
     }
 
-    private function getFormattedEmotions($requestId) {
+    private function getFormattedEmotions($requestId, $startTime = null, $endTime = null) {
 
         $emotionLabels = [
             'EDP-Anticipation' => 'Anticipation',
-            'EDP-Concentrated' => 'Focus Level',
+            'EDP-Concentrated' => 'Concentration',
             'EDP-Confident' => 'Confidence',
-            'EDP-Emotional' => 'Emotion Pulse',
-            'EDP-Energetic' => 'Energy Boost',
-            'EDP-Hesitation' => 'Pause Signal',
-            'EDP-Passionate' => 'Emotional Drive',
-            'EDP-Stressful' => 'Stress Level',
-            'EDP-Thoughtful' => 'Mental Depth',
-            'EDP-Uneasy' => 'Uneasy',
+            'EDP-Emotional' => 'Excitement',
+            'EDP-Energetic' => 'Energy',
+            'EDP-Hesitation' => 'Hesitation',
+            'EDP-Passionate' => 'Passion',
+            'EDP-Stressful' => 'Stress',
+            'EDP-Thoughtful' => 'Thoughtfulness',
+            'EDP-Uneasy' => 'Uneasiness',
             'clStress' => 'Stress Recovery',
-            'overallCognitiveActivity' => 'Mind Meter'
+            'overallCognitiveActivity' => 'Focus'
         ];
-
-        // this gives the 8 EDP emotions, hit the designated endpoint for structure example
-        $emotions = EmloResponseService::getEmloResponseParamValueForId($requestId, 'EDP');
-        $oCA = EmloResponseService::getEmloResponseParamValueForId($requestId, 'overallCognitiveActivity.averageLevel');
-        $clStress = EmloResponseService::getEmloResponseParamValueForId($requestId, 'clStress.clStress');
-
-        Log::info('oca is: ' . json_encode($oCA));
-        Log::info('clStress is: ' . json_encode($clStress));
-
+        
+        $EDPEmotions = EmloResponseService::getEmloResponseParamValueForId(
+                                            request_id: $requestId,
+                                            path_key: 'EDP',
+                                            start_time: $startTime,
+                                            end_time: $endTime
+                                        );
+        $oCA = EmloResponseService::getEmloResponseParamValueForId(
+                                    request_id:$requestId,
+                                    path_key:'overallCognitiveActivity.averageLevel',
+                                    start_time: $startTime,                     
+                                    end_time: $endTime
+                                );
+        $clStress = EmloResponseService::getEmloResponseParamValueForId(
+                                            request_id: $requestId,
+                                            path_key: 'clStress.clStress',
+                                            start_time: $startTime,
+                                            end_time: $endTime
+                                        );                        
+   
         // Check if we have the expected structure
-        if (!isset($emotions['status']) || !$emotions['status']) {
+        if (!isset($EDPEmotions['status']) || !$EDPEmotions['status']) {
             return [];
         }
-
-        if (!isset($emotions['results']['param_value'][0]['string_value'])) {
+        
+        if (!isset($EDPEmotions['results']['param_value'][0]['string_value'])) {
             return [];
         }
 
         // Get the JSON string and decode it
-        $emotionsJson = $emotions['results']['param_value'][0]['string_value'];
+        $emotionsJson = $EDPEmotions['results']['param_value'][0]['string_value'];
         $emotionsArray = json_decode($emotionsJson, true);
 
         if (!$emotionsArray) {
@@ -1901,7 +1923,7 @@ class VideoRequestController extends Controller
         // Helper function to extract value from param_value
         $getParamValue = function($data) {
             if (!isset($data['status']) || !$data['status'] || !isset($data['results']['param_value'][0])) {
-                return null;
+                return [];
             }
 
             $paramValue = $data['results']['param_value'][0];
@@ -1912,8 +1934,8 @@ class VideoRequestController extends Controller
             } elseif ($paramValue['string_value'] !== null) {
                 return (float)$paramValue['string_value'];
             }
-
-            return null;
+            
+            return [];
         };
 
         // Add the two additional emotions to the array
@@ -1926,38 +1948,39 @@ class VideoRequestController extends Controller
         if ($stressValue !== null) {
             $emotionsArray['clStress'] = $stressValue;
         }
-
-        // Sort emotions by score (highest first)
+        
         arsort($emotionsArray);
-
-        // Prepare arrays for series, average, and labels
+        
         $series = [];
         $average = [];
         $labels = [];
         $emotionalInsights = [];
-
-        // Convert to the desired format with numeric string keys
+        
         $index = 0;
         foreach ($emotionsArray as $emotionKey => $score) {
 
-            // Add to numbered insights
             $emotionalInsights[(string)$index] = [
-                'emotion' => $emotionKey,
-                'score' => round($score / 100, 2) // convert to decimal (79 -> 0.79)
+                'emotion' =>  $emotionLabels[$emotionKey],
+                'score' => is_int($score) ? round($score / 100, 2) : 0
             ];
+            
+            $series[] = $score;
+            if ($emotionKey == 'overallCognitiveActivity' || $emotionKey == 'clStress') {
+                $average[] = '-'; // bcs these are a 'moment in time emotions' so it makes no sense to avg them
+            } else {
+                $paramResultArray = EmloResponseService::getEmloResponseParamValue($emotionKey);
+                if (empty($paramResultArray['results']['param_value'])) {
+                    return [];
+                }
+                $average[] = EmloResponseService::calculateParamAverage($paramResultArray['results']['param_value']);
+            }
 
-            // Add to series, average, and labels arrays
-            $series[] = (string)$score;
-            $average[] = (string)round($score * 0.8); // Example: average is 80% of current score
-
-            // Use predefined label or fallback to formatted emotion name
             $displayLabel = $emotionLabels[$emotionKey];
             $labels[] = $displayLabel;
 
             $index++;
         }
-
-        // Combine everything into the final structure
+        
         $result = [
             'emotional_insights' => array_merge($emotionalInsights, [
                 'series' => $series,
