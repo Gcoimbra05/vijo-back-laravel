@@ -97,14 +97,6 @@ class SubscriptionController extends Controller
         $user = Auth::user();
         $subscription = Subscription::where('user_id', $user->id)->first();
 
-        if (!$subscription) {
-            return response()->json([
-                'status'  => false,
-                'message' => 'No active subscription found',
-                'results' => null
-            ], 404);
-        }
-
-        return $subscription->status ? 'active' : 'inactive';
+        return $subscription && $subscription->status ? 'active' : 'inactive';
     }
 }

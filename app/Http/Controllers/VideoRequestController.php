@@ -936,13 +936,15 @@ class VideoRequestController extends Controller
         $transcriptions = null;
         if ($transcription) {
             $transcriptions = [
-                'id' => $transcription->id ?? 0,
-                'text' => $transcription->text ?? '',
-                'thumb' => 'https://placehold.co/300x200/0066cc/ffffff?text=Work+Day',
-                'emoji' => 'U+1F4AA',
-                'emotion_score' => 0.85,
-                'answer' => 'Breakthrough at work',
-                'emotion' => 'proud'
+                [
+                    'id' => $transcription->id ?? 0,
+                    'answer' => $transcription->text ?? '',
+                    'thumb' => 'https://placehold.co/300x200/0066cc/ffffff?text=Work+Day',
+                    'emoji' => 'U+1F4AA',
+                    'emotion_score' => 0.85,
+                    'text' => 'Breakthrough at work',
+                    'emotion' => 'proud'
+                ]
             ];
         }
 

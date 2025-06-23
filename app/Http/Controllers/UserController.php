@@ -434,7 +434,7 @@ class UserController extends Controller
                     "from_count" => 0
                 ],
                 "userPlan" => [
-                    "user_status" => SubscriptionController::getUserPlanStatus()->getData()->results,
+                    "user_status" => 'active', #SubscriptionController::getUserPlanStatus(),
                 ],
                 "membershipPlan" => MembershipPlanController::getMembershipPlans(), // 'id, slug, title, description'
                 "plans" => [], // 'id, slug, name, description, payment_link'
