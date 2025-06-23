@@ -405,22 +405,21 @@ class UserController extends Controller
                     "line" => "Line"
                 ],
                 "filterByLabels" => [
-                    "daily" => "Current Week",
-                    "last5Weeks" => "Last 5 Weeks",
-                    "weekly" => "Current Month",
-                    "last3Months" => "Last 3 Months",
-                    "last6Months" => "Last 6 Months",
-                    "last12Months" => "Last 12 Months",
-                    "sinceStart" => "Since Start",
-                    "custom" => "Custom"
+                    "current_week" => "Current Week",
+                    "last_5_weeks" => "Last 5 Weeks",
+                    "current_month" => "Current Month",
+                    "last_3_months" => "Last 3 Months",
+                    "last_6_months" => "Last 6 Months",
+                    "last_12_months" => "Last 12 Months",
+                    "since_start" => "Since Start"
                 ],
                 "viewByLabels" => [
-                    "days" => "Daily",
-                    "days_of_week" => "Day of Week",
-                    "weeks" => "Weekly",
-                    "months" => "Monthly",
-                    "quarters" => "Quarterly",
-                    "years" => "Yearly"
+                    "daily" => "Daily",
+                    "day_of_week" => "Day of Week",
+                    "weekly" => "Weekly",
+                    "monthly" => "Monthly",
+                    "quarterly" => "Quarterly",
+                    "yearly" => "Yearly"
                 ],
                 "rangeTypeLabels" => [
                     "lva" => "Normalized",
