@@ -98,14 +98,16 @@ class ContactController extends Controller
         $validated = $request->validate([
             'first_name'   => 'required|string|max:255',
             'last_name'    => 'required|string|max:255',
-            'country_code' => 'required|string|max:10',
+            'country_code' => 'nullable|string|max:10',
             'mobile'       => 'required|string|max:15',
             'email'        => 'nullable|email|max:255',
         ]);
 
         $userId = Auth::id();
         $validated['user_id'] = $userId;
-
+        if (empty($validated['country_code'])) {
+            $validated['country_code'] = '1';
+        }
         $existingContact = Contact::where('country_code', $validated['country_code'])
             ->where('mobile', $validated['mobile'])
             ->where('user_id', $validated['user_id'])
@@ -165,10 +167,14 @@ class ContactController extends Controller
         $validated = $request->validate([
             'first_name'   => 'required|string|max:255',
             'last_name'    => 'required|string|max:255',
-            'country_code' => 'required|string|max:10',
+            'country_code' => 'nullable|string|max:10',
             'mobile'       => 'required|string|max:15',
             'email'        => 'nullable|email|max:255',
         ]);
+
+        if (array_key_exists('country_code', $validated) && is_null($validated['country_code'])) {
+            unset($validated['country_code']);
+        }
 
         // Validar grupos
         if (!empty($groups)) {
@@ -234,7 +240,7 @@ class ContactController extends Controller
     {
         $data = $request->all();
 
-        $requiredFields = ['first_name', 'last_name', 'country_code', 'mobile'];
+        $requiredFields = ['first_name', 'last_name', 'mobile'];
         $allowedFields = array_merge($requiredFields, ['email']);
         $filteredData = [];
         $hasDuplicates = false;
@@ -252,6 +258,10 @@ class ContactController extends Controller
                 }
             }
 
+            if (empty($contact['country_code'])) {
+                $contact['country_code'] = '1';
+            }
+
             $existingContact = Contact::where('country_code', $contact['country_code'])
                 ->where('mobile', $contact['mobile'])
                 ->where('user_id', $userId)
@@ -263,6 +273,7 @@ class ContactController extends Controller
             }
 
             $filtered = array_intersect_key($contact, array_flip($allowedFields));
+            $filtered['country_code'] = $contact['country_code'];
             $filtered['user_id'] = $userId;
             $filteredData[] = $filtered;
         }

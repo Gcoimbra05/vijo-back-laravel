@@ -948,14 +948,12 @@ class VideoRequestController extends Controller
             ];
         }
 
-        Log::info('Transcriptions result', $transcriptions);
-
         // Stu wants to lock statistics behind paywalls, so we need to be able to provide the time range
         $start_time = $request->query('start_time');
         $end_time = $request->query('end_time');
 
         $formattedEmotions = $this->getFormattedEmotions($videoRequest->id, $start_time, $end_time);
-        Log::info('formattedEmotions result', $formattedEmotions);
+        # Log::info('formattedEmotions result', $formattedEmotions);
 
         $llmResponse = LlmResponse::select('text')
             ->where('request_id', $videoRequest->id)
@@ -963,37 +961,7 @@ class VideoRequestController extends Controller
 
         $videoTags = $videoRequest->tags ? explode(',', $videoRequest->tags) : [];
         $userTags = Tag::whereIn('id', $videoTags)->get(['id', 'name'])->toArray();
-        Log::info('User tags for video request', $userTags);
-
-        /* $transcriptions = [
-            [
-                'id' => 1,
-                'text' => 'Today was an incredible day at work. I finally solved that technical problem that had been bothering me for weeks.',
-                'thumb' => 'https://placehold.co/300x200/0066cc/ffffff?text=Work+Day',
-                'emoji' => 'U+1F4AA', // Flexed Biceps
-                'emotion_score' => 0.85,
-                'answer' => 'Breakthrough at work',
-                'emotion' => 'proud'
-            ],
-            [
-                'id' => 2,
-                'text' => 'I had a meaningful conversation with an old friend. We reconnected after years and it felt like no time had passed.',
-                'thumb' => 'https://placehold.co/300x200/ff9900/ffffff?text=Friendship',
-                'emoji' => 'U+1F64F', // Folded Hands
-                'emotion_score' => 0.92,
-                'answer' => 'Reconnecting',
-                'emotion' => 'happy'
-            ],
-            [
-                'id' => 3,
-                'text' => 'The presentation didn\'t go as planned. I was nervous and forgot some key points. I need to practice more next time.',
-                'thumb' => 'https://placehold.co/300x200/cc3300/ffffff?text=Presentation',
-                'emoji' => 'U+1F4C4', // Page Facing Up
-                'emotion_score' => 0.31,
-                'answer' => 'Presentation struggles',
-                'emotion' => 'disappointed'
-            ]
-        ]; */
+        # Log::info('User tags for video request', $userTags);
 
         $journalEmotionalData = [
             'emotional_insights' => [
@@ -1950,45 +1918,33 @@ class VideoRequestController extends Controller
         if ($stressValue !== null) {
             $emotionsArray['clStress'] = $stressValue;
         }
-        
+
         arsort($emotionsArray);
         
-        $series = [];
-        $average = [];
-        $labels = [];
         $emotionalInsights = [];
-        
+
         $index = 0;
         foreach ($emotionsArray as $emotionKey => $score) {
-
-            $emotionalInsights[(string)$index] = [
-                'emotion' =>  $emotionLabels[$emotionKey],
-                'score' => is_int($score) ? round($score / 100, 2) : 0
-            ];
-            
-            $series[] = $score;
-            if ($emotionKey == 'overallCognitiveActivity' || $emotionKey == 'clStress') {
-                $average[] = '-'; // bcs these are a 'moment in time emotions' so it makes no sense to avg them
-            } else {
+            $average = 0;
+            if ($emotionKey != 'overallCognitiveActivity' && $emotionKey != 'clStress') {
                 $paramResultArray = EmloResponseService::getEmloResponseParamValue($emotionKey);
                 if (empty($paramResultArray['results']['param_value'])) {
                     return [];
                 }
-                $average[] = EmloResponseService::calculateParamAverage($paramResultArray['results']['param_value']);
+                $average = EmloResponseService::calculateParamAverage($paramResultArray['results']['param_value']);
             }
 
-            $displayLabel = $emotionLabels[$emotionKey];
-            $labels[] = $displayLabel;
+            $emotionalInsights[] = [
+                'emotion' =>  $emotionLabels[$emotionKey],
+                'score' => is_int($score) ? $score : 0,
+                'average' => (int) round($average),
+            ];
 
             $index++;
         }
-        
+
         $result = [
-            'emotional_insights' => array_merge($emotionalInsights, [
-                'series' => $series,
-                'average' => $average,
-                'labels' => $labels
-            ])
+            'emotional_insights' => $emotionalInsights
         ];
 
         return $result;
