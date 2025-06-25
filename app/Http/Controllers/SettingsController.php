@@ -75,71 +75,71 @@ class SettingsController extends Controller
             "emotion_datasets" => [
                 [
                     "id" => "1",
-                    "metric_id" => "emotion##1",
-                    'emotionCode' => 'EDP-Anticipation',
+                    # "metric_id" => "emotion##1",
+                    "metric_id" => "EDP-Anticipation",
                     "name" => "Anticipation",
                     "emotionEmoji" => null
                 ],
                 [
                     "id" => "24",
-                    "metric_id" => "emotion##24",
-                    'emotionCode' => 'EDP-Concentrated',
+                    # "metric_id" => "emotion##24",
+                    "metric_id" => "EDP-Concentrated",
                     "name" => "Concentrated",
                     "emotionEmoji" => null
                 ],
                 [
                     "id" => "22",
-                    "metric_id" => "emotion##22",
-                    'emotionCode' => 'EDP-Confident',
+                    # "metric_id" => "emotion##22",
+                    "metric_id" => "EDP-Confident",
                     "name" => "Confident",
                     "emotionEmoji" => null
                 ],
                 [
                     "id" => "3",
-                    "metric_id" => "emotion##3",
-                    'emotionCode' => 'EDP-Emotional',
+                    # "metric_id" => "emotion##3",
+                    "metric_id" => "EDP-Emotional",
                     "name" => "Emotional",
                     "emotionEmoji" => null
                 ],
                 [
                     "id" => "6",
-                    "metric_id" => "emotion##6",
-                    'emotionCode' => 'EDP-Energetic',
+                    # "metric_id" => "emotion##6",
+                    "metric_id" => "EDP-Energetic",
                     "name" => "Energetic",
                     "emotionEmoji" => null
                 ],
                 [
                     "id" => "5",
-                    "metric_id" => "emotion##5",
-                    'emotionCode' => 'EDP-Hesitation',
+                    # "metric_id" => "emotion##5",
+                    "metric_id" => "EDP-Hesitation",
                     "name" => "Hesitation",
                     "emotionEmoji" => null
                 ],
                 [
                     "id" => "7",
-                    "metric_id" => "emotion##7",
-                    'emotionCode' => 'EDP-Passionate',
+                    # "metric_id" => "emotion##7",
+                    "metric_id" => "EDP-Passionate",
                     "name" => "Passionate",
                     "emotionEmoji" => null
                 ],
                 [
                     "id" => "8",
-                    "metric_id" => "emotion##8",
-                    'emotionCode' => 'EDP-Stressful',
+                    # "metric_id" => "emotion##8",
+                    "metric_id" => "EDP-Stressful",
                     "name" => "Stressful",
                     "emotionEmoji" => null
                 ],
                 [
                     "id" => "9",
-                    "metric_id" => "emotion##9",
-                    'emotionCode' => 'EDP-Thoughtful',
+                    # "metric_id" => "emotion##9",
+                    "metric_id" => "EDP-Thoughtful",
                     "name" => "Thoughtful",
                     "emotionEmoji" => null
                 ],
                 [
                     "id" => "10",
-                    "metric_id" => "emotion##10",
-                    'emotionCode' => 'EDP-Uneasy',
+                    # "metric_id" => "emotion##10",
+                    "metric_id" => "EDP-Uneasy",
                     "name" => "Uneasy",
                     "emotionEmoji" => null
                 ]
@@ -356,54 +356,13 @@ class SettingsController extends Controller
 
     public function getInsights(Request $request)
     {
-        $emotion = $request->get('emotion', 'EDP-Anticipation');
+        $emotion = $request->get('metric1', 'EDP-Anticipation');
 
         $emlo = new EmloInsightsService();
         return $emlo->getInsightsData(
             $request,
             $emotion
         );
-
-        /* $responseData = [
-            "data" => [
-                [
-                    "name" => "EDP-Anticipation",
-                    "period" => "2025-06-06",
-                    "period_display" => "Jun 6, 2025",
-                    "avg" => 40,
-                    "min" => 40,
-                    "max" => 40,
-                    "request_count" => 2,
-                    "sort_order" => "2025-06-06"
-                ],
-                [
-                    "name" => "EDP-Passionate",
-                    "period" => "2025-06-10",
-                    "period_display" => "Jun 10, 2025",
-                    "avg" => 40,
-                    "min" => 40,
-                    "max" => 40,
-                    "request_count" => 8,
-                    "sort_order" => "2025-06-10"
-                ],
-                [
-                    "name" => "EDP-Passionate",
-                    "period" => "2025-06-11",
-                    "period_display" => "Jun 11, 2025",
-                    "avg" => 40,
-                    "min" => 40,
-                    "max" => 40,
-                    "request_count" => 15,
-                    "sort_order" => "2025-06-11"
-                ]
-            ],
-            "aggregation" => "daily",
-            "time_range" => "last_6_months",
-            "period" => [
-                "start" => "2024-12-01T00:00:00.000000Z",
-                "end" => "2025-06-30T23:59:59.999999Z"
-            ]
-        ]; */
     }
 
     public function getStaticPages ()

@@ -74,10 +74,11 @@ class VideoRequestController extends Controller
 
             $request->emoji = $catalog ? $catalog->emoji : '';
             $request->catalog_title = $catalog ? $catalog->title : '';
-            $request->created_at = $request->created_at->format('M d, Y');
+            $reqArr = $request->toArray();
+            $reqArr['created_at'] = $request->created_at ? $request->created_at->format('M d, Y') : '';
 
             $toRequestsData[] = [
-                'request'    => $request,
+                'request'    => $reqArr,
                 'contacts'   => $contacts,
                 'groups'     => $groups,
                 'is_grouped' => $isGrouped,
@@ -85,12 +86,21 @@ class VideoRequestController extends Controller
         }
 
         $fromRequests = VideoRequest::with('latestVideo')
-            ->where('ref_user_id', $userId)
-            ->where(function($query) {
-                $query->whereNotNull('contact_id')
-                      ->orWhereNotNull('group_id');
-            })
-            ->get();
+            ->where(function($query) use ($userId) {
+                $query->where('ref_user_id', $userId)
+                      ->where(function($query) {
+                            $query->whereNotNull('contact_id')
+                                    ->orWhereNotNull('group_id');
+                      })
+                      ->orWhere(function($query) {
+                            $query->where('ref_country_code', Auth::user()->country_code)
+                                   ->where('ref_mobile', Auth::user()->mobile)
+                                   ->where(function($query) {
+                                       $query->whereNotNull('contact_id')
+                                             ->orWhereNotNull('group_id');
+                                   });
+                            });
+            })->get();
 
         $fromRequestsData = [];
         foreach ($fromRequests as $request) {
@@ -121,12 +131,13 @@ class VideoRequestController extends Controller
 
             $request->emoji = $catalog ? $catalog->emoji : '';
             $request->catalog_title = $catalog ? $catalog->title : '';
-            // ajuste o campo createdat para o formato May 29, 2025
-            $request->created_at = $request->created_at->format('M d, Y');
             $isGrouped = ($contacts->count() + $groups->count()) > 1;
 
+            $reqArr = $request->toArray();
+            $reqArr['created_at'] = $request->created_at ? $request->created_at->format('M d, Y') : '';
+
             $fromRequestsData[] = [
-                'request'    => $request,
+                'request'    => $reqArr,
                 'contacts'   => $contacts,
                 'groups'     => $groups,
                 'is_grouped' => $isGrouped,
