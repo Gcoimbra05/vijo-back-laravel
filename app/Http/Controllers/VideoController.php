@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class VideoController extends Controller
 {
@@ -171,6 +172,7 @@ class VideoController extends Controller
 
     public function uploadAndStore(Request $request)
     {
+        Log::info('uploadAndStore');
         $request->validate([
             'request_id' => 'required|exists:video_requests,id',
             'file' => 'required|file|mimes:mp4,mov,ogg,qt,webm,mkv|max:512000',
@@ -179,6 +181,7 @@ class VideoController extends Controller
 
         $mediaController = app(MediaStorageController::class);
         $uploadResponse = $mediaController->uploadVideo($request);
+        Log::info('uploadResponse', ['response' => $uploadResponse]);
         $videoRequestId = $request->input('request_id');
         $uploadData = $uploadResponse->getData(true);
 
@@ -189,7 +192,12 @@ class VideoController extends Controller
                 'errors'  => $uploadData['errors'] ?? null,
             ], 422);
         }
-
+        Log::info('Video upload successful', [
+            'videoRequestId' => $videoRequestId,
+            'videoName' => $uploadData['video_name'],
+            'thumbnailName' => $uploadData['thumbnail_name'],
+            'videoDuration' => $uploadData['video_duration'],
+        ]);
         $video = Video::where('request_id', $videoRequestId)
             ->whereNull('video_url')
             ->whereNotNull('thumbnail_url')
@@ -215,7 +223,7 @@ class VideoController extends Controller
                 'user_id'        => Auth::id(),
             ]);
         }
-
+        Log::info('Video saved to database');
         $videoRequestController = new VideoRequestController();
         $videoRequestController->initProcess($request, $videoRequestId);
 

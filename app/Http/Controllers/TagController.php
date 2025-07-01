@@ -141,7 +141,7 @@ class TagController extends Controller
         return $tagIds;
     }
 
-    public static function getUserTags($categoryId = 0, $userId = null)
+    public static function getUserTags($categoryId = 0, $userId = null, $withCustomTags = true)
     {
         if (!$userId) {
             $userId = Auth::id();
@@ -153,19 +153,21 @@ class TagController extends Controller
             ->get(['id', 'name'])
             ->toArray();
 
-        $customTags = Tag::where('type', 'custom')
-            ->where('created_by_user', $userId)
-            ->where('status', 1)
-            ->get(['id', 'name'])
-            ->toArray();
+        if ($withCustomTags) {
+            $customTags = Tag::where('type', 'custom')
+                ->where('created_by_user', $userId)
+                ->where('status', 1)
+                ->get(['id', 'name'])
+                ->toArray();
 
-        $mergeTags = array_merge($catalogTags, $customTags);
-        $catalogTags = array_map(function ($tag) {
-            return [
-                'id' => (string)$tag['id'],
-                'name' => $tag['name'],
-            ];
-        }, $mergeTags);
+            $mergeTags = array_merge($catalogTags, $customTags);
+            $catalogTags = array_map(function ($tag) {
+                return [
+                    'id' => (string)$tag['id'],
+                    'name' => $tag['name'],
+                ];
+            }, $mergeTags);
+        }
 
         return $catalogTags;
     }

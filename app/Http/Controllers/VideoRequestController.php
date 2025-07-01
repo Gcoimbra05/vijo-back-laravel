@@ -229,15 +229,6 @@ class VideoRequestController extends Controller
             ], 404);
         }
 
-        $request->validate([
-            'catalog_id' => 'required|integer',
-            'type' => 'required|string|in:daily,request',
-        ]);
-
-        $data = $request->only(['catalog_id', 'type']);
-        $data['user_id'] = Auth::id();
-        $videoRequest->update($data);
-
         if ($request->hasFile('file')) {
             Log::info('Processing file upload for video request ID: ' . $videoRequest->id);
             $file = $request->file('file');
@@ -431,22 +422,18 @@ class VideoRequestController extends Controller
 
     public function initProcess(Request $request, $id)
     {
-        $userId = Auth::id();
-        $videoRequest = VideoRequest::with(['latestVideo', 'catalog'])
-            ->where(function ($query) use ($userId) {
-                $query->where('user_id', $userId)
-                    ->orWhere('ref_user_id', $userId);
-            })
-            ->find($id);
+        Log::info('Initializing video request processing for ID: ' . $id);
+        $videoRequest = VideoRequest::with(['latestVideo', 'catalog'])->find($id);
 
         if (!$videoRequest) {
+            Log::error('Video request not found for ID: ' . $id);
             return response()->json([
                 'success' => false,
                 'message' => 'Video request not found.',
                 'data' => null,
             ], 404);
         }
-
+        Log::info('Video request found: ', ['videoRequest' => $videoRequest]);
         ProcessVideoRequest::dispatch($videoRequest);
 
         return response()->json($videoRequest, 201);
@@ -672,29 +659,42 @@ class VideoRequestController extends Controller
         Log::info('Starting video request process');
         $userId = Auth::id();
         $catalogId = $request->input('catalog_id');
+        $requestId = $request->input('request_id');
 
-        if (!$catalogId) {
-            return response()->json([
-                'status' => false,
-                'message' => 'Catalog ID is required.'
-            ], 400);
-        }
-        Log::info('Catalog ID: ' . $catalogId);
+        if ($requestId) {
+            Log::info('Request ID provided: ' . $requestId);
+            $videoRequest = VideoRequest::find($requestId);
+            if (!$videoRequest || ($videoRequest->user_id !== $userId && $videoRequest->ref_user_id !== $userId)) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Unauthorized access to this request.'
+                ], 403);
+            }
+            $catalogId = $videoRequest->catalog_id;
+        } else {
+            if (!$catalogId) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Catalog ID is required.'
+                ], 400);
+            }
+            Log::info('Catalog ID: ' . $catalogId);
 
-        $catalog = Catalog::with(['parentCatalog', 'category', 'videoType'])->find($catalogId);
-        if (!$catalog) {
-            return response()->json([
-                'status' => false,
-                'message' => 'Catalog not found.'
-            ], 404);
+            $catalog = Catalog::with(['parentCatalog', 'category', 'videoType'])->find($catalogId);
+            if (!$catalog) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Catalog not found.'
+                ], 404);
+            }
+            Log::info('Catalog found: ' . $catalog->title);
+            // Create the VideoRequest
+            $videoRequest = VideoRequest::create([
+                'user_id' => $userId,
+                'catalog_id' => $catalogId,
+                'status' => 'Pending',
+            ]);
         }
-        Log::info('Catalog found: ' . $catalog->title);
-        // Create the VideoRequest
-        $videoRequest = VideoRequest::create([
-            'user_id' => $userId,
-            'catalog_id' => $catalogId,
-            'status' => 'Pending',
-        ]);
 
         $recordTime = $catalog->max_record_time ?? '60';
         $minRecordTime = $catalog->min_record_time ?? '15';
@@ -709,7 +709,7 @@ class VideoRequestController extends Controller
         Log::info('Video Type Metrics: ' . $vtMetricNo . ', KPIs: ' . $vtKpiNo . ', KPI Metrics: ' . $vtKpiMetrics);
         $questions = CatalogQuestionController::getQuestionsByCatalogId($catalog, $vtKpiMetrics, $vtKpiNo);
 
-        $userTags = TagController::getUserTags($catalog->category_id, $userId);
+        $userTags = TagController::getUserTags($catalog->category_id, $userId, false);
 
         $videoType = [
             'metrics' => $vtMetricNo,
@@ -1287,10 +1287,28 @@ class VideoRequestController extends Controller
         $catalog = $videoRequest->catalog;
         $category = $catalog ? $catalog->category : null;
         $video = $videoRequest->latestVideo;
+        $tags = $videoRequest->tags ?? [];
+        $tags = !empty($tags) ? explode(',', $tags) : [];
+        $tags = Tag::whereIn('id', $tags)->get(['id', 'name'])->toArray();
 
         $transcript = Transcript::select('text')
                         ->where('request_id', $videoRequest->id)
                         ->first()?->text ?? '';
+
+        $transcriptions = null;
+        if ($transcript) {
+            $transcriptions = [
+                [
+                    'id' => 0,
+                    'answer' => $transcript ?? '',
+                    'thumb' => 'https://placehold.co/300x200/0066cc/ffffff?text=Work+Day',
+                    'emoji' => 'U+1F4AA',
+                    'emotion_score' => 0.85,
+                    'text' => 'Breakthrough at work',
+                    'emotion' => 'proud'
+                ]
+            ];
+        }
 
         $transcriptWEmotions = Transcript::select('text_w_segment_emotions')
                         ->where('request_id', $videoRequest->id)
@@ -1299,8 +1317,6 @@ class VideoRequestController extends Controller
         $llmResponse = LlmResponse::select('text')
                         ->where('request_id', $videoRequest->id)
                         ->first()?->text ?? '';
-
-        $userTags = TagController::getUserTags($catalog->category_id);
 
         $emotions = EmloResponseService::getEmloResponseParamValueForId($videoRequest->id, 'EDP');
 
@@ -1314,7 +1330,7 @@ class VideoRequestController extends Controller
             'is_private'        => $videoRequest->is_private ?? 0,
             'video'             => $video ? $video->video_url : '',
             'video_thumb'       => $video ? $video->thumbnail_url : '',
-            'user_tags'         => $userTags,
+            'user_tags'         => $tags,
 
             'emotions'          => $emotions,
 
@@ -1323,7 +1339,7 @@ class VideoRequestController extends Controller
             'emotional_insights'=> '', // implement if needed
             'emotional_outcomes'=> '', // implement if needed
 
-            'transcription'     => $transcript,
+            'transcription'     => $transcriptions,
             'final_video_transcript' => $transcriptWEmotions,
 
             'summaryReport'     => $llmResponse,
@@ -1496,17 +1512,30 @@ class VideoRequestController extends Controller
             ]);
 
             $fullName = trim(($row['first_name'] ?? '') . ' ' . ($row['last_name'] ?? ''));
-            $url = rtrim($videoUrl, "/") . '/' . base64_encode($shareRequest->id);
+            //$url = rtrim($videoUrl, "/") . '/' . base64_encode($shareRequest->id);
+            $envUrl = env('APP_ENV') === 'production' ? 'https://vijo.me' : 'https://test.vijo.me';
+            $url = $envUrl . '/gallery-share/' . $originalRequestId;
 
             // Send email notification
             if (!empty($refEmail)) {
                 try {
-                    Mail::raw("Hello {$fullName}, you have received a shared video. Access: {$url}", function ($message) use ($refEmail) {
+                    $sendName = Auth::user()->first_name ?? 'Vijo User';
+                     Mail::send('emails.template', [
+                        'title' => '👀 ' . $sendName . ' has shared a Vijo with you',
+                        'contentView' => 'emails.share_video_request',
+                        'contentData' => [
+                            'senderName'    => $sendName,
+                            'recipientName' => $fullName,
+                            'url'           => $url,
+                            'note'          => $originalRequest->ref_note ?? '',
+                            'signUpUrl'     => $envUrl,
+                        ]
+                    ], function ($message) use ($refEmail, $fullName) {
                         $message->to($refEmail)
-                            ->subject('A video was shared with you');
+                            ->subject('👀 ' . $fullName . ' has shared a Vijo with you');
                     });
                 } catch (\Exception $e) {
-                    // Log::error('Error sending email: ' . $e->getMessage());
+                    Log::error('Error sending email: ' . $e->getMessage());
                 }
             }
 
@@ -1516,7 +1545,7 @@ class VideoRequestController extends Controller
                     $twilio = new \App\Services\TwilioService();
                     $twilio->sendSms('+' . $countryCode . $mobile, "Hello {$fullName}, you have received a shared video. Access: {$url}");
                 } catch (\Exception $e) {
-                    // Log::error('Error sending SMS: ' . $e->getMessage());
+                    Log::error('Error sending SMS: ' . $e->getMessage());
                 }
             }
         }
