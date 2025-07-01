@@ -8,20 +8,20 @@ Route::get('/', function () {
     return view('welcome');
 });
 
-Route::get('images/{filename}', function ($filename) {
-    return MediaStorageController::handlePublicFiles('images', $filename);
+Route::get('images/{filename}', function (Request $request, $filename) {
+    return MediaStorageController::handlePublicFiles($request, 'images', $filename);
 });
 Route::get('videos/{filename}', function (Request $request, $filename) {
     return MediaStorageController::handlePublicFiles($request, 'videos', $filename);
 });
-Route::get('thumbnails/{filename}', function ($filename) {
-    return MediaStorageController::handlePublicFiles('thumbnails', $filename);
+Route::get('thumbnails/{filename}', function (Request $request, $filename) {
+    return MediaStorageController::handlePublicFiles($request, 'thumbnails', $filename);
 });
-Route::get('documents/{filename}', function ($filename) {
-    return MediaStorageController::handlePublicFiles('documents', $filename);
+Route::get('documents/{filename}', function (Request $request, $filename) {
+    return MediaStorageController::handlePublicFiles($request, 'documents', $filename);
 });
-Route::get('pdf/{filename}', function ($filename) {
-    return MediaStorageController::handlePublicFiles('pdf', $filename);
+Route::get('pdf/{filename}', function (Request $request, $filename) {
+    return MediaStorageController::handlePublicFiles($request, 'pdf', $filename);
 });
 
 // Fallback Route
