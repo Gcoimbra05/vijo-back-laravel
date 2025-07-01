@@ -1,5 +1,6 @@
 <?php
 
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\MediaStorageController;
 
@@ -10,8 +11,8 @@ Route::get('/', function () {
 Route::get('images/{filename}', function ($filename) {
     return MediaStorageController::handlePublicFiles('images', $filename);
 });
-Route::get('videos/{filename}', function ($filename) {
-    return MediaStorageController::handlePublicFiles('videos', $filename);
+Route::get('videos/{filename}', function (Request $request, $filename) {
+    return MediaStorageController::handlePublicFiles($request, 'videos', $filename);
 });
 Route::get('thumbnails/{filename}', function ($filename) {
     return MediaStorageController::handlePublicFiles('thumbnails', $filename);

@@ -10,6 +10,8 @@ use Symfony\Component\HttpFoundation\File\File;
 use Illuminate\Support\Facades\File as FacadeFile;
 use Intervention\Image\Facades\Image;
 
+use Aws\S3\S3Client;
+
 class MediaStorageController extends Controller
 {
     /**
@@ -224,74 +226,81 @@ class MediaStorageController extends Controller
         ]);
     }
 
-    public static function handlePublicFiles($type, $filename)
+    public static function handlePublicFiles(Request $request, $type, $filename)
     {
         Log::info('Handling public file request for type: ' . $type . ', filename: ' . $filename);
-            /* // Check if the file belongs to the authenticated user
-            if (!self::fileBelongsToUser($type, $filename)) {
-                abort(403, 'Unauthorized access to the file.');
-            } */
 
-        $path = $type . "/" . $filename;
-        $disk = config('filesystems.default', 's3');
-        if ($disk === 's3') {
-            // Check if the file exists on S3
-            if (!Storage::disk('s3')->exists($path)) {
-                Log::info('File not found on S3: ' . $path);
-                abort(404);
-            }
+        $path = $type . '/' . $filename;
 
-            // Get the file URL on S3
-            $url = Storage::disk('s3')->url($path);
-            $mimeType = Storage::disk('s3')->mimeType($path);
-            $size = Storage::disk('s3')->size($path);
+        $bucket = config('filesystems.disks.s3.bucket');
+        $s3 = new S3Client([
+            'version'     => 'latest',
+            'region'      => config('filesystems.disks.s3.region'),
+            'credentials' => [
+                'key'    => config('filesystems.disks.s3.key'),
+                'secret' => config('filesystems.disks.s3.secret'),
+            ],
+        ]);
 
-            // Set HTTP headers
-            $headers = [
-                'Content-Type' => $mimeType,
-                'Content-Disposition' => 'inline; filename="' . basename($filename) . '"',
-                'Content-Length' => $size,
-                'Accept-Ranges' => 'bytes', // Add support for byte ranges
-                'Cache-Control' => 'public, max-age=31536000', // Cache for 1 year
-                'Expires' => gmdate('D, d M Y H:i:s', time() + 31536000) . ' GMT', // Expiration date
-                'Access-Control-Allow-Origin' => '*',
-            ];
-
-            // Return the response with the file
-            return response()->stream(function () use ($path) {
-                $stream = Storage::disk('s3')->getDriver()->readStream($path);
-                fpassthru($stream);
-            }, 200, $headers);
-        } else {
-            if (!FacadeFile::exists($path)) {
-                abort(404);
-            }
-
-            $mimeType = FacadeFile::mimeType($path);
-            if (empty($mimeType) && $type == 'video') {
-                if (strpos($filename, '.mp4') !== false) {
-                    $mimeType = 'video/mp4';
-                } else if (strpos($filename, '.webm') !== false) {
-                    $mimeType = 'video/webm';
-                }
-            }
-
-            // Set HTTP headers
-            $headers = [
-                'Content-Type' => $mimeType,
-                'Content-Disposition' => 'inline; filename="' . basename($path) . '"',
-                'Content-Length' => filesize($path),
-                'Accept-Ranges' => 'bytes', // Add support for byte ranges
-                'Cache-Control' => 'public, max-age=31536000', // Cache for 1 year
-                'Expires' => gmdate('D, d M Y H:i:s', time() + 31536000) . ' GMT', // Expiration date
-                'Access-Control-Allow-Origin' => '*',
-            ];
-
-            // Return the response with the file
-            return response()->file($path, $headers);
+        try {
+            $head = $s3->headObject([
+                'Bucket' => $bucket,
+                'Key'    => $path,
+            ]);
+        } catch (\Aws\S3\Exception\S3Exception $e) {
+            abort(404, 'Arquivo não encontrado no S3');
         }
 
-        abort(404);
+        $size = $head['ContentLength'];
+        $mimeType = $head['ContentType'] ?? 'application/octet-stream';
+
+        $headers = [
+            'Content-Type' => $mimeType,
+            'Accept-Ranges' => 'bytes',
+            'Cache-Control' => 'public, max-age=31536000',
+            'Expires' => gmdate('D, d M Y H:i:s', time() + 31536000) . ' GMT',
+            'Access-Control-Allow-Origin' => '*',
+        ];
+
+        $range = $request->header('Range');
+        if ($range && preg_match('/bytes=(\d+)-(\d*)/', $range, $matches)) {
+            $start = intval($matches[1]);
+            $end = $matches[2] !== '' ? intval($matches[2]) : $size - 1;
+            $length = $end - $start + 1;
+
+            $headers['Content-Range'] = "bytes $start-$end/$size";
+            $headers['Content-Length'] = $length;
+
+            $object = $s3->getObject([
+                'Bucket' => $bucket,
+                'Key' => $path,
+                'Range' => "bytes=$start-$end",
+            ]);
+
+            return response()->stream(function () use ($object) {
+                $body = $object['Body'];
+                while (!$body->eof()) {
+                    echo $body->read(1024 * 1024); // 1MB chunks
+                    flush();
+                }
+            }, 206, $headers); // Partial Content
+        }
+
+        // w/o range, return full content
+        $headers['Content-Length'] = $size;
+
+        $object = $s3->getObject([
+            'Bucket' => $bucket,
+            'Key' => $path,
+        ]);
+
+        return response()->stream(function () use ($object) {
+            $body = $object['Body'];
+            while (!$body->eof()) {
+                echo $body->read(1024 * 1024);
+                flush();
+            }
+        }, 200, $headers); // Full content
     }
 
     /* private static function fileBelongsToUser($type, $filename)
@@ -319,7 +328,7 @@ class MediaStorageController extends Controller
                 } else {
                     $request = RequestProspect::where('prospect_code', $code)->select('user_id')->first();
                 }
-    
+
                 if ($request) {
                     return self::checkFileOwnership($type, $filename, $request->user_id);
                 }
