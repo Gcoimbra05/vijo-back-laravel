@@ -27,7 +27,7 @@ class EmloResponseService
             }
 
             $path_id = $result[0]['id'];
-            Log::debug('the $path_id is' . $path_id);
+            # Log::debug('the $path_id is' . $path_id);
 
             $query = EmloResponseValue::select('response_id', 'path_id', 'numeric_value', 'string_value', 'boolean_value', 'created_at')
                 ->where('path_id', $path_id);
@@ -73,8 +73,8 @@ class EmloResponseService
             
             $result = $query->get()->toArray();
 
-            Log:info("the result is: " . json_encode($result));
-            
+            # Log:info("the result is: " . json_encode($result));
+
             return [
                 'status' => true,
                 'results' => [
@@ -193,7 +193,7 @@ class EmloResponseService
 
     private function extractNumericValue($valueData) {
         if (!isset($valueData['results']['param_value'][0])) {
-            Log::debug('No param_value found, returning 0');
+            # Log::debug('No param_value found, returning 0');
             return 0;
         }
         
@@ -202,20 +202,20 @@ class EmloResponseService
         // Try numeric_value first, then parse string_value
         if ($paramValue['numeric_value'] !== null) {
             $numericValue = (float) $paramValue['numeric_value'];
-            Log::debug('Using numeric_value', ['value' => $numericValue]);
+            # Log::debug('Using numeric_value', ['value' => $numericValue]);
             return $numericValue;
         }
         
         if ($paramValue['string_value'] !== null) {
             $stringValue = (float) $paramValue['string_value'];
-            Log::debug('Using string_value converted to numeric', [
+            /* Log::debug('Using string_value converted to numeric', [
                 'original' => $paramValue['string_value'],
                 'converted' => $stringValue
-            ]);
+            ]); */
             return $stringValue;
         }
         
-        Log::debug('No numeric value found, returning 0');
+        # Log::debug('No numeric value found, returning 0');
         return 0;
     }
 
@@ -249,8 +249,8 @@ class EmloResponseService
         }
 
         $average = $sum / $validCount;
-        Log::info("The count is: " . $validCount);
-        Log::info("The average is: " . $average);
+        # Log::info("The count is: " . $validCount);
+        # Log::info("The average is: " . $average);
 
         return $average;
     }

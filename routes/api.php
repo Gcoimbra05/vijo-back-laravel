@@ -52,7 +52,8 @@ Route::prefix('v2')->middleware(ForceJsonResponse::class)->group(function () {
     Route::get('/information-contents', [SettingsController::class, 'getInformationContent']);
     Route::get('/static-pages', [SettingsController::class, 'getStaticPages']);
     Route::post('/insights', [SettingsController::class, 'getInsights']); // chart_type=bar&view_by=days_of_week&filter_by=daily&datatype=emotion&metric1=emotion%23%231&no_zero_record=0
-
+    Route::get('shared-video-details/{id}', [VideoRequestController::class, 'shareJournalDetails']);
+        
     Route::middleware('auth:sanctum')->group(function () {
         Route::apiResource('users', UserController::class);
         Route::get('dashboard', [UserController::class, 'getDashboardData']);
@@ -66,7 +67,6 @@ Route::prefix('v2')->middleware(ForceJsonResponse::class)->group(function () {
         Route::get('video-galleries', [VideoRequestController::class, 'getVideoGalleries']);
         Route::get('video-detail/{id}', [VideoRequestController::class, 'getVideoDetail']);
         Route::post('make-request', [VideoRequestController::class, 'makeVideoRequest']);
-        Route::get('shared-video-details/{id}', [VideoRequestController::class, 'shareJournalDetails']);
         Route::post('share-video-contacts', [VideoRequestController::class, 'shareVideoToContactsAndGroups']);
         Route::post('send-reminder', [VideoRequestController::class, 'sendReminder']);
         Route::post('unshare-video', [VideoRequestController::class, 'unshareVideoRequest']);
@@ -76,6 +76,7 @@ Route::prefix('v2')->middleware(ForceJsonResponse::class)->group(function () {
         Route::post('cancel-decline-request', [VideoRequestController::class, 'cancelDeclineRecordRequest']);
         Route::post('share-video-requests', [VideoRequestController::class, 'shareVideoRequests']);
         Route::post('process-video-request/{id}', [VideoRequestController::class, 'initProcess']);
+
         Route::get('related-requests/{id}', [VideoRequestController::class, 'getRelatedRequests']);
         Route::delete('delete-requests/{id}', [VideoRequestController::class, 'deleteVideoRequests']);
 

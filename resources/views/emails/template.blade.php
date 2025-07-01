@@ -50,9 +50,13 @@
         <table width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width: 328px; font-weight: 500; color: #1A1C1F;">
           <tr>
             <td style="background-color: #DBE1FF; border-radius: 16px; padding: 24px; text-align: left;">
-              <h3 style="margin-top: 0; font-size: 28px;"> {{ $title }}</h3>
+              <!-- <h3 style="margin-top: 0; font-size: 28px;"> {{ $title }}</h3> -->
 
-              <p>[EMAIL_CONTENTS]</p>
+              @isset($contentView)
+                  @include($contentView, $contentData ?? [])
+              @else
+                  <p>{{ $slot ?? '' }}</p>
+              @endisset
             </td>
           </tr>
         </table>
