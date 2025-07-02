@@ -354,11 +354,10 @@ class SettingsController extends Controller
         return response()->json($responseData);
     }
 
-    public function getInsights(Request $request)
+    public function getInsights(Request $request, EmloInsightsService $emlo)
     {
-        $emotion = $request->get('metric1', 'EDP-Anticipation');
+        $emotion = $request->get('metric1', 'EDP-Stressful');
 
-        $emlo = new EmloInsightsService();
         return $emlo->getInsightsData(
             $request,
             $emotion

@@ -5,46 +5,51 @@ namespace App\Services;
 use App\Models\Rule;
 use App\Models\EmloResponseParamSpecs;
 use App\Services\Emlo\EmloResponseService;
-
 use Illuminate\Support\Facades\Log;
+
+use App\Exceptions\EmloParamSpecNotFoundException;
 
 class RuleEvaluationService
 {
+    public function __construct(private EmloResponseService $emloResponseService
+    ){}
+
     public function evaluateRules(int $requestId, string $paramName): array
     {
         $paramsWValues = [];
-        $emloResponseService = app(EmloResponseService::class);
+
+        $paramSpecId = EmloResponseParamSpecs::select('id')
+            ->where("simplified_param_name", $paramName)
+            ->first();
+        if (!$paramSpecId) {
+            throw new EmloParamSpecNotFoundException("EMLO param specification id for param '{$paramName}' not found");
+        }
 
         $rules = Rule::with('conditions')
-            ->where('param_name', $paramName)
+            ->where('param_spec_id', $paramSpecId->id)
             ->where('active', true)
             ->get();
         
-        $paramsWSpec = $this->getAllRequestParamsWSpec();
-
-        foreach ($paramsWSpec as $param) {
-
-            $paramWValues = $emloResponseService->getEmloResponseParamValueForId($requestId, $param->param_name);
-            
-            if($paramWValues['success'] == true){
-                
-                $dataPoint = $this->extractRelevantValueFromParamArray($paramWValues);
-                if ($dataPoint) {
-                    $paramsWValues[$param->param_name] = $dataPoint;
-                } else {
-                    return [];
-                }
-                
-            }
+        $paramWSpec = EmloResponseParamSpecs::select('param_name')
+            ->where('simplified_param_name', $paramName)
+            ->first();
+        if (!$paramWSpec) {
+            throw new EmloParamSpecNotFoundException("EMLO param specification simplified_param_name for param '{$paramName}' not found");
         }
 
+        $paramValue = $this->emloResponseService->getParamValueByRequestId($requestId, $paramWSpec->param_name);
+        $dataPoint = $paramValue;
+        if ($dataPoint) {
+            $paramsWValues[$paramWSpec->param_name] = $dataPoint;
+        } else {
+            return [];
+        }
+                
         $messages = [];
                 
         foreach ($rules as $rule) {
             foreach ($rule->conditions as $condition) {
-                
                 $conditionResult = $this->evaluateCondition($condition->condition, $paramsWValues);
-
                 if ($conditionResult) {
                     $messages[] = $condition->message;
                 }
@@ -52,29 +57,6 @@ class RuleEvaluationService
         }
 
         return $messages;
-    }
-
-    private function getAllRequestParamsWSpec()
-    {
-        $paramsWSpecs = EmloResponseParamSpecs::all();
-        return $paramsWSpecs;
-
-    }
-
-    private function extractRelevantValueFromParamArray(array $paramArray)
-    {
-        if(isset($paramArray['data'])) {
-            if(isset($paramArray['data'][0]['numeric_value'])) {
-                return $paramArray['data'][0]['numeric_value'];
-            } else {
-                $stringValue = json_decode($paramArray['data'][0]['string_value'], true);
-                if(isset($stringValue)){
-                    return $stringValue['averageLevel'];
-                } else {
-                    return false;
-                }
-            }
-        }
     }
 
     private function evaluateOperator($leftValue, $operator, $rightValue): bool
@@ -88,7 +70,6 @@ class RuleEvaluationService
                 return $leftValue >= $rightValue;
             case '<=':
                 return $leftValue <= $rightValue;
-            case '==':
             case '=':
                 return $leftValue == $rightValue;
             case '!=':

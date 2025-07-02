@@ -2,19 +2,25 @@
 
 namespace App\Http\Controllers;
 
+use App\Exceptions\EmloParamNotFoundException;
 use Illuminate\Routing\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\EmloResponse;
-use App\Models\EmloResponsePath;
 use App\Services\Emlo\EmloResponseService;
 use App\Services\Emlo\EmloHelperService;
-use function PHPUnit\Framework\isEmpty;
-use Illuminate\Support\Facades\Log;
+use App\Services\Emlo\EmloInsightsService;
+
+use App\Exceptions\EmloNotFoundException;
 
 class EmloResponseController extends Controller {
 
-public function index()
+    public function __construct(
+        protected EmloResponseService $emloResponseService, 
+        protected EmloInsightsService $emloInsightsService
+    ){}
+
+    public function index()
     {
         $userId = Auth::id();
         if (!$userId) {
@@ -135,42 +141,27 @@ public function index()
         return response()->json($responseData, 200);
     }
 
-    public function getEmloResponseParamValue(Request $request, $param_name)
+    public function getParamValueByRequestId(Request $request, $requestId, $paramName)
     {
-
-
-
-        // Get query parameters
-        $response_id = $request->query('response_id');
-        $start_time = $request->query('start_time');
-        $end_time = $request->query('end_time');
-    
-        // Get ordering parameters
-        $orderBy = $request->query('orderby', 'created_at');
-        $direction = $request->query('direction', 'DESC');
-            
-        // Build filters array (only include non-empty values)
-        $filters = [];
-        if (!empty($response_id)) $filters['response_id'] = $response_id;
-
-        // Get pagination parameters
-        $limit = (int)$request->query('limit', 20);
-        $offset = (int)$request->query('offset', 0);
-        
-        // Call service method with time parameters
-        $result = EmloResponseService::getEmloResponseParamValue(
-            $param_name,
-            $filters,
-            $limit,
-            $offset,
-            $orderBy,
-            $direction,
-            $start_time,
-            $end_time
-        );
-        
-        // Return JSON response
-        return response()->json($result);
+        try {
+            $result = $this->emloResponseService->getParamValueByRequestId($requestId, $paramName);
+            return response()->json($result);
+        } catch (EmloNotFoundException) {
+            return response()->json(['error' => 'parameter value not found'], 404);
+        } catch (\Exception) {
+            return response()->json(['error' => 'internal server error'], 500);
+        }
     }
 
+    public function getInsights(Request $request, $paramName)
+    {
+        try {
+            $result = $this->emloInsightsService->getInsightsData($request, $paramName);
+            return response()->json($result);
+        } catch (EmloNotFoundException) {
+            return response()->json(['error' => 'insights values not found'], 404);
+        } catch (\Exception) {
+            return response()->json(['error' => 'internal server error'], 500);
+        }
+    }
 }

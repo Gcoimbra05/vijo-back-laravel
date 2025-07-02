@@ -4,28 +4,33 @@ namespace App\Services\Emlo;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
-use Illuminate\Support\Collection;
 use App\Services\Emlo\EmloResponseService;
+use Exception;
+
+use App\Exceptions\EmloParamNotFoundException;
+use App\Exceptions\EmloResponseNotFoundException;
+use App\Exceptions\EmloParamValueNotFoundException;
 
 class EmloInsightsService
 {
+
+    public function __construct(protected EmloResponseService $emloResponseService){}
+
     public function getInsightsData(Request $request, $paramName)
     {        
         $aggregation = $request->get('aggregation', 'daily');
         $timeRange = $request->get('time_range', 'current_week');
         
         $timeWindow = $this->getTimeWindow($timeRange);
-    
-        $emotion = EmloResponseService::getEmloResponseParamValue(
-            path_key: $paramName,
-            start_time: $timeWindow['start'],
-            end_time: $timeWindow['end'],
-        );
+        $queryFilters = [
+            "start_time" => $timeWindow['start'],
+            "end_time" => $timeWindow['end']
+        ];
 
-        $rawData = $this->extractParamValues($emotion, $paramName);
-        $aggregatedData = $this->aggregateData($rawData, $aggregation, $paramName);
+        $result = $this->emloResponseService->getAllValuesOfParam($paramName,$queryFilters);
+
+        $aggregatedData = $this->aggregateData($result, $aggregation, $paramName);
 
         $response = [
             'data' => $aggregatedData,
@@ -37,52 +42,9 @@ class EmloInsightsService
             ],
         ];
                 
-        return response()->json($response);
+        return $response;
     }
 
-    private function extractParamValues($data, $paramName)
-    {
-        if (!isset($data['status']) || !$data['status'] || !isset($data['results']['param_value'])) {
-            return collect([]);
-        }
-
-        $processedRecords = [];
-        
-        foreach ($data['results']['param_value'] as $record) {
-            $processedRecord = $this->processRecord($record, $paramName);
-            
-            if ($this->isValidRecord($processedRecord, $paramName)) {
-                $processedRecords[] = $processedRecord;
-            }
-        }
-
-        return collect($processedRecords);
-    }
-
-    private function processRecord($record, $paramName)
-    {
-        // Get the value (numeric_value or string_value)
-        $value = null;
-        if ($record['numeric_value'] !== null) {
-            $value = (float)$record['numeric_value'];
-        } elseif ($record['string_value'] !== null) {
-            $value = (float)$record['string_value'];
-        }
-
-        // Return in the format aggregateData expects
-        return (object) [
-            $paramName => $value,
-            'created_at' => $record['created_at']
-        ];
-    }
-
-    private function isValidRecord($record, $paramName)
-    {
-        // Since we just created this object, we know the property exists
-        // Just check if the value is not null
-        return $record->$paramName !== null;
-    }
-    
     private function getTimeWindow($timeRange)
     {
         $now = Carbon::now();
@@ -139,14 +101,17 @@ class EmloInsightsService
         }
     }
     
-    private function aggregateData(Collection $rawData, $aggregation, $paramName)
+    private function aggregateData($result, $aggregation, $paramName)
     {
-        if ($rawData->isEmpty()) {
+        // Handle both Collection and array inputs
+        $collection = is_array($result) ? collect($result) : $result;
+        
+        if ($collection->isEmpty()) {
             return [];
         }
         
         // Group the data based on aggregation type
-        $grouped = $rawData->groupBy(function ($item) use ($aggregation) {
+        $grouped = $collection->groupBy(function ($item) use ($aggregation) {
             $date = Carbon::parse($item->created_at);
             
             switch ($aggregation) {
@@ -174,8 +139,26 @@ class EmloInsightsService
         });
         
         // Calculate aggregated metrics for each group
-        $result = $grouped->map(function ($group, $period) use ($aggregation, $paramName) {
-            $values = $group->pluck($paramName);
+        $aggregatedResult = $grouped->map(function ($group, $period) use ($aggregation, $paramName) {
+            // Extract values from the 'value' property (not the dynamic paramName property)
+            $values = $group->pluck('value')->filter(function ($value) {
+                return $value !== null && is_numeric($value);
+            });
+
+            // Handle case where no valid values exist
+            if ($values->isEmpty()) {
+                return [
+                    'name' => $paramName,
+                    'period' => $period,
+                    'period_display' => $this->formatPeriodForDisplay($period, $aggregation),
+                    'avg' => null,
+                    'min' => null,
+                    'max' => null,
+                    'request_count' => $group->count(),
+                    'valid_count' => 0,
+                    'sort_order' => $this->getSortOrder($period, $aggregation)
+                ];
+            }
 
             return [
                 'name' => $paramName,
@@ -185,12 +168,13 @@ class EmloInsightsService
                 'min' => $values->min(),
                 'max' => $values->max(),
                 'request_count' => $group->count(),
+                'valid_count' => $values->count(),
                 'sort_order' => $this->getSortOrder($period, $aggregation)
             ];
         });
         
-        // Sort the results properly
-        return $result->sortBy('sort_order')->values()->all();
+        // Sort the results properly and return as array
+        return $aggregatedResult->sortBy('sort_order')->values()->all();
     }
     
     private function formatPeriodForDisplay($period, $aggregation)

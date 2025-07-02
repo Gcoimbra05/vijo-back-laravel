@@ -14,6 +14,7 @@ class EmloResponseParamSpecs extends Model implements AuditableContract
 
     protected $fillable = [
         'param_name',
+        'simplified_param_name',
         'description',
         'min',
         'max',

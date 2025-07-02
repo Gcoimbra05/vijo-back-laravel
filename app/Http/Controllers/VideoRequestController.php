@@ -19,9 +19,12 @@ use App\Models\ContactGroup;
 use App\Models\LlmResponse;
 use App\Models\Tag;
 use App\Models\User;
+use App\Models\EmloResponse;
 use App\Models\Transcript;
+use App\Services\Emlo\EmloDatabaseLoader;
 use App\Services\Emlo\EmloHelperService;
 use App\Services\Emlo\EmloResponseService;
+use App\Services\Emlo\EmloSegmentParameterService;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
 
@@ -29,16 +32,27 @@ class VideoRequestController extends Controller
 {
     use ValidatesRequests;
 
+    protected $emloResponseService;
+    protected $emloSegmentParameterService;
+
+    public function __construct(EmloResponseService $emloResponseService, EmloSegmentParameterService $emloSegmentParameterService)
+    {
+        $this->emloResponseService = $emloResponseService;
+        $this->emloSegmentParameterService = $emloSegmentParameterService;
+    }
+
     public function index()
     {
         $userId = Auth::id();
 
-        $toRequests = VideoRequest::with('latestVideo')
-            ->where('user_id', $userId)
-            ->whereNotNull('title')
-            ->where(function($query) {
+        $toRequests = VideoRequest::where('user_id', $userId)
+            ->where(function ($query) {
+                $query->whereNotNull('title')
+                      ->orWhere('type', 'share');
+            })
+            ->where(function ($query) {
                 $query->whereNotNull('contact_id')
-                      ->orWhereNotNull('group_id');
+                    ->orWhereNotNull('group_id');
             })
             ->get();
 
@@ -85,22 +99,21 @@ class VideoRequestController extends Controller
             ];
         }
 
-        $fromRequests = VideoRequest::with('latestVideo')
-            ->where(function($query) use ($userId) {
-                $query->where('ref_user_id', $userId)
-                      ->where(function($query) {
+        $fromRequests = VideoRequest::where(function ($query) use ($userId) {
+            $query->where('ref_user_id', $userId)
+                ->where(function ($query) {
+                    $query->whereNotNull('contact_id')
+                        ->orWhereNotNull('group_id');
+                })
+                ->orWhere(function ($query) {
+                    $query->where('ref_country_code', Auth::user()->country_code)
+                        ->where('ref_mobile', Auth::user()->mobile)
+                        ->where(function ($query) {
                             $query->whereNotNull('contact_id')
-                                    ->orWhereNotNull('group_id');
-                      })
-                      ->orWhere(function($query) {
-                            $query->where('ref_country_code', Auth::user()->country_code)
-                                   ->where('ref_mobile', Auth::user()->mobile)
-                                   ->where(function($query) {
-                                       $query->whereNotNull('contact_id')
-                                             ->orWhereNotNull('group_id');
-                                   });
-                            });
-            })->get();
+                                ->orWhereNotNull('group_id');
+                        });
+                });
+        })->get();
 
         $fromRequestsData = [];
         foreach ($fromRequests as $request) {
@@ -959,12 +972,7 @@ class VideoRequestController extends Controller
             ];
         }
 
-        // Stu wants to lock statistics behind paywalls, so we need to be able to provide the time range
-        $start_time = $request->query('start_time');
-        $end_time = $request->query('end_time');
-
-        $formattedEmotions = $this->getFormattedEmotions($videoRequest->id, $start_time, $end_time);
-        # Log::info('formattedEmotions result', $formattedEmotions);
+        $formattedEmotions = $this->getFormattedEmotions($videoRequest->id);
 
         $llmResponse = LlmResponse::select('text')
             ->where('request_id', $videoRequest->id)
@@ -1069,8 +1077,8 @@ class VideoRequestController extends Controller
             'user_tags'         => $userTags,
             'transcription'     => $transcriptions,
             'emotional_insights' => isset($formattedEmotions['emotional_insights']) ? $formattedEmotions['emotional_insights'] : [],
-            'emotional_insights_static' => $journalEmotionalData['emotional_insights'],
-            'emotional_outcomes' => $staticData['emotional_outcomes'],
+            //'emotional_insights_static' => $journalEmotionalData['emotional_insights'],
+            //'emotional_outcomes' => $staticData['emotional_outcomes'],
             'final_video_transcript' => $staticData['final_video_transcript'],
             'summaryReport'     => $staticData['summaryReport'],
             'gptSummary'        => $llmResponse,
@@ -1318,7 +1326,7 @@ class VideoRequestController extends Controller
                         ->where('request_id', $videoRequest->id)
                         ->first()?->text ?? '';
 
-        $emotions = EmloResponseService::getEmloResponseParamValueForId($videoRequest->id, 'EDP');
+        $emotions = $this->emloResponseService->getParamValueByRequestId($videoRequest->id, 'EDP-Stressful');
 
         // Main journal data
         $journalData = [
@@ -1877,106 +1885,50 @@ class VideoRequestController extends Controller
         ]);
     }
 
-    private function getFormattedEmotions($requestId, $startTime = null, $endTime = null) {
+    private function getFormattedEmotions($requestId) {
+        $emotionsWValues = [];
+        $paramsInUse = EmloDatabaseLoader::getParamsInUse();
 
-        $emotionLabels = [
-            'EDP-Anticipation' => 'Anticipation',
-            'EDP-Concentrated' => 'Concentration',
-            'EDP-Confident' => 'Confidence',
-            'EDP-Emotional' => 'Excitement',
-            'EDP-Energetic' => 'Energy',
-            'EDP-Hesitation' => 'Hesitation',
-            'EDP-Passionate' => 'Passion',
-            'EDP-Stressful' => 'Stress',
-            'EDP-Thoughtful' => 'Thoughtfulness',
-            'EDP-Uneasy' => 'Uneasiness',
-            'clStress' => 'Stress Recovery',
-            'overallCognitiveActivity' => 'Focus'
-        ];
-        
-        $EDPEmotions = EmloResponseService::getEmloResponseParamValueForId(
-                                            request_id: $requestId,
-                                            path_key: 'EDP',
-                                            start_time: $startTime,
-                                            end_time: $endTime
-                                        );
-        $oCA = EmloResponseService::getEmloResponseParamValueForId(
-                                    request_id:$requestId,
-                                    path_key:'overallCognitiveActivity.averageLevel',
-                                    start_time: $startTime,                     
-                                    end_time: $endTime
-                                );
-        $clStress = EmloResponseService::getEmloResponseParamValueForId(
-                                            request_id: $requestId,
-                                            path_key: 'clStress.clStress',
-                                            start_time: $startTime,
-                                            end_time: $endTime
-                                        );                        
-   
-        // Check if we have the expected structure
-        if (!isset($EDPEmotions['status']) || !$EDPEmotions['status']) {
-            return [];
+        foreach ($paramsInUse as $paramInUse) {
+            $emotionValue = $this->emloResponseService->getParamValueByRequestId($requestId, $paramInUse->param_name);
+
+            $emotionsWValues[] = 
+                [   
+                    'param_name' => $paramInUse->param_name,
+                    'value' => $emotionValue, 
+                    'simplified_param_name' => $paramInUse->simplified_param_name 
+                ];
         }
         
-        if (!isset($EDPEmotions['results']['param_value'][0]['string_value'])) {
-            return [];
-        }
-
-        // Get the JSON string and decode it
-        $emotionsJson = $EDPEmotions['results']['param_value'][0]['string_value'];
-        $emotionsArray = json_decode($emotionsJson, true);
-
-        if (!$emotionsArray) {
-            return [];
-        }
-
-        // Helper function to extract value from param_value
-        $getParamValue = function($data) {
-            if (!isset($data['status']) || !$data['status'] || !isset($data['results']['param_value'][0])) {
-                return [];
-            }
-
-            $paramValue = $data['results']['param_value'][0];
-
-            // Check for numeric_value first, then string_value
-            if ($paramValue['numeric_value'] !== null) {
-                return (float)$paramValue['numeric_value'];
-            } elseif ($paramValue['string_value'] !== null) {
-                return (float)$paramValue['string_value'];
-            }
-            
-            return [];
-        };
-
-        // Add the two additional emotions to the array
-        $ocaValue = $getParamValue($oCA);
-        if ($ocaValue !== null) {
-            $emotionsArray['overallCognitiveActivity'] = $ocaValue;
-        }
-
-        $stressValue = $getParamValue($clStress);
-        if ($stressValue !== null) {
-            $emotionsArray['clStress'] = $stressValue;
-        }
-
-        arsort($emotionsArray);
-        
+        usort($emotionsWValues, function($a, $b) {
+            return $b['value'] <=> $a['value'];
+        });   
         $emotionalInsights = [];
-
         $index = 0;
-        foreach ($emotionsArray as $emotionKey => $score) {
-            $average = 0;
-            if ($emotionKey != 'overallCognitiveActivity' && $emotionKey != 'clStress') {
-                $paramResultArray = EmloResponseService::getEmloResponseParamValue($emotionKey);
-                if (empty($paramResultArray['results']['param_value'])) {
-                    return [];
+
+        foreach ($emotionsWValues as $emotionWValue) {            
+            $average = -1;
+            
+            //  Moment-in-time emotions
+            if ($emotionWValue['param_name'] == 'overallCognitiveActivity' || $emotionWValue['param_name'] == 'clStress') {
+                $average = -1;
+
+            // Segment parameter emotions
+            } else if (in_array($emotionWValue['param_name'], array_column(EmloDatabaseLoader::getSegmentsInUse(), 'param_name'))) {
+                $averages = $this->emloSegmentParameterService->getAveragesForAllResponses($emotionWValue['param_name']);
+                $average = $averages->pluck('value')->avg();
+            
+            // Regular parameter emotions
+            } else {
+                $result = $this->emloResponseService->getAllValuesOfParam($emotionWValue['param_name'], []);
+                if (!empty($result->value)) {
+                    $average = self::calculateParamAverage($result);
                 }
-                $average = EmloResponseService::calculateParamAverage($paramResultArray['results']['param_value']);
             }
 
             $emotionalInsights[] = [
-                'emotion' =>  $emotionLabels[$emotionKey],
-                'score' => is_int($score) ? $score : 0,
+                'emotion' => $emotionWValue['simplified_param_name'],
+                'score' => $emotionWValue['value'] / 100,
                 'average' => (int) round($average),
             ];
 
@@ -1988,6 +1940,36 @@ class VideoRequestController extends Controller
         ];
 
         return $result;
+    }
+
+    private static function calculateParamAverage($paramValues) 
+    {
+        // Handle both Collection and array inputs
+        $collection = is_array($paramValues) ? collect($paramValues) : $paramValues;
+        
+        // Filter out items with null values and extract valid numeric values
+        $validValues = $collection
+            ->filter(function ($item) {
+                return isset($item->value) && $item->value !== null && is_numeric($item->value);
+            })
+            ->pluck('value')
+            ->map(function ($value) {
+                return (float) $value;
+            });
+
+        // Check if we have any valid values
+        if ($validValues->isEmpty()) {
+            Log::warning("No valid values found for averaging");
+            return null;
+        }
+
+        $validCount = $validValues->count();
+        $average = $validValues->avg();
+
+        Log::info("The count is: " . $validCount);
+        Log::info("The average is: " . $average);
+
+        return $average;
     }
 
 }

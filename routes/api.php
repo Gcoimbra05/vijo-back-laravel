@@ -103,13 +103,10 @@ Route::prefix('v2')->middleware(ForceJsonResponse::class)->group(function () {
     Route::match(['get', 'post'], 'webhook', [StripeWebhookController::class, 'handle']);
 
     Route::prefix('emlo-response')->group(function () {
-        Route::get('get-emotion-insights/{param}', [EmloInsightsService::class, 'getInsightsData']);
+        Route::get('get-emotion-insights/{param}', [EmloResponseController::class, 'getInsights']);
 
         Route::get('{request_id}/{param}/compare', [RuleEvaluationController::class, 'evaluateRules']);
         Route::get('{param}/specification', [EmloResponseParamSpecsController::class, 'showByParamName']);
-        Route::get('{request_id}/{param}', [EmloResponseService::class, 'getEmloResponseParamValueForId']);
-        Route::get('{param}', [EmloResponseController::class, 'getEmloResponseParamValue']);
-
-        Route::get('{request_id}/param-group/{param_group}', [EmloResponseService::class, 'getEmloResponseParamGroupValue']);
+        Route::get('{request_id}/{param}', [EmloResponseController::class, 'getParamValueByRequestId']);
     });
 });

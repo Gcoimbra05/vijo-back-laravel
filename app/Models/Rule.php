@@ -9,7 +9,7 @@ class Rule extends Model
 {
     protected $fillable = [
         'name',
-        'param_name', 
+        'param_spec_id', 
         'active'
     ];
 

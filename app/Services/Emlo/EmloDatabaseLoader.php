@@ -8,6 +8,8 @@ class EmloDatabaseLoader
 {
     private static $segments = [];
     private static $zeroValuedSegments = [];
+    private static $segmentsInUse = [];
+    private static $paramsInUse = [];
     private static $initialized = false;
 
     /**
@@ -46,10 +48,34 @@ class EmloDatabaseLoader
             ->limit(13)
             ->get()
             ->toArray();
+
+            $segmentParamsInUse = config('emlo.segmentParamsInUse');
+
+            self::$segmentsInUse = $db->table('emlo_response_segments')
+                ->select('name', 'number')
+                ->whereIn('name', $segmentParamsInUse)
+                ->get()
+                ->toArray();
+
+               
+            self::$segmentsInUse = $db->table('emlo_response_param_specs')
+                ->select('param_name')
+                ->where('type', 'segment')
+                ->get()
+                ->toArray();
+            
+
+            self::$paramsInUse = $db->table('emlo_response_param_specs')
+                ->get()
+                ->toArray();
+
+
         } else {
             // Initialize with empty arrays if table doesn't exist
             self::$segments = [];
             self::$zeroValuedSegments = [];
+            self::$segmentsInUse = [];
+            self::$paramsInUse = [];
         }
 
         self::$initialized = true;
@@ -73,5 +99,25 @@ class EmloDatabaseLoader
     public static function getZeroValuedSegments()
     {
         return self::$zeroValuedSegments;
+    }
+
+    /**
+     * Get the special examples data
+     *
+     * @return array
+     */
+    public static function getSegmentsInUse()
+    {
+        return self::$segmentsInUse;
+    }
+
+    /**
+     * Get the special examples data
+     *
+     * @return array
+     */
+    public static function getParamsInUse()
+    {
+        return self::$paramsInUse;
     }
 }
