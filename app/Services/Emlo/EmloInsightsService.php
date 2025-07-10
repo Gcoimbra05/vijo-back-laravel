@@ -11,6 +11,7 @@ use Exception;
 use App\Exceptions\EmloParamNotFoundException;
 use App\Exceptions\EmloResponseNotFoundException;
 use App\Exceptions\EmloParamValueNotFoundException;
+use Illuminate\Support\Facades\Log;
 
 class EmloInsightsService
 {
@@ -28,9 +29,15 @@ class EmloInsightsService
             "end_time" => $timeWindow['end']
         ];
 
-        $result = $this->emloResponseService->getAllValuesOfParam($paramName,$queryFilters);
-
+        $result = $this->emloResponseService->getAllValuesOfParam($paramName, $queryFilters);
         $aggregatedData = $this->aggregateData($result, $aggregation, $paramName);
+
+        // Daily e Days of week
+        if ($timeRange === 'current_week'
+        && ($aggregation === 'daily'
+        || $aggregation === 'day_of_week')) {
+            $aggregatedData = $this->fillMissingDaysWithZeros($aggregatedData, $timeWindow, $paramName);
+        }
 
         $response = [
             'data' => $aggregatedData,
@@ -43,6 +50,38 @@ class EmloInsightsService
         ];
 
         return $response;
+    }
+
+    private function fillMissingDaysWithZeros($aggregatedData, $timeWindow, $paramName)
+    {
+        $start = Carbon::parse($timeWindow['start']);
+        $end = Carbon::parse($timeWindow['end']);
+        $period = collect();
+
+        // Create a collection with all days in the range
+        for ($date = $start->copy(); $date->lte($end); $date->addDay()) {
+            $dateStr = $date->format('Y-m-d');
+            $period->put($dateStr, [
+                'name' => $paramName,
+                'period' => $dateStr,
+                'period_display' => $date->format('M j, Y'),
+                'avg' => 0,
+                'min' => 0,
+                'max' => 0,
+                'request_count' => 0,
+                'valid_count' => 0,
+                'sort_order' => $dateStr
+            ]);
+        }
+
+        // Merge with existing data (overwriting zeros where we have data)
+        foreach ($aggregatedData as $item) {
+            if (isset($item['period']) && $period->has($item['period'])) {
+                $period[$item['period']] = $item;
+            }
+        }
+
+        return $period->values()->all();
     }
 
     private function getTimeWindow($timeRange)

@@ -77,70 +77,70 @@ class SettingsController extends Controller
                     "id" => "1",
                     "metric_id" => "EDP-Anticipation",
                     "name" => "Anticipation",
-                    "emotionEmoji" => null,
+                    "emotionEmoji" => "U+1F440", // 👀
                     "description" => "Anticipation is the energy in your voice when you’re expecting something—showing curiosity, or nervousness about what’s ahead."
                 ],
                 [
                     "id" => "24",
                     "metric_id" => "EDP-Concentrated",
                     "name" => "Concentration",
-                    "emotionEmoji" => null,
+                    "emotionEmoji" => "U+1F9D0", // 🧐
                     "description" => "Concentration is the focus your voice reveals when your mind is locked in. It reflects how mentally engaged you are—whether you’re deep in thought, absorbing information, or zoning in on something important."
                 ],
                 [
                     "id" => "22",
                     "metric_id" => "EDP-Confident",
                     "name" => "Confidence",
-                    "emotionEmoji" => null,
+                    "emotionEmoji" => "U+1F451", // 👑
                     "description" => "Confidence is the steadiness in your voice that shows how sure you feel. It reflects your sense of certainty, trust in your words, and belief in what you’re saying—whether you’re speaking boldly or with quiet assurance."
                 ],
                 [
                     "id" => "3",
                     "metric_id" => "EDP-Emotional",
                     "name" => "Emotional",
-                    "emotionEmoji" => null,
+                    "emotionEmoji" => "U+1F4AB", // 💫
                     "description" => "Reflects how much energy and feeling you express. It shows how emotionally engaged you are—whether you’re sharing something joyful, intense, or deeply meaningful."
                 ],
                 [
                     "id" => "6",
                     "metric_id" => "EDP-Energetic",
                     "name" => "Energy",
-                    "emotionEmoji" => null,
+                    "emotionEmoji" => "U+26A1", // ⚡
                     "description" => "Energy is the drive in your voice that shows how alert, lively, or drained you feel. It reflects your overall vibe — whether you’re full of momentum, calmly steady, or running low and needing a recharge."
                 ],
                 [
                     "id" => "5",
                     "metric_id" => "EDP-Hesitation",
                     "name" => "Hesitation",
-                    "emotionEmoji" => null,
+                    "emotionEmoji" => "U+1F937", // 🤷
                     "description" => "Hesitation is the pause in your voice that shows when you’re unsure or holding back. It reflects moments of doubt, caution, or the need to think twice before speaking—offering insight into your comfort and confidence."
                 ],
                 [
                     "id" => "7",
                     "metric_id" => "EDP-Passionate",
                     "name" => "Passion",
-                    "emotionEmoji" => null,
+                    "emotionEmoji" => "U+1F4A5", // 💥
                     "description" => "Passion is the fire in your voice when you truly care about what you’re saying. It reflects strong emotion, deep interest, and personal connection—whether you’re speaking with excitement, urgency, or heartfelt conviction."
                 ],
                 [
                     "id" => "8",
                     "metric_id" => "EDP-Stressful",
                     "name" => "Stress",
-                    "emotionEmoji" => null,
+                    "emotionEmoji" => "U+1F48E", // 💎
                     "description" => "Stress is the tension in your voice that shows when you’re feeling pressure, overwhelmed, or stretched thin. It reflects how your body and mind are reacting to challenges—even if you’re not saying it out loud."
                 ],
                 [
                     "id" => "9",
                     "metric_id" => "EDP-Thoughtful",
                     "name" => "Thoughtfulness",
-                    "emotionEmoji" => null,
+                    "emotionEmoji" => "U+1F4AD", // 💭
                     "description" => "Thoughtfulness is the calm focus in your voice when you’re reflecting, processing, or choosing your words with care. It shows how present and considerate you are—revealing a mind that’s engaged and intentional."
                 ],
                 [
                     "id" => "10",
                     "metric_id" => "EDP-Uneasy",
                     "name" => "Uneasiness",
-                    "emotionEmoji" => null,
+                    "emotionEmoji" => "U+1F300", // 🌀
                     "description" => "Uneasiness is the tension in your voice that hints at discomfort or embarrassment. It reflects how at ease—or not—you feel with what you’re saying, revealing moments where something doesn’t quite sit right."
                 ]
             ],
@@ -149,7 +149,8 @@ class SettingsController extends Controller
     }
 
     // fake routes
-    public function getCountries () {
+    public function getCountries()
+    {
         return response()->json([
             'status' => true,
             'message' => '',
@@ -338,7 +339,7 @@ class SettingsController extends Controller
         );
     }
 
-    public function getStaticPages ()
+    public function getStaticPages()
     {
         $responseData = [
             'status'  => true,
