@@ -24,6 +24,7 @@ class Subscription extends Model implements AuditableContract
         'cancel_at',
         'cancelled_at',
         'reason',
+        'cancel_at_period_end',
     ];
 
     public function user()

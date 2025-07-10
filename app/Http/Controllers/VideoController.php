@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Video;
 use App\Models\VideoRequest;
+use App\Services\Emlo\EmloResponseService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
@@ -224,7 +225,8 @@ class VideoController extends Controller
             ]);
         }
         Log::info('Video saved to database');
-        $videoRequestController = new VideoRequestController();
+
+        $videoRequestController = app(VideoRequestController::class);
         $videoRequestController->initProcess($request, $videoRequestId);
 
         return response()->json([

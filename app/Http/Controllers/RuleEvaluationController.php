@@ -3,9 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Exceptions\EmloNotFoundException;
+use App\Exceptions\NoRulesFoundException;
+use App\Services\QueryParamsHelperService;
 use Illuminate\Routing\Controller;
 use Illuminate\Http\Request;
 use App\Services\RuleEvaluationService;
+use Exception;
 use Illuminate\Support\Facades\Log;
 
 
@@ -15,7 +18,7 @@ class RuleEvaluationController extends Controller
     public function __construct(private RuleEvaluationService $ruleEvaluationService
     ){}
 
-    public function evaluateRules(int $requestId, string $paramName)
+    public function evaluateRules(Request $request, $requestId, string $paramName)
     {
         try {
             if ($requestId <= 0) {
@@ -32,12 +35,17 @@ class RuleEvaluationController extends Controller
                 ], 400);
             }
 
-            $evalResult = $this->ruleEvaluationService->evaluateRules($requestId, $paramName);
+            $queryOptions = QueryParamsHelperService::getQueryOptions($request);
+
+            $evalResult = $this->ruleEvaluationService->evaluateRules($requestId, $paramName, $queryOptions);
             return response()->json($evalResult);
         } catch (EmloNotFoundException) {
-            return response()->json(['error' => 'insights values not found'], 404);
-        } catch (\Exception) {
-            return response()->json(['error' => 'internal server error'], 500);
+            return response()->json(['message' => 'insights values not found'], 404);
+        } catch (\Exception $e) {
+            Log::error('error is: ' . $e->getTraceAsString());
+            return response()->json(['message' => 'internal server error'], 500);
+        }  catch (NoRulesFoundException) {
+            return response()->json(['message' => 'no rules found for EMLO parameter'], 404);
         }
     }
 }

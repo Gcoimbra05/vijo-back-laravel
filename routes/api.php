@@ -98,9 +98,12 @@ Route::prefix('v2')->middleware(ForceJsonResponse::class)->group(function () {
         // need to make these admin only
         Route::apiResource('affiliates', AffiliateController::class);
         Route::apiResource('llm-templates', LlmTemplateController::class);
+
+        Route::post('stripe/checkout-session', [StripeWebhookController::class, 'createCheckoutSession']);
     });
 
-    Route::match(['get', 'post'], 'webhook', [StripeWebhookController::class, 'handle']);
+    // Stripe Webhook
+    Route::post('stripe/webhook', [StripeWebhookController::class, 'handle']);
 
     Route::prefix('emlo-response')->group(function () {
         Route::get('get-emotion-insights/{param}', [EmloResponseController::class, 'getInsights']);

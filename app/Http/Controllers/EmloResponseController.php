@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Exceptions\EmloParamNotFoundException;
 use Illuminate\Routing\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -11,7 +10,7 @@ use App\Services\Emlo\EmloResponseService;
 use App\Services\Emlo\EmloHelperService;
 use App\Services\Emlo\EmloInsightsService;
 
-use App\Exceptions\EmloNotFoundException;
+use App\Exceptions\Emlo\EmloNotFoundException;
 
 class EmloResponseController extends Controller {
 

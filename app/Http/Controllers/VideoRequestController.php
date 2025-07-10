@@ -902,7 +902,6 @@ class VideoRequestController extends Controller
             ], 400);
         }
 
-        // Fetch the VideoRequest (journal) with related catalog, category, latest video, and user
         $videoRequest = VideoRequest::with([
             'catalog.category',
             'latestVideo',
@@ -922,10 +921,8 @@ class VideoRequestController extends Controller
             ], 404);
         }
 
-        // Fetch contacts and groups shared via video_requests
         $contacts = [];
         $groups = [];
-
         if ($videoRequest) {
             // Contacts: requests with same catalog_id, same user_id, filled contact_id and null group_id
             $contacts = Contact::select('contacts.id as contact_id', 'contacts.first_name', 'contacts.last_name', 'contacts.email', 'contacts.mobile')
@@ -980,65 +977,8 @@ class VideoRequestController extends Controller
 
         $videoTags = $videoRequest->tags ? explode(',', $videoRequest->tags) : [];
         $userTags = Tag::whereIn('id', $videoTags)->get(['id', 'name'])->toArray();
-        # Log::info('User tags for video request', $userTags);
-
-        $journalEmotionalData = [
-            'emotional_insights' => [
-                [
-                    'emotion' => 'confidence',
-                    'score' => 0.82,
-                    'description' => 'Your confidence appears to be strong when discussing your work achievements and problem-solving abilities. You express satisfaction in overcoming technical challenges.'
-                ],
-                [
-                    'emotion' => 'determination',
-                    'score' => 0.76,
-                    'description' => 'There\'s a notable sense of determination in your approach to difficult tasks, showing persistence even when facing obstacles.'
-                ],
-                [
-                    'emotion' => 'curiosity',
-                    'score' => 0.69,
-                    'description' => 'You demonstrate intellectual curiosity, particularly about learning new technologies and exploring different solutions to problems.'
-                ],
-                [
-                    'emotion' => 'anxiety',
-                    'score' => 0.34,
-                    'description' => 'Some mild anxiety appears when mentioning deadlines and expectations, though it doesn\'t seem to overwhelm your overall positive outlook.'
-                ],
-
-                'series' => ['82', '76', '69', '34', '22', '18', '12', '5'],
-                'average' => ['65', '58', '52', '42', '38', '25', '22', '10'],
-                'labels' => [
-                    'Confidence',
-                    'Determination',
-                    'Curiosity',
-                    'Anxiety',
-                    'Frustration',
-                    'Doubt',
-                    'Uncertainty',
-                    'Hesitation'
-                ],
-            ],
-        ];
 
         $staticData = [
-            'emotional_outcomes' => [
-                [
-                    'outcome_type' => 'professional growth',
-                    'strength' => 'high',
-                    'description' => 'Your emotional state indicates strong potential for continued professional development. The confidence you express in your abilities suggests you\'re likely to take on increasingly challenging projects.'
-                ],
-                [
-                    'outcome_type' => 'work satisfaction',
-                    'strength' => 'medium-high',
-                    'description' => 'Your emotional response to work accomplishments suggests good job satisfaction, though there may be room to find even greater fulfillment through more diverse projects.'
-                ],
-                [
-                    'outcome_type' => 'stress management',
-                    'strength' => 'medium',
-                    'description' => 'While you generally handle work pressure well, developing additional stress management techniques might help during particularly demanding periods.'
-                ]
-            ],
-
             'final_video_transcript' => "Today was a really productive day at work. I finally managed to solve that bug that's been affecting our main feature for the past week. It turned out to be related to an edge case in data validation that nobody had anticipated. I spent most of the morning digging through the codebase and eventually found where the problem was happening. The fix itself was actually pretty simple once I understood the root cause.\n\nI felt really good about sharing the solution with my team during our afternoon standup. My project manager was particularly impressed with how quickly I was able to isolate the issue. This kind of problem-solving is exactly why I enjoy software development so much - there's always a puzzle to solve, and finding the solution is incredibly satisfying.\n\nI'm looking forward to tackling our next sprint planning tomorrow. I have some ideas about how we can improve our testing process to catch these kinds of issues earlier in the development cycle. Overall, today reminded me why I chose this career path - the challenges are real, but overcoming them is so rewarding.",
 
             'summaryReport' => [
@@ -1056,8 +996,6 @@ class VideoRequestController extends Controller
                     'future' => ["sprint planning", "improving testing processes"]
                 ]
             ],
-
-            'gptSummary' => "The journal entry captures a moment of professional triumph as the author successfully resolved a complex technical issue that had been impacting a key feature. There's a clear sense of satisfaction and validation, especially when sharing the solution with colleagues and receiving recognition. The experience seems to have reinforced the author's career choice and passion for problem-solving. Looking ahead, they're motivated to improve team processes and take on new challenges. Overall, this represents a positive peak experience in their professional journey, balancing the difficulties of technical work with the rewards of overcoming obstacles."
         ];
 
         $data = [
@@ -1076,9 +1014,10 @@ class VideoRequestController extends Controller
             'video_thumb'       => $video ? $video->thumbnail_url : '',
             'user_tags'         => $userTags,
             'transcription'     => $transcriptions,
+            'cred_score'        => $videoRequest->cred_score ?? 75,
+            'catalog_message_title'   => $catalog->message_title ?? 'Well Done!',
+            'catalog_message'   => $catalog->message ?? 'Checking in on your stress takes awareness and courage.',
             'emotional_insights' => isset($formattedEmotions['emotional_insights']) ? $formattedEmotions['emotional_insights'] : [],
-            //'emotional_insights_static' => $journalEmotionalData['emotional_insights'],
-            //'emotional_outcomes' => $staticData['emotional_outcomes'],
             'final_video_transcript' => $staticData['final_video_transcript'],
             'summaryReport'     => $staticData['summaryReport'],
             'gptSummary'        => $llmResponse,
@@ -1930,6 +1869,8 @@ class VideoRequestController extends Controller
                 'emotion' => $emotionWValue['simplified_param_name'],
                 'score' => $emotionWValue['value'] / 100,
                 'average' => (int) round($average),
+                'description' => $emotionWValue['description'] ?? '',
+                'emoji' => $emotionWValue['emoji'] ?? '',
             ];
 
             $index++;

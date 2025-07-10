@@ -11,7 +11,7 @@ class CatalogController extends Controller
 {
     public function index()
     {
-        $catalogs = Catalog::with(['category'])->get();
+        $catalogs = Catalog::with(['category'])->where('is_deleted', 0)->get();
         return response()->json([
             'success' => true,
             'message' => 'Catalogs retrieved successfully.',
@@ -21,7 +21,7 @@ class CatalogController extends Controller
 
     public function show($id)
     {
-        $catalog = Catalog::with(['category'])->find($id);
+        $catalog = Catalog::with(['category'])->where('id', $id)->where('is_deleted', 0)->first();
         if (!$catalog) {
             return response()->json([
                 'success' => false,
@@ -29,6 +29,7 @@ class CatalogController extends Controller
                 'data' => null,
             ], 404);
         }
+
         return response()->json([
             'success' => true,
             'message' => 'Catalog retrieved successfully.',
@@ -62,7 +63,7 @@ class CatalogController extends Controller
 
     public function update(Request $request, $id)
     {
-        $catalog = Catalog::find($id);
+        $catalog = Catalog::where('id', $id)->where('is_deleted', 0)->first();
         if (!$catalog) {
             return response()->json([
                 'success' => false,
@@ -113,7 +114,7 @@ class CatalogController extends Controller
 
     public function getCatalogsByCategory($categoryId)
     {
-        $catalogs = Catalog::where('category_id', $categoryId)->get();
+        $catalogs = Catalog::where('category_id', $categoryId)->where('is_deleted', 0)->get();
 
         return response()->json([
             'success' => true,

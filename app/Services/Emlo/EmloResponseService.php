@@ -11,10 +11,10 @@ use Illuminate\Support\Facades\Log;
 use App\Services\Emlo\EmloSegmentParameterService;
 use App\Services\QueryParamsHelperService;
 
-use App\Exceptions\EmloParamNotFoundException;
-use App\Exceptions\EmloResponseNotFoundException;
-use App\Exceptions\EmloParamValueNotFoundException;
-use App\Exceptions\EmloPathIdNotFoundException;
+use App\Exceptions\Emlo\EmloNotFoundException;
+
+
+
 
 use Exception;
 
@@ -34,13 +34,13 @@ class EmloResponseService
             ->where('param_name', $paramName)
             ->first();
         if(!$param) {
-            throw new EmloParamNotFoundException('$paramName ' . $paramName . ' does not exist');
+            throw new EmloNotFoundException('$paramName ' . $paramName . ' does not exist');
         }
 
         if ($param->type == 'regular') {
             $pathResult = EmloResponsePath::getPathId($paramName);
             if (empty($pathResult)) {
-                throw new EmloParamNotFoundException('pathId for ' . $paramName . ' does not exist');
+                throw new EmloNotFoundException('pathId for ' . $paramName . ' does not exist');
             }
 
             $query = EmloResponseValue::select('response_id', 'path_id', 'numeric_value', 'string_value', 'boolean_value', 'created_at')
@@ -67,20 +67,21 @@ class EmloResponseService
             ->where('param_name', $paramName)
             ->first();
         if(!$param) {
-            throw new EmloParamNotFoundException('$paramName ' . $paramName . ' does not exist');
+            throw new EmloNotFoundException('$paramName ' . $paramName . ' does not exist');
         }
 
         $response = EmloResponse::select('id', 'raw_response')
             ->where('request_id', $requestId)
             ->first();
+
         if(!$response) {
-            throw new EmloResponseNotFoundException("EMLO response not found for request '{$requestId}'");
+            throw new EmloNotFoundException("EMLO response not found for request '{$requestId}'");
         }
 
         if ($param->type == 'regular') {
             $pathId = $param->path_key ? EmloResponsePath::getPathId($param->path_key) : EmloResponsePath::getPathId($paramName);
             if (!$pathId) {
-                throw new EmloPathIdNotFoundException("EMLO response path not found for path key '{$param->path_key}'");
+                throw new EmloNotFoundException("EMLO response path not found for path key '{$param->path_key}'");
             }
 
             $result = EmloResponseValue::select('numeric_value', 'string_value', 'boolean_value', 'created_at')
@@ -88,7 +89,7 @@ class EmloResponseService
                 ->where('response_id', $response->id)
                 ->first();
             if (!$result) {
-                throw new EmloParamValueNotFoundException("EMLO param value not found for path id '{$pathId->id}' and response id '{$response->id}'");
+                throw new EmloNotFoundException("EMLO param value not found for path id '{$pathId->id}' and response id '{$response->id}'");
             }
             
             $array = [

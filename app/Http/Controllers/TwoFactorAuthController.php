@@ -8,6 +8,7 @@ use App\Services\TwilioService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Str;
@@ -54,6 +55,28 @@ class TwoFactorAuthController extends Controller
 
         $fullPhoneNumber = $request->country_code . $request->mobile;
         $this->twilio->sendSms($fullPhoneNumber, "Vijo: Your Life, Your Story \n{$code} is your verification code.");
+
+        // Send email notification
+        $userEmail = $user->email;
+        if (!empty($userEmail)) {
+            $envUrl = env('APP_ENV') === 'production' ? 'https://vijo.me' : 'https://test.vijo.me';
+            try {
+                Mail::send('emails.template', [
+                    'title' => 'Your Vijo account verification code',
+                    'contentView' => 'emails.verification_code',
+                    'contentData' => [
+                        'recipientName'     => $user->first_name,
+                        'verificationCode'  => $code,
+                        'signUpUrl'         => $envUrl,
+                    ]
+                ], function ($message) use ($userEmail, $code) {
+                    $message->to($userEmail)
+                        ->subject('🔑 Your verification code is ' . $code);
+                });
+            } catch (\Exception $e) {
+                Log::error('Error sending email: ' . $e->getMessage());
+            }
+        }
 
         return response()->json([
             "status" => true,
@@ -109,9 +132,32 @@ class TwoFactorAuthController extends Controller
 
         $token = $user->createToken('auth_token')->plainTextToken;
 
+        if (!$user->is_verified) {
+            // Send email notification
+            $userEmail = $user->email;
+            if (!empty($userEmail)) {
+                try {
+                    Mail::send('emails.template', [
+                        'title' => "You're in! Welcome to the world of Vijo",
+                        'contentView' => 'emails.welcome_vijo',
+                        'contentData' => [
+                            'recipientName'     => $user->first_name,
+                        ]
+                    ], function ($message) use ($userEmail) {
+                        $message->to($userEmail)
+                            ->subject("You're in! Welcome to the world of Vijo");
+                    });
+                } catch (\Exception $e) {
+                    Log::error('Error sending email: ' . $e->getMessage());
+                }
+            }
+        }
+
         // Generate and save the refresh_token
         $refreshToken = Str::random(60);
         $user->refresh_token = $refreshToken;
+        $user->is_verified = true;
+        $user->last_login_date = Carbon::now();
         $user->save();
 
         return response()->json([

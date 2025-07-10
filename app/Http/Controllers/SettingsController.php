@@ -75,102 +75,76 @@ class SettingsController extends Controller
             "emotion_datasets" => [
                 [
                     "id" => "1",
-                    # "metric_id" => "emotion##1",
                     "metric_id" => "EDP-Anticipation",
                     "name" => "Anticipation",
-                    "emotionEmoji" => null
+                    "emotionEmoji" => null,
+                    "description" => "Anticipation is the energy in your voice when you’re expecting something—showing curiosity, or nervousness about what’s ahead."
                 ],
                 [
                     "id" => "24",
-                    # "metric_id" => "emotion##24",
                     "metric_id" => "EDP-Concentrated",
-                    "name" => "Concentrated",
-                    "emotionEmoji" => null
+                    "name" => "Concentration",
+                    "emotionEmoji" => null,
+                    "description" => "Concentration is the focus your voice reveals when your mind is locked in. It reflects how mentally engaged you are—whether you’re deep in thought, absorbing information, or zoning in on something important."
                 ],
                 [
                     "id" => "22",
-                    # "metric_id" => "emotion##22",
                     "metric_id" => "EDP-Confident",
-                    "name" => "Confident",
-                    "emotionEmoji" => null
+                    "name" => "Confidence",
+                    "emotionEmoji" => null,
+                    "description" => "Confidence is the steadiness in your voice that shows how sure you feel. It reflects your sense of certainty, trust in your words, and belief in what you’re saying—whether you’re speaking boldly or with quiet assurance."
                 ],
                 [
                     "id" => "3",
-                    # "metric_id" => "emotion##3",
                     "metric_id" => "EDP-Emotional",
                     "name" => "Emotional",
-                    "emotionEmoji" => null
+                    "emotionEmoji" => null,
+                    "description" => "Reflects how much energy and feeling you express. It shows how emotionally engaged you are—whether you’re sharing something joyful, intense, or deeply meaningful."
                 ],
                 [
                     "id" => "6",
-                    # "metric_id" => "emotion##6",
                     "metric_id" => "EDP-Energetic",
-                    "name" => "Energetic",
-                    "emotionEmoji" => null
+                    "name" => "Energy",
+                    "emotionEmoji" => null,
+                    "description" => "Energy is the drive in your voice that shows how alert, lively, or drained you feel. It reflects your overall vibe — whether you’re full of momentum, calmly steady, or running low and needing a recharge."
                 ],
                 [
                     "id" => "5",
-                    # "metric_id" => "emotion##5",
                     "metric_id" => "EDP-Hesitation",
                     "name" => "Hesitation",
-                    "emotionEmoji" => null
+                    "emotionEmoji" => null,
+                    "description" => "Hesitation is the pause in your voice that shows when you’re unsure or holding back. It reflects moments of doubt, caution, or the need to think twice before speaking—offering insight into your comfort and confidence."
                 ],
                 [
                     "id" => "7",
-                    # "metric_id" => "emotion##7",
                     "metric_id" => "EDP-Passionate",
-                    "name" => "Passionate",
-                    "emotionEmoji" => null
+                    "name" => "Passion",
+                    "emotionEmoji" => null,
+                    "description" => "Passion is the fire in your voice when you truly care about what you’re saying. It reflects strong emotion, deep interest, and personal connection—whether you’re speaking with excitement, urgency, or heartfelt conviction."
                 ],
                 [
                     "id" => "8",
-                    # "metric_id" => "emotion##8",
                     "metric_id" => "EDP-Stressful",
-                    "name" => "Stressful",
-                    "emotionEmoji" => null
+                    "name" => "Stress",
+                    "emotionEmoji" => null,
+                    "description" => "Stress is the tension in your voice that shows when you’re feeling pressure, overwhelmed, or stretched thin. It reflects how your body and mind are reacting to challenges—even if you’re not saying it out loud."
                 ],
                 [
                     "id" => "9",
-                    # "metric_id" => "emotion##9",
                     "metric_id" => "EDP-Thoughtful",
-                    "name" => "Thoughtful",
-                    "emotionEmoji" => null
+                    "name" => "Thoughtfulness",
+                    "emotionEmoji" => null,
+                    "description" => "Thoughtfulness is the calm focus in your voice when you’re reflecting, processing, or choosing your words with care. It shows how present and considerate you are—revealing a mind that’s engaged and intentional."
                 ],
                 [
                     "id" => "10",
-                    # "metric_id" => "emotion##10",
                     "metric_id" => "EDP-Uneasy",
-                    "name" => "Uneasy",
-                    "emotionEmoji" => null
+                    "name" => "Uneasiness",
+                    "emotionEmoji" => null,
+                    "description" => "Uneasiness is the tension in your voice that hints at discomfort or embarrassment. It reflects how at ease—or not—you feel with what you’re saying, revealing moments where something doesn’t quite sit right."
                 ]
             ],
-            "outcome_datasets" => [
-                /* [
-                    "id" => 1,
-                    "metric_id" => "performance##012",
-                    "name" => "EP"
-                ],
-                [
-                    "id" => 2,
-                    "metric_id" => "performance##0",
-                    "name" => "KPI 1"
-                ],
-                [
-                    "id" => 3,
-                    "metric_id" => "performance##0_0",
-                    "name" => "KPI 1 - Metric 1"
-                ],
-                [
-                    "id" => 4,
-                    "metric_id" => "performance##0_1",
-                    "name" => "KPI 1 - Metric 2"
-                ],
-                [
-                    "id" => 5,
-                    "metric_id" => "performance##0_2",
-                    "name" => "KPI 1 - Metric 3"
-                ] */
-            ]
+            "outcome_datasets" => []
         ];
     }
 

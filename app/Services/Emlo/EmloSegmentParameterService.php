@@ -7,8 +7,7 @@ use App\Models\EmloResponseSegment;
 use App\Services\Emlo\EmloHelperService;
 use Exception;
 
-use App\Exceptions\EmloParamNotFoundException;
-use App\Exceptions\EmloSegmentParamNotFoundException;
+use App\Exceptions\Emlo\EmloNotFoundException;
 
 class EmloSegmentParameterService {
 
@@ -20,7 +19,7 @@ class EmloSegmentParameterService {
                                             ->where('name', $parameterName)
                                             ->first();
         if (!$parameterIndex) {
-            throw new EmloParamNotFoundException("EMLO param '{$parameterName}' not found");
+            throw new EmloNotFoundException("EMLO param '{$parameterName}' not found");
         }
 
         $decodedResponseData = EmloHelperService::decodeRawResponse($rawResponse);
@@ -51,7 +50,7 @@ class EmloSegmentParameterService {
                                             ->where('name', $parameterName)
                                             ->first();
         if (!$parameterIndex) {
-            throw new EmloSegmentParamNotFoundException("EMLO segment param '{$parameterName}' not found");
+            throw new EmloNotFoundException("EMLO segment param '{$parameterName}' not found");
         }
 
         $results = EmloResponse::select('raw_response', 'created_at')->get();
