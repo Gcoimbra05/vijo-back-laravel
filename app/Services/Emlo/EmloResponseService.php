@@ -19,7 +19,7 @@ use App\Exceptions\Emlo\EmloNotFoundException;
 use Exception;
 
 class EmloResponseService
-{   
+{
 
     protected $emloSegmentService;
 
@@ -30,17 +30,19 @@ class EmloResponseService
 
     public function getAllValuesOfParam($paramName, $queryOptions)
     {
-        $param = EmloResponseParamSpecs::select('type', 'needs_normalization', 'path_key')
-            ->where('param_name', $paramName)
-            ->first();
+        $param = EmloResponseParamSpecs::select('type', 'needs_normalization', 'path_key')->where('param_name', $paramName)->first();
         if(!$param) {
-            throw new EmloNotFoundException('$paramName ' . $paramName . ' does not exist');
+            Log::error('$paramName ' . $paramName . ' does not exist');
+            return collect(); // Return empty collection instead of throwing exception
+            // throw new EmloNotFoundException('$paramName ' . $paramName . ' does not exist');
         }
 
         if ($param->type == 'regular') {
             $pathResult = EmloResponsePath::getPathId($paramName);
             if (empty($pathResult)) {
-                throw new EmloNotFoundException('pathId for ' . $paramName . ' does not exist');
+                // throw new EmloNotFoundException('pathId for ' . $paramName . ' does not exist');
+                Log::error("Path ID for parameter '{$paramName}' does not exist");
+                return collect(); // Return empty collection instead of throwing exception
             }
 
             $query = EmloResponseValue::select('response_id', 'path_id', 'numeric_value', 'string_value', 'boolean_value', 'created_at')
@@ -50,15 +52,23 @@ class EmloResponseService
             $responseValues = $query->get();
 
             $formattedResponses = $this->formatResponseValues($responseValues, $paramName);
-            if ($formattedResponses == []) {
-                throw new Exception("Failed to format responses for parameter '{$paramName}'");
+            if ($formattedResponses->isEmpty()) {
+                Log::warning("No formatted responses found for parameter '{$paramName}'");
+                return collect(); // Return empty collection instead of throwing exception
             }
-            
-            return $formattedResponses;     
+
+            return $formattedResponses;
         } else if ($param->type == 'segment') {
-            $result = $this->emloSegmentService->getAveragesForAllResponses($paramName);
-            return $result;
+            try {
+                $result = $this->emloSegmentService->getAveragesForAllResponses($paramName);
+                return $result;
+            } catch (Exception $e) {
+                Log::error("Error getting segment averages: " . $e->getMessage());
+                return collect(); // Return empty collection instead of propagating the error
+            }
         }
+
+        return collect(); // Default return empty collection
     }
 
     public function getParamValueByRequestId($requestId, $paramName)
@@ -91,7 +101,7 @@ class EmloResponseService
             if (!$result) {
                 throw new EmloNotFoundException("EMLO param value not found for path id '{$pathId->id}' and response id '{$response->id}'");
             }
-            
+
             $array = [
                 'results' => [
                     'param_value' => [$result]
@@ -108,18 +118,18 @@ class EmloResponseService
 
         } else if ($param->type == 'segment') {
             $avg = $this->emloSegmentService->calculateAverageOfSingleResponse($paramName, $response->raw_response);
-        
+
             $returnValue = $param->needs_normalization ? EmloHelperService::applyNormalizationFormula($avg) : $avg;
             return $returnValue;
         }
-    }    
+    }
 
     private function formatResponseValues($responseValues, $paramName)
     {
         Log::debug("responseValues are: " . json_encode($responseValues));
 
         $processedRecords = collect(); // Create empty Collection
-        
+
         foreach ($responseValues as $record) {
             $processedRecord = $this->processRecord($record, $paramName);
             $processedRecords->push($processedRecord); // Use push() instead of []
