@@ -16,10 +16,14 @@ use App\Models\Catalog;
 use App\Models\CatalogQuestion;
 use App\Models\Contact;
 use App\Models\ContactGroup;
+use App\Models\CredScore;
+use App\Models\CredScoreKpi;
 use App\Models\LlmResponse;
 use App\Models\Tag;
 use App\Models\User;
 use App\Models\EmloResponse;
+use App\Models\KpiMetricSpecification;
+use App\Models\KpiMetricValue;
 use App\Models\Transcript;
 use App\Services\Emlo\EmloDatabaseLoader;
 use App\Services\Emlo\EmloHelperService;
@@ -709,9 +713,41 @@ class VideoRequestController extends Controller
             ]);
         }
 
+        $credScoreId = CredScore::select('id')
+            ->where('catalog_id', $catalogId)
+            ->first();
+        if (!$credScoreId) {
+            return response()->json([
+                    'status' => false,
+                    'message' => 'Cred score not found.'
+            ], 404);
+        }
+
+        $kpiMetricSpecs = KpiMetricSpecification::select('*')
+            ->whereHas('credScoreKpi.credScore')
+            ->get();
+        Log::info("kpiMetricSpecs are: " . json_encode($kpiMetricSpecs));
+
+        $questions = [];
+
+        foreach ($kpiMetricSpecs as $metricSpec) {
+            $questions [] = [
+                'id' => $metricSpec->id,
+                'name' => $metricSpec->name,
+                'question' => $metricSpec->question,
+                'range' => $metricSpec->range,
+            ];
+        }
+
+        Log::info("questions are: " . json_encode($questions));
+
         $recordTime = $catalog->max_record_time ?? '60';
         $minRecordTime = $catalog->min_record_time ?? '15';
         $parentCatalogId = $catalog->parent_catalog_id ?? '0';
+
+
+
+############################# TEMP #############################
 
         $vtMetricNo = $vtKpiNo = $vtKpiMetrics = 0;
         if ($catalog->videoType) {
@@ -720,9 +756,7 @@ class VideoRequestController extends Controller
             $vtKpiMetrics = ($vtKpiNo > 0) ? floor($vtMetricNo / $vtKpiNo) : 0;
         }
         Log::info('Video Type Metrics: ' . $vtMetricNo . ', KPIs: ' . $vtKpiNo . ', KPI Metrics: ' . $vtKpiMetrics);
-        $questions = CatalogQuestionController::getQuestionsByCatalogId($catalog, $vtKpiMetrics, $vtKpiNo);
-
-        $userTags = TagController::getUserTags($catalog->category_id, $userId, false);
+        // $questions = CatalogQuestionController::getQuestionsByCatalogId($catalog, $vtKpiMetrics, $vtKpiNo);
 
         $videoType = [
             'metrics' => $vtMetricNo,
@@ -730,6 +764,10 @@ class VideoRequestController extends Controller
             'kpi_metrics' => $vtKpiMetrics
         ];
         Log::info('Video Type: ', $videoType);
+
+##########################################################
+
+        $userTags = TagController::getUserTags($catalog->category_id, $userId, false);
 
         return response()->json([
             'status' => true,
@@ -969,7 +1007,7 @@ class VideoRequestController extends Controller
             ];
         }
 
-        $formattedEmotions = $this->getFormattedEmotions($videoRequest->id);
+        $formattedEmotions = $this->getFormattedEmotions($videoRequest->id, $userId);
 
         $llmResponse = LlmResponse::select('text')
             ->where('request_id', $videoRequest->id)
@@ -998,36 +1036,39 @@ class VideoRequestController extends Controller
             ],
         ];
 
+        $suggestedCatalogs = (new CatalogController($catalog))->getSuggestedCatalogs($userId);
+
         $data = [
-            'id'                => $videoRequest->id,
-            'user_id'           => $videoRequest->user_id,
-            'journal_title'     => $videoRequest->title ?? ($catalog->title ?? ''),
-            'ref_user_id'       => $videoRequest->ref_user_id ?? 0,
-            'journal_type'      => $videoRequest->type ?? 'daily',
-            'recommendation_id' => $videoRequest->recommendation_id ?? '',
-            'category_name'     => $category ? $category->name : '',
-            'journal_tags'      => $videoRequest->tags ?? '',
-            'is_private'        => $videoRequest->is_private ?? 0,
-            'rrc_video1'        => $video ? $video->video_name : '',
-            'rrc_video1_thumb'  => $video ? $video->thumbnail_name : '',
-            'video'             => $video ? $video->video_url : '',
-            'video_thumb'       => $video ? $video->thumbnail_url : '',
-            'user_tags'         => $userTags,
-            'transcription'     => $transcriptions,
-            'cred_score'        => $videoRequest->cred_score ?? 75,
+            'catalog_id'              => $catalog->id ?? '',
+            'catalog_message'         => $catalog->message ?? 'Checking in on your stress takes awareness and courage.',
             'catalog_message_title'   => $catalog->message_title ?? 'Well Done!',
-            'catalog_message'   => $catalog->message ?? 'Checking in on your stress takes awareness and courage.',
-            'emotional_insights' => isset($formattedEmotions['emotional_insights']) ? $formattedEmotions['emotional_insights'] : [],
-            'final_video_transcript' => $staticData['final_video_transcript'],
-            'summaryReport'     => $staticData['summaryReport'],
-            'gptSummary'        => $llmResponse,
-            'video_type_id'     => $catalog->video_type_id ?? '',
-            'catalog_id'        => $catalog->id ?? '',
-            'catalog_name'      => $catalog->title ?? '',
-            'created_at'        => $videoRequest->created_at ? $videoRequest->created_at->format('M d, Y') : '',
-            'recordedBy'        => $videoRequest->user_id == $userId ? 'self' : ($videoRequest->ref_user_id == $userId ? 'recordResponse' : 'shared'),
-            'contacts'          => $contacts,
-            'groups'            => $groups,
+            'catalog_name'            => $catalog->title ?? '',
+            'category_name'           => $category ? $category->name : '',
+            'contacts'                => $contacts,
+            'created_at'              => $videoRequest->created_at ? $videoRequest->created_at->format('M d, Y') : '',
+            'cred_score'              => $videoRequest->cred_score ?? 75,
+            'emotional_insights'      => isset($formattedEmotions['emotional_insights']) ? $formattedEmotions['emotional_insights'] : [],
+            'final_video_transcript'  => $staticData['final_video_transcript'],
+            'groups'                  => $groups,
+            'gptSummary'              => $llmResponse,
+            'id'                      => $videoRequest->id,
+            'is_private'              => $videoRequest->is_private ?? 0,
+            'journal_tags'            => $videoRequest->tags ?? '',
+            'journal_title'           => $videoRequest->title ?? ($catalog->title ?? ''),
+            'journal_type'            => $videoRequest->type ?? 'daily',
+            'recommendation_id'       => $videoRequest->recommendation_id ?? '',
+            'recordedBy'              => $videoRequest->user_id == $userId ? 'self' : ($videoRequest->ref_user_id == $userId ? 'recordResponse' : 'shared'),
+            'ref_user_id'             => $videoRequest->ref_user_id ?? 0,
+            'rrc_video1'              => $video ? $video->video_name : '',
+            'rrc_video1_thumb'        => $video ? $video->thumbnail_name : '',
+            "suggested_catalogs"      => $suggestedCatalogs,
+            'summaryReport'           => $staticData['summaryReport'],
+            'transcription'           => $transcriptions,
+            'user_id'                 => $videoRequest->user_id,
+            'user_tags'               => $userTags,
+            'video'                   => $video ? $video->video_url : '',
+            'video_thumb'             => $video ? $video->thumbnail_url : '',
+            'video_type_id'           => $catalog->video_type_id ?? '',
         ];
 
         return response()->json([
@@ -1203,6 +1244,11 @@ class VideoRequestController extends Controller
 
     public function shareJournalDetails($share_id = null)
     {
+        $userId = Auth::id();
+        if (!$userId) {
+            return response()->json(['error' => 'user not found'], 404);
+        }
+
         if (empty($share_id)) {
             return response()->json([
                 'status' => false,
@@ -1265,7 +1311,7 @@ class VideoRequestController extends Controller
                         ->where('request_id', $videoRequest->id)
                         ->first()?->text ?? '';
 
-        $emotions = $this->emloResponseService->getParamValueByRequestId($videoRequest->id, 'EDP-Stressful');
+        $emotions = $this->emloResponseService->getParamValueByRequestId($videoRequest->id, $userId, 'EDP-Stressful');
 
         // Main journal data
         $journalData = [
@@ -1824,12 +1870,13 @@ class VideoRequestController extends Controller
         ]);
     }
 
-    private function getFormattedEmotions($requestId) {
+    private function getFormattedEmotions($requestId, $userId) 
+    {
         $emotionsWValues = [];
         $paramsInUse = EmloDatabaseLoader::getParamsInUse();
 
         foreach ($paramsInUse as $paramInUse) {
-            $emotionValue = $this->emloResponseService->getParamValueByRequestId($requestId, $paramInUse->param_name);
+            $emotionValue = $this->emloResponseService->getParamValueByRequestId($requestId, $userId, $paramInUse->param_name);
 
             $emotionsWValues[] = 
                 [   
@@ -1859,8 +1906,8 @@ class VideoRequestController extends Controller
             
             // Regular parameter emotions
             } else {
-                $result = $this->emloResponseService->getAllValuesOfParam($emotionWValue['param_name'], []);
-                if (!empty($result->value)) {
+                $result = $this->emloResponseService->getAllValuesOfParam($emotionWValue['param_name'], $userId, []);
+                if (!empty($result)) {
                     $average = self::calculateParamAverage($result);
                 }
             }

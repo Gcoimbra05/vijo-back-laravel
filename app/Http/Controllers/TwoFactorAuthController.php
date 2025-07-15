@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Models\UserLogin;
 use App\Models\UserVerification;
 use App\Services\TwilioService;
 use Carbon\Carbon;
@@ -159,6 +160,13 @@ class TwoFactorAuthController extends Controller
         $user->is_verified = true;
         $user->last_login_date = Carbon::now();
         $user->save();
+
+        UserLogin::create([
+            'user_id'    => $user->id,
+            'logged_in_at' => now(),
+            'ip_address' => $request->ip(),
+            'user_agent' => $request->userAgent(),
+        ]);
 
         return response()->json([
             'status' => true,

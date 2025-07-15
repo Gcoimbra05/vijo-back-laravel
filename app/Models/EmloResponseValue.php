@@ -92,4 +92,9 @@ class EmloResponseValue extends Model implements AuditableContract
         }
     }
 
+    public function response()
+    {
+        return $this->belongsTo(EmloResponse::class,'response_id', 'id');
+    }
+
 }

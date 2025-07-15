@@ -44,5 +44,8 @@ class EmloResponse extends Model implements AuditableContract
         ];
     }
 
-    
+    public function request()
+    {
+        return $this->belongsTo(VideoRequest::class, 'request_id', 'id');
+    }
 }

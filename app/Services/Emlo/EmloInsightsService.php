@@ -2,15 +2,14 @@
 
 namespace App\Services\Emlo;
 
+use App\Exceptions\UserNotFoundException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 use App\Services\Emlo\EmloResponseService;
 use Exception;
 
-use App\Exceptions\EmloParamNotFoundException;
-use App\Exceptions\EmloResponseNotFoundException;
-use App\Exceptions\EmloParamValueNotFoundException;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 
 class EmloInsightsService
@@ -18,8 +17,8 @@ class EmloInsightsService
 
     public function __construct(protected EmloResponseService $emloResponseService){}
 
-    public function getInsightsData(Request $request, $paramName)
-    {
+    public function getInsightsData(Request $request, $userId, $paramName)
+    {        
         $aggregation = $request->get('aggregation', 'daily');
         $timeRange = $request->get('time_range', 'current_week');
 
@@ -29,7 +28,8 @@ class EmloInsightsService
             "end_time" => $timeWindow['end']
         ];
 
-        $result = $this->emloResponseService->getAllValuesOfParam($paramName, $queryFilters);
+        $result = $this->emloResponseService->getAllValuesOfParam($paramName, $userId,$queryFilters);
+
         $aggregatedData = $this->aggregateData($result, $aggregation, $paramName);
 
         // Daily e Days of week
