@@ -4,13 +4,16 @@ namespace App\Http\Controllers;
 
 use App\Models\CatalogAnswer;
 use App\Models\Video;
+use App\Models\CredScore;
+use App\Models\KpiMetricSpecification;
+use App\Models\KpiMetricValue;
+use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
-use Twilio\Rest\Media;
+
 
 class CatalogAnswerController extends Controller
 {
@@ -48,6 +51,44 @@ class CatalogAnswerController extends Controller
             'request_id' => $request->input('request_id'),
             'catalog_id' => $request->input('catalog_id'),
         ]);
+
+        $credScoreId = CredScore::select('id')
+            ->where('catalog_id', $request->input('catalog_id'))
+            ->first();
+        if (!$credScoreId) {
+            return response()->json([
+                    'status' => false,
+                    'message' => 'Cred score not found.'
+            ], 404);
+        }
+
+        $kpiMetricSpecs = KpiMetricSpecification::select('*')
+            ->whereHas('credScoreKpi.credScore')
+            ->get();
+
+        $index = 1;
+        foreach($kpiMetricSpecs as $kpiMetricSpec) {
+            $questionKey = "question{$index}_score";
+            if (!$request->has($questionKey) || $request->input($questionKey) === null) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Missing required question:' . $questionKey
+                ], 400);
+            } else {
+                $result = KpiMetricValue::insert([
+                    'kpi_metric_spec_id' => $kpiMetricSpec->id,
+                    'request_id' => $request->input('request_id'),
+                    'value' => $request->input("question{$index}_score")
+                ]);
+                if (!$result) {
+                    return response()->json([
+                        'status' => false,
+                        'message' => 'Internal server error.'
+                    ], 500);
+                }
+                $index++;
+            }
+        }
 
         $request->validate([
             'request_id' => 'required|integer|exists:video_requests,id',

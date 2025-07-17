@@ -2,23 +2,24 @@
 
 namespace App\Services;
 
+
 use App\Models\Rule;
 use Illuminate\Support\Collection;
 use App\Models\EmloResponseParamSpecs;
 use App\Services\Emlo\EmloResponseService;
 use Illuminate\Support\Facades\Log;
 
-use App\Exceptions\EmloParamValueNotFoundException;
-use App\Exceptions\EmloParamSpecNotFoundException;
-use App\Exceptions\NoRulesFoundException;
-use App\Exceptions\NotEnoughEmloParamValuesException;
+use App\Exceptions\Emlo\EmloNotFoundException;
+use App\Exceptions\Emlo\NoRulesFoundException;
+use App\Exceptions\Emlo\NotEnoughEmloParamValuesException;
+
 
 class RuleEvaluationService
 {
     public function __construct(private EmloResponseService $emloResponseService
     ){}
 
-    public function evaluateRules(int $requestId, string $paramName, $queryOptions): array
+    public function evaluateRules(int $requestId, $userId, string $paramName, $queryOptions): array
     {
         $paramsWValues = [];
         $messages = [];
@@ -27,7 +28,7 @@ class RuleEvaluationService
             ->where("param_name", $paramName)
             ->first();
         if (!$paramSpec) {
-            throw new EmloParamSpecNotFoundException("EMLO param specification for param '{$paramName}' not found");
+            throw new EmloNotFoundException("EMLO param specification for param '{$paramName}' not found");
         }
 
         $rule = Rule::with('conditions')
@@ -44,9 +45,9 @@ class RuleEvaluationService
 
         foreach ($paramDisributions as $distribution) {
             if ($distribution['distribution'] == 'gaussian') {
-                $paramValues = $this->emloResponseService->getAllValuesOfParam($distribution['param'], []);
+                $paramValues = $this->emloResponseService->getAllValuesOfParam($distribution['param'], $userId, $queryOptions);
                 if (!$paramValues) {
-                    throw new EmloParamValueNotFoundException("EMLO param values not found for param '{$distribution['param']}");
+                    throw new EmloNotFoundException("EMLO param values not found for param '{$distribution['param']}");
                 }
 
                 $standardDeviation = self::standardDeviation($paramValues);
@@ -54,9 +55,9 @@ class RuleEvaluationService
                 $paramsWValues[$distribution['param']] = $standardDeviation;
 
             } else if ($distribution['distribution'] == 'definitive_state') {
-                $paramValue = $this->emloResponseService->getParamValueByRequestId($requestId, $paramSpec->param_name);
+                $paramValue = $this->emloResponseService->getParamValueByRequestId($requestId, $userId, $paramSpec->param_name);
                 if (!$paramValue) {
-                    throw new EmloParamValueNotFoundException("EMLO param value not found for param '{$distribution['param']}");
+                    throw new EmloNotFoundException("EMLO param value not found for param '{$distribution['param']}");
                 }
                 $paramsWValues[$distribution['param']] = $paramValue;
             }

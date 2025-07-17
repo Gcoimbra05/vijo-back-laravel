@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Exceptions\UserNotFoundException;
 use Illuminate\Routing\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -143,7 +144,12 @@ class EmloResponseController extends Controller {
     public function getParamValueByRequestId(Request $request, $requestId, $paramName)
     {
         try {
-            $result = $this->emloResponseService->getParamValueByRequestId($requestId, $paramName);
+            $userId = Auth::id();
+            if (!$userId) {
+                return response()->json(['error' => 'user not found'], 404);
+            }
+
+            $result = $this->emloResponseService->getParamValueByRequestId($requestId, $userId, $paramName);
             return response()->json($result);
         } catch (EmloNotFoundException) {
             return response()->json(['error' => 'parameter value not found'], 404);
@@ -155,12 +161,17 @@ class EmloResponseController extends Controller {
     public function getInsights(Request $request, $paramName)
     {
         try {
-            $result = $this->emloInsightsService->getInsightsData($request, $paramName);
+            $userId = Auth::id();
+            if (!$userId) {
+                return response()->json(['error' => 'user not found'], 404);
+            }
+
+            $result = $this->emloInsightsService->getInsightsData($request, $userId, $paramName);
             return response()->json($result);
         } catch (EmloNotFoundException) {
             return response()->json(['error' => 'insights values not found'], 404);
         } catch (\Exception) {
             return response()->json(['error' => 'internal server error'], 500);
         }
-    }
+    } 
 }

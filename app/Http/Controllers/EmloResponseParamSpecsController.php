@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\EmloResponseParamSpecs;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Facades\Auth;
 
 class EmloResponseParamSpecsController extends Controller
 {
@@ -22,6 +23,15 @@ class EmloResponseParamSpecsController extends Controller
 
     public function show($id)
     {
+        $userId = Auth::id();
+        if (!$userId) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized access.',
+                'data' => null,
+            ], 401);
+        }
+
         $spec = EmloResponseParamSpecs::with('emlo_response_param_specs')->find($id);
         if (!$spec) {
             return response()->json([
@@ -40,7 +50,7 @@ class EmloResponseParamSpecsController extends Controller
     }
 
     public function showByParamName($paramName)
-    {
+    {   
         $spec = EmloResponseParamSpecs::findByParamName($paramName);
         if (!$spec) {
             return response()->json([
@@ -59,7 +69,16 @@ class EmloResponseParamSpecsController extends Controller
     }
 
     public function store(Request $request)
-    {
+    {   
+        $userId = Auth::id();
+        if (!$userId) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized access.',
+                'data' => null,
+            ], 401);
+        }
+
         $request->validate([
             'param_name' => 'required|string|max:255',
             'description' => 'required|string',
@@ -76,7 +95,16 @@ class EmloResponseParamSpecsController extends Controller
     }
 
     public function update(Request $request, $id)
-    {
+    {   
+        $userId = Auth::id();
+        if (!$userId) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized access.',
+                'data' => null,
+            ], 401);
+        }
+
         $spec = EmloResponseParamSpecs::find($id);
         if (!$spec) {
             return response()->json([
@@ -102,7 +130,16 @@ class EmloResponseParamSpecsController extends Controller
     }
 
     public function destroy($id)
-    {
+    {   
+        $userId = Auth::id();
+        if (!$userId) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized access.',
+                'data' => null,
+            ], 401);
+        }
+
         $spec = EmloResponseParamSpecs::find($id);
         if (!$spec) {
             return response()->json([

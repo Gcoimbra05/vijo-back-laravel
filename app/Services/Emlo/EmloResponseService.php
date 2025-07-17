@@ -7,15 +7,9 @@ use App\Models\EmloResponseParamSpecs;
 use App\Models\EmloResponsePath;
 use App\Models\EmloResponseValue;
 use Illuminate\Support\Facades\Log;
-
 use App\Services\Emlo\EmloSegmentParameterService;
 use App\Services\QueryParamsHelperService;
-
 use App\Exceptions\Emlo\EmloNotFoundException;
-
-
-
-
 use Exception;
 
 class EmloResponseService
@@ -28,7 +22,7 @@ class EmloResponseService
         $this->emloSegmentService = $emloSegmentService;
     }
 
-    public function getAllValuesOfParam($paramName, $queryOptions)
+    public function getAllValuesOfParam($paramName, $userId, $queryOptions)
     {
         $param = EmloResponseParamSpecs::select('type', 'needs_normalization', 'path_key')->where('param_name', $paramName)->first();
         if(!$param) {
@@ -46,7 +40,13 @@ class EmloResponseService
             }
 
             $query = EmloResponseValue::select('response_id', 'path_id', 'numeric_value', 'string_value', 'boolean_value', 'created_at')
-                ->where('path_id', $pathResult->id);
+                ->where('path_id', $pathResult->id)
+                ->whereHas('response.request', function ($subQuery) use ($userId) {
+                    $subQuery->where('user_id', $userId);
+                });
+
+            $query = QueryParamsHelperService::applyQueryOptions($query, $queryOptions);
+            $responseValues = $query->get();
 
             $query = QueryParamsHelperService::applyQueryOptions($query, $queryOptions);
             $responseValues = $query->get();
@@ -71,7 +71,7 @@ class EmloResponseService
         return collect(); // Default return empty collection
     }
 
-    public function getParamValueByRequestId($requestId, $paramName)
+    public function getParamValueByRequestId($requestId, $userId, $paramName)
     {
         $param = EmloResponseParamSpecs::select('type', 'needs_normalization', 'path_key')
             ->where('param_name', $paramName)
@@ -82,6 +82,13 @@ class EmloResponseService
 
         $response = EmloResponse::select('id', 'raw_response')
             ->where('request_id', $requestId)
+            ->first();
+
+        $query = EmloResponse::select('id', 'raw_response')
+            ->where('request_id', $requestId)
+            ->whereHas('request', function ($subQuery) use ($userId) {
+                $subQuery->where('user_id', $userId);
+            })
             ->first();
 
         if(!$response) {

@@ -6,7 +6,7 @@ use App\Http\Controllers\CatalogAnswerController;
 use App\Http\Controllers\CatalogController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\ContactController;
-
+use App\Http\Controllers\CredScoreController;
 use App\Http\Controllers\GroupController;
 use App\Http\Controllers\MembershipPlanController;
 use App\Http\Controllers\StripeWebhookController;
@@ -23,8 +23,6 @@ use App\Http\Controllers\SettingsController;
 use Illuminate\Support\Facades\Route;
 
 use App\Http\Controllers\EmloResponseController;
-use App\Services\Emlo\EmloResponseService;
-use App\Services\Emlo\EmloInsightsService;
 use App\Http\Controllers\EmloResponseParamSpecsController;
 
 
@@ -101,16 +99,19 @@ Route::prefix('v2')->middleware(ForceJsonResponse::class)->group(function () {
         Route::apiResource('llm-templates', LlmTemplateController::class);
 
         Route::post('stripe/checkout-session', [StripeWebhookController::class, 'createCheckoutSession']);
+
+        Route::get('cred-score/{request_id}', [CredScoreController::class, 'getCredScore']);
+
+        Route::prefix('emlo-response')->group(function () {
+            Route::get('get-emotion-insights/{param}', [EmloResponseController::class, 'getInsights']);
+
+            Route::get('{request_id}/{param}/compare', [RuleEvaluationController::class, 'evaluateRules']);
+            Route::get('{param}/specification', [EmloResponseParamSpecsController::class, 'showByParamName']);
+            Route::get('{request_id}/{param}', [EmloResponseController::class, 'getParamValueByRequestId']);
+        });
+
     });
 
     // Stripe Webhook
     Route::post('stripe/webhook', [StripeWebhookController::class, 'handle']);
-
-    Route::prefix('emlo-response')->group(function () {
-        Route::get('get-emotion-insights/{param}', [EmloResponseController::class, 'getInsights']);
-
-        Route::get('{request_id}/{param}/compare', [RuleEvaluationController::class, 'evaluateRules']);
-        Route::get('{param}/specification', [EmloResponseParamSpecsController::class, 'showByParamName']);
-        Route::get('{request_id}/{param}', [EmloResponseController::class, 'getParamValueByRequestId']);
-    });
 });
