@@ -339,6 +339,13 @@ class SettingsController extends Controller
         );
     }
 
+    public function getInsightsV2(Request $request, EmloInsightsService $emlo)
+    {
+        return $emlo->getInsightsResponse(
+            $request,
+        );
+    }
+
     public function getStaticPages()
     {
         $responseData = [
