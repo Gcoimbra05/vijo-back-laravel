@@ -68,6 +68,9 @@ class CatalogAnswerController extends Controller
 
         $index = 1;
         foreach($kpiMetricSpecs as $kpiMetricSpec) {
+            if ($index > 3) {
+                break;
+            }
             $questionKey = "question{$index}_score";
             if (!$request->has($questionKey) || $request->input($questionKey) === null) {
                 return response()->json([

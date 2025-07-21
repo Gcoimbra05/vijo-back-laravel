@@ -61,7 +61,7 @@ class VideoRequest extends Model implements AuditableContract
 
     public function videos()
     {
-        return $this->hasMany(Video::class);
+        return $this->hasMany(Video::class, 'request_id');
     }
 
     public function latestVideo()

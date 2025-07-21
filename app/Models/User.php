@@ -29,7 +29,8 @@ class User extends Authenticatable implements AuditableContract
         'is_verified',
         'plan_id',
         'plan_start_date',
-        'refresh_token'
+        'refresh_token',
+        'is_admin',
     ];
 
     protected $hidden = [
@@ -44,6 +45,7 @@ class User extends Authenticatable implements AuditableContract
         'reminders' => 'boolean',
         'notifications' => 'boolean',
         'optInNewsUpdates' => 'boolean',
+        'is_admin' => 'boolean',
     ];
 
     public function plan()

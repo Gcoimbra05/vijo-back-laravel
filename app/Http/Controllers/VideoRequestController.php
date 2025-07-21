@@ -32,6 +32,8 @@ use App\Services\Emlo\EmloSegmentParameterService;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
 
+use App\Exceptions\Emlo\EmloNotFoundException;
+
 class VideoRequestController extends Controller
 {
     use ValidatesRequests;
@@ -713,30 +715,25 @@ class VideoRequestController extends Controller
             ]);
         }
 
+        $questions = [];
+
         $credScoreId = CredScore::select('id')
             ->where('catalog_id', $catalogId)
             ->first();
-        if (!$credScoreId) {
-            return response()->json([
-                    'status' => false,
-                    'message' => 'Cred score not found.'
-            ], 404);
-        }
-
-        $kpiMetricSpecs = KpiMetricSpecification::select('*')
-            ->whereHas('credScoreKpi.credScore')
-            ->get();
-        Log::info("kpiMetricSpecs are: " . json_encode($kpiMetricSpecs));
-
-        $questions = [];
-
-        foreach ($kpiMetricSpecs as $metricSpec) {
-            $questions [] = [
-                'id' => $metricSpec->id,
-                'name' => $metricSpec->name,
-                'question' => $metricSpec->question,
-                'range' => $metricSpec->range,
-            ];
+        if ($credScoreId) {
+            $kpiMetricSpecs = KpiMetricSpecification::select('*')
+                ->whereHas('credScoreKpi.credScore')
+                ->get();
+            if ($kpiMetricSpecs) {
+                foreach ($kpiMetricSpecs as $metricSpec) {
+                    $questions [] = [
+                        'id' => $metricSpec->id,
+                        'name' => $metricSpec->name,
+                        'question' => $metricSpec->question,
+                        'range' => $metricSpec->range,
+                    ];
+                }
+            }
         }
 
         Log::info("questions are: " . json_encode($questions));
@@ -761,7 +758,7 @@ class VideoRequestController extends Controller
         $videoType = [
             'metrics' => $vtMetricNo,
             'kpis' => $vtKpiNo,
-            'kpi_metrics' => $vtKpiMetrics
+            'kpi_metrics' => count($questions), // > 0 ? $vtKpiMetrics : 0,
         ];
         Log::info('Video Type: ', $videoType);
 
@@ -791,22 +788,41 @@ class VideoRequestController extends Controller
     {
         $userId = Auth::id();
 
-        $catalogs = Catalog::with(['videoType'])
-            ->whereIn('id', function($query) use ($userId) {
-                $query->select('catalog_id')
-                    ->from('video_requests')
-                    ->where(function($q) use ($userId) {
-                        $q->where('user_id', $userId)
-                          ->orWhere('ref_user_id', $userId);
-                    });
+        $topCatalogIds = VideoRequest::select('catalog_id')
+            ->where(function($q) use ($userId) {
+                $q->where('user_id', $userId)
+                  ->orWhere('ref_user_id', $userId);
             })
+            ->groupBy('catalog_id')
+            ->orderByRaw('COUNT(*) DESC')
+            ->limit(3)
+            ->pluck('catalog_id')
+            ->toArray();
+
+        if (count($topCatalogIds) < 3) {
+            $extraCatalogs = Catalog::where('is_deleted', 0)
+                ->where('status', 1)
+                ->where(function($query) {
+                    $query->whereNull('parent_catalog_id')
+                          ->orWhere('parent_catalog_id', 0);
+                })
+                ->whereNotIn('id', $topCatalogIds)
+                ->limit(3 - count($topCatalogIds))
+                ->pluck('id')
+                ->toArray();
+
+            $topCatalogIds = array_merge($topCatalogIds, $extraCatalogs);
+        }
+
+        $catalogs = Catalog::with(['videoType'])
+            ->whereIn('id', $topCatalogIds)
             ->where(function($query) {
                 $query->whereNull('parent_catalog_id')
                       ->orWhere('parent_catalog_id', 0);
             })
             ->where('is_deleted', 0)
             ->where('status', 1)
-            ->orderBy('admin_order')
+            ->orderByRaw('FIELD(id, ' . implode(',', $topCatalogIds) . ')')
             ->get();
 
         $results = $catalogs->map(function($catalog) {
@@ -824,7 +840,7 @@ class VideoRequestController extends Controller
                 'isMultipart'     => (string)($catalog->is_multipart ?? 0),
                 'catalogPrograms' => [],
                 'catalogEmoji'    => $catalog->emoji ?? '',
-                'video_type_id' => (string)($catalog->video_type_id ?? ''),
+                'video_type_id'   => (string)($catalog->video_type_id ?? ''),
                 'metric_no'       => (string)$metric_no,
                 'kpi_no'          => (string)$kpi_no,
                 'dashboard_id'    => '',
@@ -1872,62 +1888,69 @@ class VideoRequestController extends Controller
 
     private function getFormattedEmotions($requestId, $userId) 
     {
-        $emotionsWValues = [];
-        $paramsInUse = EmloDatabaseLoader::getParamsInUse();
+        try{
+            $emotionsWValues = [];
+            $paramsInUse = EmloDatabaseLoader::getParamsInUse();
 
-        foreach ($paramsInUse as $paramInUse) {
-            $emotionValue = $this->emloResponseService->getParamValueByRequestId($requestId, $userId, $paramInUse->param_name);
-
-            $emotionsWValues[] = 
-                [   
-                    'param_name' => $paramInUse->param_name,
-                    'value' => $emotionValue, 
-                    'simplified_param_name' => $paramInUse->simplified_param_name 
-                ];
-        }
-        
-        usort($emotionsWValues, function($a, $b) {
-            return $b['value'] <=> $a['value'];
-        });   
-        $emotionalInsights = [];
-        $index = 0;
-
-        foreach ($emotionsWValues as $emotionWValue) {            
-            $average = -1;
-            
-            //  Moment-in-time emotions
-            if ($emotionWValue['param_name'] == 'overallCognitiveActivity' || $emotionWValue['param_name'] == 'clStress') {
-                $average = -1;
-
-            // Segment parameter emotions
-            } else if (in_array($emotionWValue['param_name'], array_column(EmloDatabaseLoader::getSegmentsInUse(), 'param_name'))) {
-                $averages = $this->emloSegmentParameterService->getAveragesForAllResponses($emotionWValue['param_name']);
-                $average = $averages->pluck('value')->avg();
-            
-            // Regular parameter emotions
-            } else {
-                $result = $this->emloResponseService->getAllValuesOfParam($emotionWValue['param_name'], $userId, []);
-                if (!empty($result)) {
-                    $average = self::calculateParamAverage($result);
+            foreach ($paramsInUse as $paramInUse) {
+                try {
+                    $emotionValue = $this->emloResponseService->getParamValueByRequestId($requestId, $userId, $paramInUse->param_name);
+                } catch(EmloNotFoundException) {
+                    continue;
                 }
+                $emotionsWValues[] = 
+                    [   
+                        'param_name' => $paramInUse->param_name,
+                        'value' => $emotionValue, 
+                        'simplified_param_name' => $paramInUse->simplified_param_name 
+                    ];
+            }
+            
+            usort($emotionsWValues, function($a, $b) {
+                return $b['value'] <=> $a['value'];
+            });   
+            $emotionalInsights = [];
+            $index = 0;
+
+            foreach ($emotionsWValues as $emotionWValue) {            
+                $average = -1;
+                
+                //  Moment-in-time emotions
+                if ($emotionWValue['param_name'] == 'overallCognitiveActivity' || $emotionWValue['param_name'] == 'clStress') {
+                    $average = -1;
+
+                // Segment parameter emotions
+                } else if (in_array($emotionWValue['param_name'], array_column(EmloDatabaseLoader::getSegmentsInUse(), 'param_name'))) {
+                    $averages = $this->emloSegmentParameterService->getAveragesForAllResponses($emotionWValue['param_name']);
+                    $average = $averages->pluck('value')->avg();
+                
+                // Regular parameter emotions
+                } else {
+                    $result = $this->emloResponseService->getAllValuesOfParam($emotionWValue['param_name'], $userId, []);
+                    if (!empty($result)) {
+                        $average = self::calculateParamAverage($result);
+                    }
+                }
+
+                $emotionalInsights[] = [
+                    'emotion' => $emotionWValue['simplified_param_name'],
+                    'score' => $emotionWValue['value'] / 100,
+                    'average' => (int) round($average),
+                    'description' => $emotionWValue['description'] ?? '',
+                    'emoji' => $emotionWValue['emoji'] ?? '',
+                ];
+
+                $index++;
             }
 
-            $emotionalInsights[] = [
-                'emotion' => $emotionWValue['simplified_param_name'],
-                'score' => $emotionWValue['value'] / 100,
-                'average' => (int) round($average),
-                'description' => $emotionWValue['description'] ?? '',
-                'emoji' => $emotionWValue['emoji'] ?? '',
+            $result = [
+                'emotional_insights' => $emotionalInsights
             ];
 
-            $index++;
+            return $result;
+        } catch (EmloNotFoundException) {
+            return [];
         }
-
-        $result = [
-            'emotional_insights' => $emotionalInsights
-        ];
-
-        return $result;
     }
 
     private static function calculateParamAverage($paramValues) 

@@ -11,6 +11,8 @@ use Exception;
 
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use App\Models\UserLogin;
+use App\Models\VideoRequest;
 
 class EmloInsightsService
 {
@@ -298,7 +300,8 @@ class EmloInsightsService
         ]);
     }
 
-    public function getInsightsResponse(Request $request) {
+    public function getInsightsResponse(Request $request)
+    {
         // aggregation = current Month, Past Month, Quarterly, Semi-Annualy, Annually
         // time_range = weekly, monthly, All Time
 
@@ -440,15 +443,12 @@ class EmloInsightsService
             ];
         }
 
+        $userId = Auth::id();
+        $stats = $this->getUserActivityStats($userId);
+
         $activity = [
             'weekly' => $weeklyActivity,
-            'stats' => [
-                'avgRecordings' => round((rand(40, 60) / 10), 1),
-                'currentStreak' => rand(5, 10),
-                'longestStreak' => rand(15, 25),
-                'totalCheckIns' => rand(100, 200),
-                'thisMonth' => rand(15, 25)
-            ]
+            'stats' => $stats
         ];
 
         return response()->json([
@@ -497,5 +497,72 @@ class EmloInsightsService
             default:
                 return ['Unknown'];
         }
+    }
+
+    public function getUserActivityStats($userId)
+    {
+        // Total number of check-ins (logins)
+        $totalCheckIns = UserLogin::where('user_id', $userId)->count();
+
+        // Check-ins for the current month
+        $thisMonth = UserLogin::where('user_id', $userId)
+            ->whereMonth('logged_in_at', Carbon::now()->month)
+            ->whereYear('logged_in_at', Carbon::now()->year)
+            ->count();
+
+        // Distinct days with login (for streak calculation)
+        $loginDays = UserLogin::where('user_id', $userId)
+            ->orderBy('logged_in_at')
+            ->pluck('logged_in_at')
+            ->map(fn($dt) => Carbon::parse($dt)->toDateString())
+            ->unique()
+            ->values();
+
+        // Streak calculation
+        $currentStreak = 0;
+        $longestStreak = 0;
+        $streak = 0;
+        $prev = null;
+
+        foreach ($loginDays as $day) {
+            if ($prev && Carbon::parse($prev)->diffInDays($day) === 1) {
+                $streak++;
+            } else {
+                $streak = 1;
+            }
+            if ($streak > $longestStreak) {
+                $longestStreak = $streak;
+            }
+            $prev = $day;
+        }
+
+        // If the last login was today, the current streak is valid
+        $currentStreak = 0;
+        if ($loginDays->count() && Carbon::parse($loginDays->last())->isToday()) {
+            // Count how many consecutive days up to today
+            $currentStreak = 1;
+            for ($i = $loginDays->count() - 2; $i >= 0; $i--) {
+                if (Carbon::parse($loginDays[$i])->diffInDays($loginDays[$i + 1]) === 1) {
+                    $currentStreak++;
+                } else {
+                    break;
+                }
+            }
+        }
+
+        // Only video_requests that have related videos
+        $totalRecordings = VideoRequest::where('user_id', $userId)
+            ->whereHas('videos')
+            ->count();
+
+        $avgRecordings = $totalCheckIns > 0 ? round($totalRecordings / $totalCheckIns, 1) : 0;
+
+        return [
+            'avgRecordings' => $avgRecordings,
+            'currentStreak' => $currentStreak,
+            'longestStreak' => $longestStreak,
+            'totalCheckIns' => $totalCheckIns,
+            'thisMonth' => $thisMonth,
+        ];
     }
 }
