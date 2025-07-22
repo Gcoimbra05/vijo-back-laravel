@@ -441,4 +441,78 @@ class UserController extends Controller
             ]
         ]);
     }
+
+    public function adminIndex()
+    {
+        $nav_bar = 'users';
+        $users = User::all();
+
+        $breadcrumbs = [
+            ['label' => 'Users', 'url' => null],
+        ];
+
+        return view('admin.users.index', compact('users', 'nav_bar', 'breadcrumbs'));
+    }
+
+    public function deactivate($id)
+    {
+        $user = User::find($id);
+        if (!$user) {
+            return response()->json(['message' => 'User not found'], 404);
+        }
+
+        $user->active = false;
+        $user->save();
+
+        return response()->json(['message' => 'User deactivated successfully']);
+    }
+
+    public function activate($id)
+    {
+        $user = User::find($id);
+        if (!$user) {
+            return response()->json(['message' => 'User not found'], 404);
+        }
+
+        $user->active = true;
+        $user->save();
+
+        return response()->json(['message' => 'User activated successfully']);
+    }
+
+    public function auditLogsView($id)
+    {
+        $user = User::find($id);
+        if (!$user) {
+            return response()->json(['message' => 'User not found'], 404);
+        }
+
+        $auditLogs = [];
+        $nav_bar = 'users';
+
+        $breadcrumbs = [
+            ['label' => 'Users', 'url' => route('users.adminIndex')],
+            ['label' => 'Audit Logs', 'url' => null]
+        ];
+
+        return view('admin.users.audit_logs', compact('user', 'auditLogs', 'nav_bar', 'breadcrumbs'));
+    }
+
+    public function journalHistoryView($id)
+    {
+        $user = User::find($id);
+        if (!$user) {
+            return response()->json(['message' => 'User not found'], 404);
+        }
+
+        $journalHistory = [];
+        $nav_bar = 'users';
+
+        $breadcrumbs = [
+            ['label' => 'Users', 'url' => route('users.adminIndex')],
+            ['label' => 'Journal History', 'url' => null]
+        ];
+
+        return view('admin.users.journal_history', compact('user', 'journalHistory', 'nav_bar', 'breadcrumbs'));
+    }
 }
