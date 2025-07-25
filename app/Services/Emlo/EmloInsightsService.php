@@ -13,121 +13,584 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use App\Models\UserLogin;
 use App\Models\VideoRequest;
+use App\Models\EmloResponse;
+use App\Models\EmloResponseValue;
+
 
 class EmloInsightsService
 {
-
     public function __construct(protected EmloResponseService $emloResponseService){}
 
     public function getInsightsData(Request $request, $userId, $paramName)
     {        
-        $aggregation = $request->get('aggregation', 'daily');
-        $timeRange = $request->get('time_range', 'current_week');
-
-        $timeWindow = $this->getTimeWindow($timeRange);
+        $filterBy = $request->get('filter_by', 'weekly');
+        Log::debug('filter by is: ' . json_encode($filterBy));
+        $timeWindow = $this->getTimeWindow($filterBy);
         $queryFilters = [
-            "start_time" => $timeWindow['start'],
+            "start_time" => $timeWindow['start'],  
             "end_time" => $timeWindow['end']
         ];
 
-        $result = $this->emloResponseService->getAllValuesOfParam($paramName, $userId,$queryFilters);
+        // Get filtered data for the main result (current period only)
+        $result = $this->emloResponseService->getAllValuesOfParam($paramName, $userId, $queryFilters);
 
-        $aggregatedData = $this->aggregateData($result, $aggregation, $paramName);
-
-        // Daily e Days of week
-        if ($timeRange === 'current_week'
-        && ($aggregation === 'daily'
-        || $aggregation === 'day_of_week')) {
-            $aggregatedData = $this->fillMissingDaysWithZeros($aggregatedData, $timeWindow, $paramName);
+        switch($filterBy) {
+            case 'weekly':
+                // Get ALL historical data for day averages (not just this week)
+                $allHistoricalData = $this->emloResponseService->getAllValuesOfParam($paramName, $userId, []);
+                $average = $this->createPerDayAverages($allHistoricalData);
+                break;
+            case 'monthly':
+                // For monthly, you might also want all-time data for comparison
+                $allHistoricalData = $this->emloResponseService->getAllValuesOfParam($paramName, $userId, []);
+                $average = $this->createMonthlyAverage($allHistoricalData);
+                break;
+            case 'all_time':
+                // For all_time, use the same dataset
+                $average = $this->createAllTimeAverage($result);
+                break;
         }
 
-        $response = [
-            'data' => $aggregatedData,
-            'aggregation' => $aggregation,
-            'time_range' => $timeRange,
-            'period' => [
-                'start' => $timeWindow['start'],
-                'end' => $timeWindow['end']
-            ],
+        $timeOfDayAverages = $this->createTimeOfDayAverages($allHistoricalData);
+
+        $aggregatedData = $this->aggregateData($result, $filterBy, $average);
+
+        $secondaryMetrics = $this->getSecondaryMetrics($userId);
+
+        $selfHonesty = $this->getSelfHonestyInfo($userId);
+
+        $daysOfWeek = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+        $weeklyActivity = [];
+        foreach ($daysOfWeek as $index => $day) {
+            $weeklyActivity[] = [
+                'day' => $day,
+                'active' => rand(50, 100),
+            ];
+        }
+
+        $userId = Auth::id();
+        $stats = $this->getUserActivityStats($userId);
+
+        $activity = [
+            'weekly' => $weeklyActivity,
+            'stats' => $stats
         ];
 
-        return $response;
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Insights data retrieved successfully',
+            'data' => [
+                'metricsData' => $aggregatedData,
+                'timeOfDayData' => $timeOfDayAverages,
+                'secondaryMetrics' => $secondaryMetrics,
+                'risk' => $selfHonesty,
+                'activity' => $activity,
+                'progressData' => $progressData ?? [],
+            ],
+        ]);
     }
 
-    private function fillMissingDaysWithZeros($aggregatedData, $timeWindow, $paramName)
+    private function getSecondaryMetrics($userId)
     {
-        $start = Carbon::parse($timeWindow['start']);
-        $end = Carbon::parse($timeWindow['end']);
-        $period = collect();
+        $clStress = $this->emloResponseService->getAllValuesOfParam('clStress', $userId, []);
+        $clStressPercentages = $this->sortClStressByValue($clStress);
+        $clStressInfoArray = $this->createClStressInfoArray($clStressPercentages);
 
-        // Create a collection with all days in the range
-        for ($date = $start->copy(); $date->lte($end); $date->addDay()) {
-            $dateStr = $date->format('Y-m-d');
-            $period->put($dateStr, [
-                'name' => $paramName,
-                'period' => $dateStr,
-                'period_display' => $date->format('M j, Y'),
-                'avg' => 0,
-                'min' => 0,
-                'max' => 0,
-                'request_count' => 0,
-                'valid_count' => 0,
-                'sort_order' => $dateStr
-            ]);
+        $oCA = $this->emloResponseService->getAllValuesOfParam('overallCognitiveActivity', $userId, []);
+        foreach ($oCA as $ocaValue) {
+            $normalizedValue = EmloHelperService::applyNormalizationFormula($ocaValue->value);
+            $ocaValue->value = $normalizedValue;
+        }
+        $oCAPercentages = $this->sortOCAByValue($oCA);
+        $ocaInfoArray = $this->createOCAInfoArray($oCAPercentages);
+
+
+        $aggression = $this->emloResponseService->getAllValuesOfParam('Aggression', $userId, []);
+        $aggressionPercentages = $this->sortAggressionByValue($aggression);
+        $aggressionInfoArray = $this->createAggressionInfoArray($aggressionPercentages);
+
+        $returnArray = [
+            $clStressInfoArray,
+            $ocaInfoArray,
+            $aggressionInfoArray
+        ];
+
+        return $returnArray;
+    }
+
+    private function getSelfHonestyInfo($userId)
+    {
+        $result = EmloResponseValue::select('response_id', 'path_id', 'numeric_value', 'string_value', 'boolean_value', 'created_at')
+            ->where('path_id', 15)
+            ->whereHas('response.request', function ($subQuery) use ($userId) {
+                $subQuery->where('user_id', $userId);
+            })
+            ->first();
+
+        $response = EmloResponse::select('raw_response')
+            ->where('id', $result->response_id)
+            ->first();
+        
+        $selfHonesty = $this->emloResponseService->handleSelfHonesty('self_honesty', $response);
+
+        $description = '';
+        if ($selfHonesty == 0) {
+            $description = 'failed to fetch self honesty score';
+        } else if ($selfHonesty >= 1 && $selfHonesty < 50) {
+            $description = 'self honesty is low';
+        } else if ($selfHonesty >= 50 && $selfHonesty < 80) {
+            $description = 'self honesty is good';
+        } else if ($selfHonesty >= 80 && $selfHonesty <= 100) {
+            $description = 'self honesty is excellent';
         }
 
-        // Merge with existing data (overwriting zeros where we have data)
-        foreach ($aggregatedData as $item) {
-            if (isset($item['period']) && $period->has($item['period'])) {
-                $period[$item['period']] = $item;
+        $returnArray = [
+            "name" => "selfHonesty",
+            "title"=> "Self-Honesty",
+            "description"=> "How honest you're being with yourself (80 - 100 is best)",
+            "min" => 1,
+            "midpoint"=> 50,
+            "max"=> 100,
+            "currentValue"=>  $selfHonesty,
+            "stats" => [
+                [
+                    "label"=> "Current Level",
+                    "value"=> $selfHonesty,
+                    "description" => $description
+                ],
+                [
+                    "label" => "Best Range",
+                    "value" => "60-100",
+                    "description" => "Honest self-reflection"
+                ]
+            ]
+        ];
+
+        return $returnArray;
+    }
+
+    private function sortClStressByValue($clStressValues)
+    {
+        $sortedValues = [
+            "1" => 0,
+            "2" => 0,
+            "3" => 0,
+            "4" => 0,
+            "5" => 0,
+        ];
+
+        $newestValue = 0;
+
+
+        foreach($clStressValues as $index => $clStressValue) {
+            if ($clStressValue != null && isset($clStressValue->value)) {
+                if ($index == 0) $newestValue = $clStressValue->value;
+
+                switch ($clStressValue->value) {
+                    case 1:
+                        $sortedValues['1']++;
+                        break;
+                    case 2:
+                        $sortedValues['2']++;
+                        break;
+                    case 3:
+                        $sortedValues['3']++;
+                        break;
+                    case 4:
+                        $sortedValues['4']++;
+                        break;
+                    case 5:
+                        $sortedValues['5']++;
+                        break;
+                }
             }
         }
 
-        return $period->values()->all();
+        $percentages = $this->getSecondaryMetricPercentages($sortedValues);
+
+        $returnArray = [
+            "percentages" => $percentages,
+            "newestValue" => $newestValue
+        ];
+                
+        return $returnArray;
     }
 
-    private function getTimeWindow($timeRange)
+    private function sortOCAByValue($oCAValues)
+    {
+        $sortedValues = [
+            "1" => 0,
+            "2" => 0,
+            "3" => 0,
+            "4" => 0,
+        ];
+
+        $newestValue = 0;
+
+
+        foreach($oCAValues as $index => $oCAValue) {
+            if ($oCAValue != null && isset($oCAValue->value)) {
+                if ($index == 0) $newestValue = $oCAValue->value;
+
+                if (($oCAValue->value >= 0.05) && ($oCAValue->value < 5)) {
+                    $sortedValues['1']++;
+                } else if (($oCAValue->value >= 5) && ($oCAValue->value < 10)) {
+                    $sortedValues['2']++;
+                } else if (($oCAValue->value >= 10) && ($oCAValue->value < 15)) {
+                    $sortedValues['3']++;
+                } else if (($oCAValue->value >= 15) && ($oCAValue->value <= 17.5)) {
+                    $sortedValues['4']++;
+                }
+            }
+        }
+
+        $percentages = $this->getSecondaryMetricPercentages($sortedValues);
+
+        $returnArray = [
+            "percentages" => $percentages,
+            "newestValue" => $newestValue
+        ];
+                
+        return $returnArray;
+    }
+
+    private function sortAggressionByValue($aggressionValues)
+    {
+        $sortedValues = [
+            "1" => 0,
+            "2" => 0,
+            "3" => 0,
+        ];
+
+        $newestValue = 0;
+
+
+        foreach($aggressionValues as $index => $aggressionValue) {
+            if ($aggressionValue != null && isset($aggressionValue->value)) {
+                if ($index == 0) $newestValue = $aggressionValue->value;
+
+                if ($aggressionValue->value == 0) {
+                    $sortedValues['1']++;
+                } else if (($aggressionValue->value >= 1) && ($aggressionValue->value < 2)) {
+                    $sortedValues['2']++;
+                } else if ($aggressionValue->value > 2) {
+                    $sortedValues['3']++;
+                }
+            }   
+        }
+
+        $percentages = $this->getSecondaryMetricPercentages($sortedValues);
+
+        $returnArray = [
+            "percentages" => $percentages,
+            "newestValue" => $newestValue
+        ];
+            
+        return $returnArray;
+    }
+
+    private function createClStressInfoArray($sortedClStressValues)
+    {
+        $clStressInfo = [
+                "name" => "stressRecovery",
+                "title"=> "Stress Recovery",
+                "description"=> "Ability to return to calm after stress (Level 1 is best)",
+                "currentValue"=> $sortedClStressValues['newestValue'],
+                "items"=> [
+                    [
+                        "range"=> 1,
+                        "label"=> "Excellent Recovery",
+                        "percentage"=> 0,
+                        "isCurrent"=> false
+                    ],
+                    [
+                        "range"=> 2,
+                        "label"=> "Very Good",
+                        "percentage"=> 0,
+                        "isCurrent"=> false
+                    ],
+                    [
+                        "range"=> 3,
+                        "label"=> "Good",
+                        "percentage"=> 0,
+                        "isCurrent"=> false
+                    ],
+                    [
+                        "range"=> 4,
+                        "label"=> "Moderate",
+                        "percentage"=> 0,
+                        "isCurrent"=> false
+                    ],
+                    [
+                        "range"=> 5,
+                        "label"=> "Needs Attention",
+                        "percentage"=> 0,
+                        "isCurrent"=> false
+                    ]
+                ]
+            ];
+
+        foreach ($clStressInfo['items'] as $index => &$item) {
+            $item['percentage'] = $sortedClStressValues['percentages'][$index];
+            if ($sortedClStressValues['newestValue'] == $item['range']) $item['isCurrent'] = true; 
+        }
+        return $clStressInfo;
+    }
+
+    private function createOCAInfoArray($sortedOCAValues)
+    {
+        $rangesForCalculation = [
+            [0, 18],
+            [18, 55],
+            [55, 60],
+            [60, 100]
+        ];
+
+        $ocaInfo = [
+                "name"=> "cognitiveBalance",
+                "title"=> "Cognitive Balance",
+                "description"=> "How well thoughts and emotions work together",
+                "currentValue"=> $sortedOCAValues['newestValue'],
+                "items"=> [
+                    [
+                        "range"=> '0 - 18',
+                        "label"=> "Disconnected",
+                        "percentage"=> 0,
+                        "isCurrent"=> false
+                    ],
+                    [
+                        "range"=> '18 - 55',
+                        "label"=> "Low Balance",
+                        "percentage"=> 0,
+                        "isCurrent"=> false
+                    ],
+                    [
+                        "range"=> '55 - 60',
+                        "label"=> "Balanced",
+                        "percentage"=> 0,
+                        "isCurrent"=> false
+                    ],
+                    [
+                        "range"=> '60 - 100',
+                        "label"=> "Overstimulated",
+                        "percentage"=> 0,
+                        "isCurrent"=> false
+                    ]
+                ]
+            ];
+
+        foreach ($ocaInfo['items'] as $index => &$item) {
+            $item['percentage'] = $sortedOCAValues['percentages'][$index];
+            if ($sortedOCAValues['newestValue'] >= $rangesForCalculation[$index][0] && $sortedOCAValues['newestValue'] < $rangesForCalculation[$index][1]) $item['isCurrent'] = true; 
+        }
+        return $ocaInfo;
+    }
+
+    private function createAggressionInfoArray($sortedAggressionValues)
+    {
+        $rangesForCalculation = [
+            [0, 0.99],
+            [1, 1.99],
+            [2, 100],
+        ];
+
+        $aggressionInfo = 
+                [
+                "name"=> "aggression",
+                "title"=> "Aggression",
+                "description"=> "How strongly anger comes through (0 is best)",
+                "currentValue"=> $sortedAggressionValues['newestValue'],
+                "items"=> [
+                    [
+                        "range"=> "0",
+                        "label"=> "Best - No Aggression",
+                        "percentage"=> 0,
+                        "isCurrent"=> false
+                    ],
+                    [
+                        "range"=> "1 - 2",
+                        "label"=> "Acceptable",
+                        "percentage"=> 0,
+                        "isCurrent"=> false
+                    ],
+                    [
+                        "range"=> ">2",
+                        "label"=> "Needs Attention",
+                        "percentage"=> 0,
+                        "isCurrent"=> false
+                    ]
+                ]
+            ];
+
+
+        foreach ($aggressionInfo['items'] as $index => &$item) {
+            $item['percentage'] = $sortedAggressionValues['percentages'][$index];
+            if ($sortedAggressionValues['newestValue'] >= $rangesForCalculation[$index][0] && $sortedAggressionValues['newestValue'] < $rangesForCalculation[$index][1]) $item['isCurrent'] = true; 
+        }
+        return $aggressionInfo;
+    }
+
+    private function getSecondaryMetricPercentages($sortedValues)
+    {
+        $sortedValues = array_values($sortedValues); // Re-index from 0
+        $total = array_sum($sortedValues);
+        
+        if ($total == 0) {
+            return $sortedValues;
+        }
+        
+        $percentages = [];
+        foreach ($sortedValues as $key => $count) {
+            $percentages[$key] = round(($count / $total) * 100, 2);
+        }
+        
+        return $percentages;
+    }
+
+    private function createPerDayAverages($allValuesOfParam)
+    {
+        try {
+            $daysWValues = [
+                'Monday' => [],
+                'Tuesday' => [],
+                'Wednesday' => [],
+                'Thursday' => [],
+                'Friday' => [],
+                'Saturday' => [],
+                'Sunday' => [],
+            ];
+
+            foreach ($allValuesOfParam as $valueOfParam) {
+                $createdAt = Carbon::parse($valueOfParam->created_at);
+                $dayName = $createdAt->format('l');
+                
+                // Add to the array (not overwrite)
+                $daysWValues[$dayName][] = $valueOfParam->value;
+            }
+
+            // Calculate averages
+            foreach($daysWValues as $day => $values) {
+                Log::debug("$day values: " . json_encode($values));
+                if (count($values) > 0) {
+                    $daysWValues[$day] = array_sum($values) / count($values);
+                } else {
+                    $daysWValues[$day] = 0;
+                }
+            }
+
+            Log::debug('Final averages: ' . json_encode($daysWValues));
+            
+            return $daysWValues;
+            
+        } catch (Exception $e) {
+            Log::debug($e->getMessage());
+        }
+    }
+
+    private function createMonthlyAverage($allValuesOfParam)
+    {
+        try {
+            // Default to current month if not specified
+            $targetMonth = now();
+            
+            $monthlyValues = [];
+            
+            foreach ($allValuesOfParam as $valueOfParam) {
+                $createdAt = Carbon::parse($valueOfParam->created_at);
+                
+                // Check if this value belongs to the same month/year
+                if ($createdAt->isSameMonth($targetMonth)) {
+                    $monthlyValues[] = $valueOfParam->value;
+                }
+            }
+            
+            if (count($monthlyValues) > 0) {
+                return array_sum($monthlyValues) / count($monthlyValues);
+            }
+            
+            return 0;
+        } catch (Exception $e) {
+            Log::debug($e->getMessage());
+            return 0;
+        }
+    }
+
+    private function createAllTimeAverage($allValuesOfParam)
+    {
+        try {
+            if (count($allValuesOfParam) > 0) {
+                $total = 0;
+                foreach ($allValuesOfParam as $valueOfParam) {
+                    $total += $valueOfParam->value;
+                }
+                return $total / count($allValuesOfParam);
+            }
+            
+            return 0;
+        } catch (Exception $e) {
+            Log::debug($e->getMessage());
+            return 0;
+        }
+    }
+
+    private function createTimeOfDayAverages($allValuesOfParam)
+    {
+        try {
+            $timeOfDayParamValues = [
+                'Morning' => [],
+                'Afternoon' => [],
+                'Evening' => []
+            ];
+
+            foreach ($allValuesOfParam as $valueOfParam) {
+                $createdAt = Carbon::parse($valueOfParam->created_at);
+                $hour = $createdAt->hour;
+
+                // Use if/elseif instead of switch for range comparisons
+                if ($hour >= 0 && $hour < 10) {
+                    $timeOfDayParamValues['Morning'][] = $valueOfParam->value;
+                } elseif ($hour >= 10 && $hour < 17) {
+                    $timeOfDayParamValues['Afternoon'][] = $valueOfParam->value;
+                } else { // 18-23
+                    $timeOfDayParamValues['Evening'][] = $valueOfParam->value;
+                }
+            }
+
+           foreach($timeOfDayParamValues as $timeOfDay => $values) {
+                if (count($values) > 0) {
+                    $timeOfDayParamValues[$timeOfDay] = (int) round(array_sum($values) / count($values));
+                } else {
+                    $timeOfDayParamValues[$timeOfDay] = 0; // or null, or whatever default you want
+                }
+            }
+
+            return $timeOfDayParamValues;
+        } catch (Exception $e) {
+            Log::debug($e->getMessage());
+            return [];
+        }
+    }
+
+
+
+    private function getTimeWindow($filterBy)
     {
         $now = Carbon::now();
 
-        switch ($timeRange) {
-            case 'current_week':
+        switch ($filterBy) {
+            case 'weekly':
                 return [
                     'start' => $now->copy()->startOfWeek(),
                     'end' => $now->copy()->endOfWeek()
                 ];
 
-            case 'last_5_weeks':
-                return [
-                    'start' => $now->copy()->subWeeks(5)->startOfWeek(),
-                    'end' => $now->copy()->endOfWeek()
-                ];
-
-            case 'current_month':
+            case 'monthly':
                 return [
                     'start' => $now->copy()->startOfMonth(),
                     'end' => $now->copy()->endOfMonth()
                 ];
 
-            case 'last_3_months':
-                return [
-                    'start' => $now->copy()->subMonths(3)->startOfMonth(),
-                    'end' => $now->copy()->endOfMonth()
-                ];
-
-            case 'last_6_months':
-                return [
-                    'start' => $now->copy()->subMonths(6)->startOfMonth(),
-                    'end' => $now->copy()->endOfMonth()
-                ];
-
-            case 'last_12_months':
-                return [
-                    'start' => $now->copy()->subMonths(12)->startOfMonth(),
-                    'end' => $now->copy()->endOfMonth()
-                ];
-
-            case 'since_start':
+            case 'all_time':
                 $earliest = DB::table('requests')->min('created_at');
                 return [
                     'start' => $earliest ? Carbon::parse($earliest) : $now->copy()->subYear(),
@@ -142,75 +605,60 @@ class EmloInsightsService
         }
     }
 
-    private function aggregateData($result, $aggregation, $paramName)
+    private function aggregateData($result, $filterBy, $average)
     {
         // Handle both Collection and array inputs
         $collection = is_array($result) ? collect($result) : $result;
+
+        // For weekly view, ensure all days are represented
+        if ($filterBy === 'weekly') {
+            return $this->aggregateWeeklyData($collection, $average);
+        }
 
         if ($collection->isEmpty()) {
             return [];
         }
 
         // Group the data based on aggregation type
-        $grouped = $collection->groupBy(function ($item) use ($aggregation) {
+        $grouped = $collection->groupBy(function ($item) use ($filterBy) {
             $date = Carbon::parse($item->created_at);
 
-            switch ($aggregation) {
-                case 'daily':
-                    return $date->format('Y-m-d');
-
-                case 'day_of_week':
-                    return $date->format('l'); // Monday, Tuesday, etc.
-
-                case 'weekly':
+            switch ($filterBy) {
+                case 'monthly':
                     return $date->format('Y') . '-W' . $date->format('W');
 
-                case 'monthly':
+                case 'all_time':
                     return $date->format('Y-m');
 
-                case 'quarterly':
-                    return $date->format('Y') . '-Q' . ceil($date->format('n') / 3);
-
-                case 'yearly':
-                    return $date->format('Y');
-
                 default:
-                    return $date->format('Y-m-d');
+                    return $date->format('l');
             }
         });
 
         // Calculate aggregated metrics for each group
-        $aggregatedResult = $grouped->map(function ($group, $period) use ($aggregation, $paramName) {
-            // Extract values from the 'value' property (not the dynamic paramName property)
+        $aggregatedResult = $grouped->map(function ($group, $period) use ($filterBy, $average) {
+            // Extract values from the 'value' property
             $values = $group->pluck('value')->filter(function ($value) {
                 return $value !== null && is_numeric($value);
             });
 
             // Handle case where no valid values exist
             if ($values->isEmpty()) {
+                $periodAverage = $this->getPeriodAverage($period, $filterBy, $average);
                 return [
-                    'name' => $paramName,
-                    'period' => $period,
-                    'period_display' => $this->formatPeriodForDisplay($period, $aggregation),
-                    'avg' => 0,
-                    'min' => 0,
-                    'max' => 0,
-                    'request_count' => $group->count(),
-                    'valid_count' => 0,
-                    'sort_order' => $this->getSortOrder($period, $aggregation)
+                    'category' => $this->formatPeriodForDisplay($period, $filterBy),
+                    'value' => 0,
+                    'avg' => $periodAverage
                 ];
             }
 
+            // Get the appropriate average for this period
+            $periodAverage = $this->getPeriodAverage($period, $filterBy, $average);
+
             return [
-                'name' => $paramName,
-                'period' => $period,
-                'period_display' => $this->formatPeriodForDisplay($period, $aggregation),
-                'avg' => round($values->avg(), 2),
-                'min' => $values->min(),
-                'max' => $values->max(),
-                'request_count' => $group->count(),
-                'valid_count' => $values->count(),
-                'sort_order' => $this->getSortOrder($period, $aggregation)
+                'category' => $this->formatPeriodForDisplay($period, $filterBy),
+                'value' => round($values->avg(), 2),
+                'avg' => $periodAverage
             ];
         });
 
@@ -218,29 +666,74 @@ class EmloInsightsService
         return $aggregatedResult->sortBy('sort_order')->values()->all();
     }
 
-    private function formatPeriodForDisplay($period, $aggregation)
+    private function aggregateWeeklyData($collection, $average)
     {
-        switch ($aggregation) {
-            case 'daily':
-                return Carbon::parse($period)->format('M j, Y'); // Jan 15, 2025
+        $daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+        $result = [];
 
-            case 'day_of_week':
-                return $period; // Monday, Tuesday, etc.
+        // Group existing data by day
+        $grouped = $collection->groupBy(function ($item) {
+            $date = Carbon::parse($item->created_at);
+            return $date->format('l');
+        });
+
+        // Create entry for each day of the week
+        foreach ($daysOfWeek as $day) {
+            if (isset($grouped[$day])) {
+                // Day has data
+                $values = $grouped[$day]->pluck('value')->filter(function ($value) {
+                    return $value !== null && is_numeric($value);
+                });
+
+                $result[] = [
+                    'category' => $day,
+                    'value' => $values->isEmpty() ? 0 : round($values->avg(), 2),
+                    'avg' => isset($average[$day]) ? round($average[$day], 2) : 0
+                ];
+            } else {
+                // Day has no data
+                $result[] = [
+                    'category' => $day,
+                    'value' => 0,
+                    'avg' => isset($average[$day]) ? round($average[$day], 2) : 0
+                ];
+            }
+        }
+
+        return $result;
+    }
+
+    private function getPeriodAverage($period, $filterBy, $average)
+    {
+        switch ($filterBy) {
+            case 'weekly':
+                // $average is an array with day averages
+                return isset($average[$period]) ? round($average[$period], 2) : 0;
+                
+            case 'monthly':
+            case 'all_time':
+                // $average is a single number
+                return round($average, 2);
+                
+            default:
+                return round($average, 2);
+        }
+    }
+
+    private function formatPeriodForDisplay($period, $filterBy)
+    {
+        switch ($filterBy) {
 
             case 'weekly':
+                return $period; // Monday, Tuesday, etc.
+
+            case 'monthly':
                 // Convert "2025-W03" to "Week 3, 2025"
                 preg_match('/(\d{4})-W(\d{2})/', $period, $matches);
                 return "Week {$matches[2]}, {$matches[1]}";
 
-            case 'monthly':
+            case 'all_time':
                 return Carbon::parse($period . '-01')->format('M Y'); // Jan 2025
-
-            case 'quarterly':
-                // Convert "2025-Q1" to "Q1 2025"
-                return str_replace('-', ' ', $period);
-
-            case 'yearly':
-                return $period;
 
             default:
                 return $period;
@@ -250,24 +743,19 @@ class EmloInsightsService
     private function getSortOrder($period, $aggregation)
     {
         switch ($aggregation) {
-            case 'daily':
-            case 'monthly':
-            case 'yearly':
-                return $period;
-
-            case 'day_of_week':
+            case 'weekly':
                 $dayOrder = [
                     'Monday' => 1, 'Tuesday' => 2, 'Wednesday' => 3,
                     'Thursday' => 4, 'Friday' => 5, 'Saturday' => 6, 'Sunday' => 7
                 ];
                 return $dayOrder[$period] ?? 8;
 
-            case 'weekly':
+            case 'monthly':
                 // Convert "2025-W03" to sortable format
                 preg_match('/(\d{4})-W(\d{2})/', $period, $matches);
                 return $matches[1] . $matches[2];
 
-            case 'quarterly':
+            case 'all_time':
                 // Convert "2025-Q1" to sortable format
                 preg_match('/(\d{4})-Q(\d)/', $period, $matches);
                 return $matches[1] . '0' . $matches[2];
@@ -275,29 +763,6 @@ class EmloInsightsService
             default:
                 return $period;
         }
-    }
-
-    public function getAggregationOptions()
-    {
-        return response()->json([
-            'aggregation_options' => [
-                ['value' => 'daily', 'label' => 'Daily'],
-                ['value' => 'day_of_week', 'label' => 'Day of Week'],
-                ['value' => 'weekly', 'label' => 'Weekly'],
-                ['value' => 'monthly', 'label' => 'Monthly'],
-                ['value' => 'quarterly', 'label' => 'Quarterly'],
-                ['value' => 'yearly', 'label' => 'Yearly']
-            ],
-            'time_range_options' => [
-                ['value' => 'current_week', 'label' => 'Current Week'],
-                ['value' => 'last_5_weeks', 'label' => 'Last 5 Weeks'],
-                ['value' => 'current_month', 'label' => 'Current Month'],
-                ['value' => 'last_3_months', 'label' => 'Last 3 Months'],
-                ['value' => 'last_6_months', 'label' => 'Last 6 Months'],
-                ['value' => 'last_12_months', 'label' => 'Last 12 Months'],
-                ['value' => 'since_start', 'label' => 'Since Start']
-            ]
-        ]);
     }
 
     public function getInsightsResponse(Request $request)
