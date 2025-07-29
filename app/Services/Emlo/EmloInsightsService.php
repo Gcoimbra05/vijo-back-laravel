@@ -22,12 +22,12 @@ class EmloInsightsService
     public function __construct(protected EmloResponseService $emloResponseService){}
 
     public function getInsightsData(Request $request, $userId, $paramName)
-    {        
+    {
         $filterBy = $request->get('filter_by', 'weekly');
         Log::debug('filter by is: ' . json_encode($filterBy));
         $timeWindow = $this->getTimeWindow($filterBy);
         $queryFilters = [
-            "start_time" => $timeWindow['start'],  
+            "start_time" => $timeWindow['start'],
             "end_time" => $timeWindow['end']
         ];
 
@@ -59,7 +59,8 @@ class EmloInsightsService
 
         $selfHonesty = $this->getSelfHonestyInfo($userId);
 
-        $daysOfWeek = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+        $daysOfWeek = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+
         $weeklyActivity = [];
         foreach ($daysOfWeek as $index => $day) {
             $weeklyActivity[] = [
@@ -130,7 +131,7 @@ class EmloInsightsService
         $response = EmloResponse::select('raw_response')
             ->where('id', $result->response_id)
             ->first();
-        
+
         $selfHonesty = $this->emloResponseService->handleSelfHonesty('self_honesty', $response);
 
         $description = '';
@@ -149,7 +150,7 @@ class EmloInsightsService
             "title"=> "Self-Honesty",
             "description"=> "How honest you're being with yourself (80 - 100 is best)",
             "min" => 1,
-            "midpoint"=> 50,
+            "midpoint"=> 60, // Midpoint for self-honesty start range eg: 60-100
             "max"=> 100,
             "currentValue"=>  $selfHonesty,
             "stats" => [
@@ -212,7 +213,7 @@ class EmloInsightsService
             "percentages" => $percentages,
             "newestValue" => $newestValue
         ];
-                
+
         return $returnArray;
     }
 
@@ -250,7 +251,7 @@ class EmloInsightsService
             "percentages" => $percentages,
             "newestValue" => $newestValue
         ];
-                
+
         return $returnArray;
     }
 
@@ -276,7 +277,7 @@ class EmloInsightsService
                 } else if ($aggressionValue->value > 2) {
                     $sortedValues['3']++;
                 }
-            }   
+            }
         }
 
         $percentages = $this->getSecondaryMetricPercentages($sortedValues);
@@ -285,7 +286,7 @@ class EmloInsightsService
             "percentages" => $percentages,
             "newestValue" => $newestValue
         ];
-            
+
         return $returnArray;
     }
 
@@ -332,7 +333,7 @@ class EmloInsightsService
 
         foreach ($clStressInfo['items'] as $index => &$item) {
             $item['percentage'] = $sortedClStressValues['percentages'][$index];
-            if ($sortedClStressValues['newestValue'] == $item['range']) $item['isCurrent'] = true; 
+            if ($sortedClStressValues['newestValue'] == $item['range']) $item['isCurrent'] = true;
         }
         return $clStressInfo;
     }
@@ -381,7 +382,7 @@ class EmloInsightsService
 
         foreach ($ocaInfo['items'] as $index => &$item) {
             $item['percentage'] = $sortedOCAValues['percentages'][$index];
-            if ($sortedOCAValues['newestValue'] >= $rangesForCalculation[$index][0] && $sortedOCAValues['newestValue'] < $rangesForCalculation[$index][1]) $item['isCurrent'] = true; 
+            if ($sortedOCAValues['newestValue'] >= $rangesForCalculation[$index][0] && $sortedOCAValues['newestValue'] < $rangesForCalculation[$index][1]) $item['isCurrent'] = true;
         }
         return $ocaInfo;
     }
@@ -394,7 +395,7 @@ class EmloInsightsService
             [2, 100],
         ];
 
-        $aggressionInfo = 
+        $aggressionInfo =
                 [
                 "name"=> "aggression",
                 "title"=> "Aggression",
@@ -425,7 +426,7 @@ class EmloInsightsService
 
         foreach ($aggressionInfo['items'] as $index => &$item) {
             $item['percentage'] = $sortedAggressionValues['percentages'][$index];
-            if ($sortedAggressionValues['newestValue'] >= $rangesForCalculation[$index][0] && $sortedAggressionValues['newestValue'] < $rangesForCalculation[$index][1]) $item['isCurrent'] = true; 
+            if ($sortedAggressionValues['newestValue'] >= $rangesForCalculation[$index][0] && $sortedAggressionValues['newestValue'] < $rangesForCalculation[$index][1]) $item['isCurrent'] = true;
         }
         return $aggressionInfo;
     }
@@ -434,16 +435,16 @@ class EmloInsightsService
     {
         $sortedValues = array_values($sortedValues); // Re-index from 0
         $total = array_sum($sortedValues);
-        
+
         if ($total == 0) {
             return $sortedValues;
         }
-        
+
         $percentages = [];
         foreach ($sortedValues as $key => $count) {
             $percentages[$key] = round(($count / $total) * 100, 2);
         }
-        
+
         return $percentages;
     }
 
@@ -451,19 +452,19 @@ class EmloInsightsService
     {
         try {
             $daysWValues = [
+                'Sunday' => [],
                 'Monday' => [],
                 'Tuesday' => [],
                 'Wednesday' => [],
                 'Thursday' => [],
                 'Friday' => [],
                 'Saturday' => [],
-                'Sunday' => [],
             ];
 
             foreach ($allValuesOfParam as $valueOfParam) {
                 $createdAt = Carbon::parse($valueOfParam->created_at);
                 $dayName = $createdAt->format('l');
-                
+
                 // Add to the array (not overwrite)
                 $daysWValues[$dayName][] = $valueOfParam->value;
             }
@@ -479,9 +480,9 @@ class EmloInsightsService
             }
 
             Log::debug('Final averages: ' . json_encode($daysWValues));
-            
+
             return $daysWValues;
-            
+
         } catch (Exception $e) {
             Log::debug($e->getMessage());
         }
@@ -492,22 +493,22 @@ class EmloInsightsService
         try {
             // Default to current month if not specified
             $targetMonth = now();
-            
+
             $monthlyValues = [];
-            
+
             foreach ($allValuesOfParam as $valueOfParam) {
                 $createdAt = Carbon::parse($valueOfParam->created_at);
-                
+
                 // Check if this value belongs to the same month/year
                 if ($createdAt->isSameMonth($targetMonth)) {
                     $monthlyValues[] = $valueOfParam->value;
                 }
             }
-            
+
             if (count($monthlyValues) > 0) {
                 return array_sum($monthlyValues) / count($monthlyValues);
             }
-            
+
             return 0;
         } catch (Exception $e) {
             Log::debug($e->getMessage());
@@ -525,7 +526,7 @@ class EmloInsightsService
                 }
                 return $total / count($allValuesOfParam);
             }
-            
+
             return 0;
         } catch (Exception $e) {
             Log::debug($e->getMessage());
@@ -668,7 +669,7 @@ class EmloInsightsService
 
     private function aggregateWeeklyData($collection, $average)
     {
-        $daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+        $daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
         $result = [];
 
         // Group existing data by day
@@ -709,12 +710,12 @@ class EmloInsightsService
             case 'weekly':
                 // $average is an array with day averages
                 return isset($average[$period]) ? round($average[$period], 2) : 0;
-                
+
             case 'monthly':
             case 'all_time':
                 // $average is a single number
                 return round($average, 2);
-                
+
             default:
                 return round($average, 2);
         }
@@ -745,8 +746,8 @@ class EmloInsightsService
         switch ($aggregation) {
             case 'weekly':
                 $dayOrder = [
-                    'Monday' => 1, 'Tuesday' => 2, 'Wednesday' => 3,
-                    'Thursday' => 4, 'Friday' => 5, 'Saturday' => 6, 'Sunday' => 7
+                    'Sunday' => 1, 'Monday' => 2, 'Tuesday' => 3,
+                    'Wednesday' => 4, 'Thursday' => 5, 'Friday' => 6, 'Saturday' => 7
                 ];
                 return $dayOrder[$period] ?? 8;
 
@@ -899,7 +900,7 @@ class EmloInsightsService
             ];
         }
 
-        $daysOfWeek = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+        $daysOfWeek = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
         $weeklyActivity = [];
         foreach ($daysOfWeek as $index => $day) {
             $weeklyActivity[] = [
@@ -935,7 +936,7 @@ class EmloInsightsService
         switch ($type) {
             // Time ranges
             case 'weekly':
-                return ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+                return ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
             case 'monthly':
                 return ['Week 1', 'Week 2', 'Week 3', 'Week 4'];
             case 'all_time':
