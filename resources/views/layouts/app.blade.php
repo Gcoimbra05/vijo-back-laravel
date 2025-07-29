@@ -5,6 +5,8 @@
         <div class="layout-container">
             @include('layouts.sidebar')
 
+            @include('layouts.messages')
+
             <div class="layout-page">
                 @include('layouts.navbar')
 
@@ -14,6 +16,7 @@
                         @if(isset($breadcrumbs) && !empty($breadcrumbs))
                             <x-breadcrumbs :items="$breadcrumbs" />
                         @endif
+
                         @yield('content')
                     </div>
 
