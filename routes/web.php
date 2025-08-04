@@ -75,15 +75,30 @@ Route::prefix('admin')->group(function () {
 
         Route::post('/logout', [AdminLoginController::class, 'logout'])->name('logout');
 
+
+        // catalogs routes
+        // Route::resource('catalogs', CatalogController::class)->except(['index']);
+        // Route::get('catalogs', [CatalogController::class, 'catalogsIndex'])->name('catalogs.list');
+        // Route::get('catalog/add', [CatalogController::class, 'add'])->name('catalogs.add');
+
+
         // Video Types
         Route::resource('journal_types', VideoTypeController::class)->except(['index']);
         Route::get('journal_types', [VideoTypeController::class, 'journalTypesIndex'])->name('videoTypes.list');
         Route::get('journal_type/add', [VideoTypeController::class, 'add'])->name('videoTypes.form');
-
         Route::get('journal_type/edit/{id}', [VideoTypeController::class, 'edit'])->name('videoTypes.edit');
         Route::get('journal_type/deactivate/{id}', [VideoTypeController::class, 'deactivate'])->name('videoTypes.deactivate');
         Route::get('journal_type/activate/{id}', [VideoTypeController::class, 'activate'])->name('videoTypes.activate');
         Route::get('journal_type/delete/{id}', [VideoTypeController::class, 'destroy'])->name('videoTypes.destroy');
+
+        // Journal Categories
+        Route::resource('journal_categories', CategoryController::class)->except(['index']);
+        Route::get('journal_categories', [CategoryController::class, 'index'])->name('journalCategories.list');
+        Route::get('journal_category/add', [CategoryController::class, 'add'])->name('journalCategories.form');
+        Route::get('journal_category/edit/{id}', [CategoryController::class, 'edit'])->name('journalCategories.edit');
+        Route::get('journal_category/deactivate/{id}', [CategoryController::class, 'deactivate'])->name('journalCategories.deactivate');
+        Route::get('journal_category/activate/{id}', [CategoryController::class, 'activate'])->name('journalCategories.activate');
+        Route::get('journal_category/delete/{id}', [CategoryController::class, 'destroy'])->name('journalCategories.destroy');
     // });
 });
 

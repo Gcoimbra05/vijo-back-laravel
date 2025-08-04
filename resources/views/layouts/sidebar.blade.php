@@ -56,6 +56,13 @@
                     </a>
                 </li>
 
+                <!-- Journal Categories -->
+                <li class="menu-item <?php if ($nav_bar == 'journal_categories') { ?>active<?php } ?>">
+                    <a href="{{ url('admin/journal_categories') }}" class="menu-link">
+                        <div data-i18n="Journal Categories">Journal Categories</div>
+                    </a>
+                </li>
+
                 <li class="menu-item <?php if ($nav_bar == 'catalogs') { ?>active<?php } ?>">
                     <a href="{{ url('admin/catalogs') }}" class="menu-link">
                         <div data-i18n="Catalogs">Vijo Journals</div>
