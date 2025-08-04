@@ -17,6 +17,7 @@ use App\Http\Controllers\SubscriptionController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\VideoController;
 use App\Http\Controllers\VideoRequestController;
+use App\Http\Controllers\VideoTypeController;
 
 Route::get('/', function () {
     return view('welcome');
@@ -70,9 +71,19 @@ Route::prefix('admin')->group(function () {
         Route::get('users/{id}/activate', [UserController::class, 'activate'])->name('users.activate');
         Route::get('users/{id}/journal-history', [UserController::class, 'journalHistoryView'])->name('users.journalHistory');
         Route::get('users/{id}/auditLogs', [UserController::class, 'auditLogsView'])->name('users.auditLogs');
-        Route::resource('users', UserController::class)->except(['index']);
+        // Route::resource('users', UserController::class)->except(['index']);
 
         Route::post('/logout', [AdminLoginController::class, 'logout'])->name('logout');
+
+        // Video Types
+        Route::resource('journal_types', VideoTypeController::class)->except(['index']);
+        Route::get('journal_types', [VideoTypeController::class, 'journalTypesIndex'])->name('videoTypes.list');
+        Route::get('journal_type/add', [VideoTypeController::class, 'add'])->name('videoTypes.form');
+
+        Route::get('journal_type/edit/{id}', [VideoTypeController::class, 'edit'])->name('videoTypes.edit');
+        Route::get('journal_type/deactivate/{id}', [VideoTypeController::class, 'deactivate'])->name('videoTypes.deactivate');
+        Route::get('journal_type/activate/{id}', [VideoTypeController::class, 'activate'])->name('videoTypes.activate');
+        Route::get('journal_type/delete/{id}', [VideoTypeController::class, 'destroy'])->name('videoTypes.destroy');
     // });
 });
 

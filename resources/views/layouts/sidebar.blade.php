@@ -42,5 +42,26 @@
                 </li>
             </ul>
         </li>
+
+        <li class="menu-item <?php if (in_array($nav_bar, array('journal_types', 'journal_categories', 'journal_subcategories', 'journal_tags', 'catalog_metric_question_labels', 'catalogs', 'promotional_catalogs', 'medias', 'catalogPrograms'))) { ?>open<?php } ?>">
+            <a href="javascript:void(0);" class="menu-link menu-toggle">
+                <i class="menu-icon tf-icons bx bx-store"></i>
+                <div data-i18n="Marketplace">Catalog</div>
+            </a>
+            <ul class="menu-sub">
+                <!-- Journal Types -->
+                <li class="menu-item <?php if ($nav_bar == 'journal_types') { ?>active<?php } ?>">
+                    <a href="{{ url('admin/journal_types') }}" class="menu-link">
+                        <div data-i18n="Journal Types">Journal Types</div>
+                    </a>
+                </li>
+
+                <li class="menu-item <?php if ($nav_bar == 'catalogs') { ?>active<?php } ?>">
+                    <a href="{{ url('admin/catalogs') }}" class="menu-link">
+                        <div data-i18n="Catalogs">Vijo Journals</div>
+                    </a>
+                </li>
+            </ul>
+        </li>
     </ul>
 </aside>
