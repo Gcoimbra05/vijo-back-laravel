@@ -461,10 +461,18 @@ class UserController extends Controller
             return response()->json(['message' => 'User not found'], 404);
         }
 
-        $user->active = false;
+        $user->status = false;
         $user->save();
 
-        return response()->json(['message' => 'User deactivated successfully']);
+        $display_msg = array(
+            'msg'   => 'Status has been changed successfully',
+            'type'  => 'success',
+            'icon'  => 'bx bx-check'
+        );
+
+        session()->flash('display_msg', $display_msg);
+
+        return redirect()->to('admin/users');
     }
 
     public function activate($id)
@@ -474,10 +482,18 @@ class UserController extends Controller
             return response()->json(['message' => 'User not found'], 404);
         }
 
-        $user->active = true;
+        $user->status = true;
         $user->save();
 
-        return response()->json(['message' => 'User activated successfully']);
+        $display_msg = array(
+            'msg'   => 'Status has been changed successfully',
+            'type'  => 'success',
+            'icon'  => 'bx bx-check'
+        );
+
+        session()->flash('display_msg', $display_msg);
+
+        return redirect()->to('admin/users');
     }
 
     public function auditLogsView($id)
