@@ -404,7 +404,7 @@ class EmloInsightsService
                 "items"=> [
                     [
                         "range"=> "0",
-                        "label"=> "Best - No Aggression",
+                        "label"=> "Optimal",
                         "percentage"=> 0,
                         "isCurrent"=> false
                     ],
