@@ -26,7 +26,7 @@
                         <tr>
                             <td><?= $key + 1; ?></td>
                             <td><?= $category->name; ?></td>
-                            <td><?= statusHtmlBadge($category->status); ?></td>
+                            <td><?= $category->status; ?></td>
                             <td><?= date('Y-m-d', strtotime($category->updated_at)); ?></td>
                             <td>
                                 <div class="dropdown">

@@ -77,7 +77,7 @@ Route::prefix('admin')->group(function () {
 
 
         // catalogs routes
-        // Route::resource('catalogs', CatalogController::class)->except(['index']);
+        Route::resource('catalogs', CatalogController::class); // ->except(['index']);
         // Route::get('catalogs', [CatalogController::class, 'catalogsIndex'])->name('catalogs.list');
         // Route::get('catalog/add', [CatalogController::class, 'add'])->name('catalogs.add');
 

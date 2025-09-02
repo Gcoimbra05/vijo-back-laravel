@@ -3,6 +3,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 class AdminLoginController extends Controller
 {
@@ -17,17 +18,19 @@ class AdminLoginController extends Controller
         $credentials['is_admin'] = true; // Garante que só admin loga
 
         if (Auth::attempt($credentials)) {
+            Log::info('Admin login successful', ['email' => $credentials['email']]);
+            // validate-ot
+            if (Auth::user()->two_factor_enabled) {
+                return redirect()->route('admin.validate-otp');
+            }
+
             return redirect()->intended('/admin/dashboard');
         }
 
-        // validate-ot
-        // if (Auth::user()->two_factor_enabled) {
-            return redirect()->route('admin.validate-otp');
-        // }
-
-        // return back()->withErrors([
-        //     'email' => 'Invalid credentials or not an admin user.',
-        // ]);
+        Log::info('passou');
+        return back()->withErrors([
+             'email' => 'Invalid credentials or not an admin user.',
+        ]);
     }
 
     // otp

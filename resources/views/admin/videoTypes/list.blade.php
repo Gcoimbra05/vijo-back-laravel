@@ -32,7 +32,7 @@
                             <td><?= $type->kpi_no; ?></td>
                             <td><?= $type->metric_no; ?></td>
                             <td><?= $type->video_no; ?></td>
-                            <td><?= statusHtmlBadge($type->status); ?></td>
+                            <td><?= $type->status; ?></td>
                             <td><?= date('Y-m-d', strtotime($type->updated_at)); ?></td>
                             <td>
                                 <div class="dropdown">
