@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 use Illuminate\Http\RedirectResponse;
@@ -16,7 +17,7 @@ class DashboardController extends Controller
     {
         $nav_bar = 'dashboard';
 
-        $totalMembers = \App\Models\User::count();
+        $totalMembers = User::count();
         $totalReferences = 0;
         $currentYear = now()->year;
         $websiteDevelopedYear = 2025;

@@ -55,12 +55,13 @@ class TwoFactorAuthController extends Controller
         ]);
 
         $fullPhoneNumber = $request->country_code . $request->mobile;
-        $this->twilio->sendSms($fullPhoneNumber, "Vijo: Your Life, Your Story \n{$code} is your verification code.");
+        $this->twilio->sendSms($fullPhoneNumber, "Your Vijo verification code is: \n{$code}");
 
         // Send email notification
         $userEmail = $user->email;
         if (!empty($userEmail)) {
-            $envUrl = env('APP_ENV') === 'production' ? 'https://vijo.me' : 'https://test.vijo.me';
+            $appUrl = config('app.url');
+            $envUrl = str_replace('.com', '.me', $appUrl);
             try {
                 Mail::send('emails.template', [
                     'title' => 'Your Vijo account verification code',

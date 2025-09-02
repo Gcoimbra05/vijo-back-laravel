@@ -7,19 +7,15 @@ use OwenIt\Auditing\Contracts\Auditable as AuditableContract;
 use Illuminate\Database\Eloquent\Model;
 use OwenIt\Auditing\Auditable;
 
-class CredScore extends Model implements AuditableContract {
-
-    protected $table = 'cred_scores';
-
+class CredScoreValue extends Model implements AuditableContract{
+    
     use HasFactory, Auditable;
-
     protected $fillable = [
-        'name',
-        'catalog_id',
+        'request_id',
+        'cred_score',
+        'percieved_score',
+        'measured_score'
     ];
 
-    public function catalog()
-    {
-        return $this->belongsTo(Catalog::class);
-    }
+    protected $table = 'cred_score_values';
 }

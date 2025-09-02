@@ -63,33 +63,36 @@ class CatalogAnswerController extends Controller
         }
 
         $kpiMetricSpecs = KpiMetricSpecification::select('*')
-            ->whereHas('credScoreKpi.credScore')
+            ->whereHas('credScoreKpi.credScore', function ($subQuery) use ($credScoreId) {
+                    $subQuery->where('cred_score_id', $credScoreId->id);})
             ->get();
 
         $index = 1;
         foreach($kpiMetricSpecs as $kpiMetricSpec) {
-            if ($index > 3) {
-                break;
-            }
-            $questionKey = "question{$index}_score";
-            if (!$request->has($questionKey) || $request->input($questionKey) === null) {
-                return response()->json([
-                    'status' => false,
-                    'message' => 'Missing required question:' . $questionKey
-                ], 400);
-            } else {
-                $result = KpiMetricValue::insert([
-                    'kpi_metric_spec_id' => $kpiMetricSpec->id,
-                    'request_id' => $request->input('request_id'),
-                    'value' => $request->input("question{$index}_score")
-                ]);
-                if (!$result) {
+            if (!($kpiMetricSpec->emlo_param_spec_id)) {
+                if ($index > 3) {
+                    break;
+                }
+                $questionKey = "question{$index}_score";
+                if (!$request->has($questionKey) || $request->input($questionKey) === null) {
                     return response()->json([
                         'status' => false,
-                        'message' => 'Internal server error.'
-                    ], 500);
+                        'message' => 'Missing required question:' . $questionKey
+                    ], 400);
+                } else {
+                    $result = KpiMetricValue::insert([
+                        'kpi_metric_spec_id' => $kpiMetricSpec->id,
+                        'request_id' => $request->input('request_id'),
+                        'value' => $request->input("question{$index}_score")
+                    ]);
+                    if (!$result) {
+                        return response()->json([
+                            'status' => false,
+                            'message' => 'Internal server error.'
+                        ], 500);
+                    }
+                    $index++;
                 }
-                $index++;
             }
         }
 
@@ -139,9 +142,8 @@ class CatalogAnswerController extends Controller
             $fileName = uniqid() . '.' . $fileExtension;
 
             $disk = env('FILESYSTEM_DISK', 's3');
-
             Storage::disk($disk)->putFileAs('thumbnails', $file, $fileName);
-            $thumbnailPath = env('APP_URL') . '/thumbnails/' . $fileName;
+            $thumbnailPath = config('app.url') . '/thumbnails/' . $fileName;
             Log::info('Thumbnail uploaded', ['thumbnail_path' => $thumbnailPath]);
 
             Video::create([
@@ -150,21 +152,6 @@ class CatalogAnswerController extends Controller
                 'thumbnail_url'  => $thumbnailPath,
                 'user_id'        => Auth::id(),
             ]);
-
-            /* 
-            WORKING IN PROGRESS
-
-            $thumb = MediaStorageController::uploadThumbnail($request);
-            if ($thumb['success']) {
-                $thumbnailPath = env('APP_URL') . '/thumbnails/' . $thumb['thumbnail_name'];
-
-                Video::create([
-                    'request_id'     => $request->input('request_id'),
-                    'thumbnail_name' => $thumb['thumbnail_name'] ?? null,
-                    'thumbnail_url'  => $thumbnailPath,
-                    'user_id'        => Auth::id(),
-                ]);
-            } */
         }
 
         Log::info('Catalog answer created', [

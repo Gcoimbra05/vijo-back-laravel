@@ -2,16 +2,17 @@
 
 namespace App\Http\Controllers;
 
-use App\Exceptions\UserNotFoundException;
 use Illuminate\Routing\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\EmloResponse;
 use App\Services\Emlo\EmloResponseService;
 use App\Services\Emlo\EmloHelperService;
-use App\Services\Emlo\EmloInsightsService;
+use App\Services\Emlo\EmloInsights\EmloInsightsService;
 
 use App\Exceptions\Emlo\EmloNotFoundException;
+
+use Illuminate\Support\Facades\Log;
 
 class EmloResponseController extends Controller {
 
@@ -89,6 +90,8 @@ class EmloResponseController extends Controller {
                 }
                 return response()->json(['status' => false, 'message' => 'Failed to create EMLO response'], 500);
             }
+
+            $this->emloResponseService->storeSegmentParameters($emloResponse->id, $request->raw_response);
         
             $responseData = [
                     'status'  => true,
@@ -161,16 +164,14 @@ class EmloResponseController extends Controller {
     public function getInsights(Request $request, $paramName)
     {
         try {
-            $userId = Auth::id();
-            if (!$userId) {
-                return response()->json(['error' => 'user not found'], 404);
-            }
+            $result = $this->emloInsightsService->getInsightsData($request, $paramName);
 
-            $result = $this->emloInsightsService->getInsightsData($request, $userId, $paramName);
-            return response()->json($result);
-        } catch (EmloNotFoundException) {
+            return $result;
+        } catch (EmloNotFoundException $e) {
+            Log::debug($e->getTraceAsString());
             return response()->json(['error' => 'insights values not found'], 404);
-        } catch (\Exception) {
+        } catch (\Exception $e) {
+            Log::debug($e->getTraceAsString());
             return response()->json(['error' => 'internal server error'], 500);
         }
     } 

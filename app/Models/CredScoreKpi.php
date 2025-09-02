@@ -11,7 +11,7 @@ class CredScoreKpi extends Model implements AuditableContract{
     
     use HasFactory, Auditable;
 
-    protected $table = 'cred_score_kpi';
+    protected $table = 'cred_score_kpis';
 
     public function credScore()
     {

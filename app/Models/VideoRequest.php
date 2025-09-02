@@ -75,4 +75,14 @@ class VideoRequest extends Model implements AuditableContract
             $this->latestVideo->delete();
         }
     }
+
+    public function emloInsightsParamAggregates()
+    {
+        return $this->hasMany(EmloInsightsParamAggregate::class, 'request_id');
+    }
+
+    public function credScoreInsightsAggregates()
+    {
+        return $this->hasMany(CredScoreInsightsAggregate::class, 'request_id');
+    }
 }

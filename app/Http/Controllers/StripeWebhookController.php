@@ -11,6 +11,7 @@ use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Stripe\Webhook;
 use Stripe\Stripe;
+use Stripe\BillingPortal\Session;
 
 class StripeWebhookController extends Controller
 {
@@ -207,7 +208,8 @@ class StripeWebhookController extends Controller
         }
 
         $priceId = $plan->price_id ?? null;
-        $envUrl = env('APP_ENV') === 'production' ? 'https://vijo.me' : 'https://test.vijo.me';
+        $appUrl = config('app.url');
+        $envUrl = str_replace('.com', '.me', $appUrl);
 
         $session = \Stripe\Checkout\Session::create([
             'payment_method_types' => ['card'],
@@ -227,5 +229,35 @@ class StripeWebhookController extends Controller
         ]);
 
         return response()->json(['url' => $session->url]);
+    }
+
+    public function getCustomerPortal(Request $request)
+    {
+        $user = Auth::user();
+
+        $subscription = Subscription::where('user_id', $user->id)
+            ->whereNotNull('stripe_customer_id')
+            ->orderByDesc('id')
+            ->first();
+
+        if (!$subscription || !$subscription->stripe_customer_id) {
+            return response()->json(['error' => 'Stripe customer_id not found for this user.'], 404);
+        }
+
+        try {
+            Stripe::setApiKey(config('services.stripe.secret'));
+
+            $appUrl = config('app.url');
+            $envUrl = str_replace('.com', '.me', $appUrl);
+            $session = Session::create([
+                'customer' => $subscription->stripe_customer_id,
+                'return_url' => $envUrl . '/',
+            ]);
+
+            return response()->json(['url' => $session->url]);
+        } catch (\Exception $e) {
+            Log::error('Erro ao criar sessão do portal Stripe: ' . $e->getMessage());
+            return response()->json(['error' => 'Erro ao gerar link do portal'], 500);
+        }
     }
 }

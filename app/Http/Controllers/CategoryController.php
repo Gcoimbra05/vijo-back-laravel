@@ -159,30 +159,6 @@ class CategoryController extends Controller
                 "emoji" => $category->emoji,
             ];
         })->toArray();
-
-        /* [
-                [
-                    "id" => "1",
-                    "name" => "Life Stories",
-                    "description" => "Capture the moments that shaped you — from cherished memories to life’s defining chapters. Reflect, remember, and relive what matters most — and share your journey with those who matter most.",
-                    "category_emoji" => "U+1F333",
-                    "emoji" => "https://vijo.com/uploads/medias/2167413647.png"
-                ],
-                [
-                    "id" => "2",
-                    "name" => "Emotional Check ",
-                    "description" => "Pause to reflect, express, and grow. Tune into your feelings with gratitude and grace, building emotional awareness and resilience one check-in at a time.",
-                    "category_emoji" => "U+1F64C",
-                    "emoji" => "https://vijo.com/uploads/medias/2667203340.png"
-                ],
-                [
-                    "id" => "3",
-                    "name" => "Personal Growth",
-                    "description" => "Celebrate progress, embrace challenges, and become the best version of yourself. This is your space for self-discovery, learning, and meaningful change — one step at a time.",
-                    "category_emoji" => "U+1F331",
-                    "emoji" => "https://vijo.com/uploads/medias/5341288882.png"
-                ]
-            ] */
     }
 
     public function add()

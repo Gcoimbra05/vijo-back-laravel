@@ -257,7 +257,7 @@ class MediaStorageController extends Controller
         $headers = [
             'Content-Type' => $mimeType,
             'Accept-Ranges' => 'bytes',
-            'Cache-Control' => 'public, max-age=31536000',
+            'Cache-Control' => 'public, max-age=31536000, immutable',
             'Expires' => gmdate('D, d M Y H:i:s', time() + 31536000) . ' GMT',
             'Access-Control-Allow-Origin' => '*',
         ];

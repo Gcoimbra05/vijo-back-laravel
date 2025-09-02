@@ -17,6 +17,8 @@ use App\Services\Emlo\EmloCsvService;
 use App\Services\LlamaService;
 use App\Services\VideoProcessingPipeline;
 
+use App\Services\Emlo\Aggregation\PostRequestAggregation;
+
 class ProcessVideoRequest implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
@@ -47,6 +49,7 @@ class ProcessVideoRequest implements ShouldQueue
      * @param  TranscriptionService  $transcriptionService
      * @param  EmloCsvService  $emloCsvService
      * @param  LlamaService $llamaService
+     * @param PostRequestAggregation $postRequestAggregation
      * @return void
      */
     public function handle(
@@ -54,7 +57,8 @@ class ProcessVideoRequest implements ShouldQueue
         EmloHelperService $emloHelperService,
         TranscriptionService $transcriptionService,
         EmloCsvService $emloCsvService,
-        LlamaService $llamaService
+        LlamaService $llamaService,
+        PostRequestAggregation $postRequestAggregation
 
     ) {
         $this->videoRequest->update(['status' => 2]);
@@ -66,6 +70,7 @@ class ProcessVideoRequest implements ShouldQueue
             'transcriptionService' => $transcriptionService,
             'emloCsvService' => $emloCsvService,
             'llamaService' => $llamaService,
+            'postRequestAggregation' => $postRequestAggregation
         ];
 
         $pipeline = new VideoProcessingPipeline();

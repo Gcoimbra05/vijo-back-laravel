@@ -3,8 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\EmloResponseParamSpecs;
+use App\Services\Emlo\EmloInsights\EmloInsightsService;
+use App\Services\Emlo\EmloInsights\InsightsV2Service;
 use Illuminate\Http\Request;
-use App\Services\Emlo\EmloInsightsService;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Auth;
 
@@ -273,16 +274,14 @@ class SettingsController extends Controller
     public function getInsights(Request $request, EmloInsightsService $emlo)
     {
         $emotion = $request->get('metric1', 'EDP-Stressful');
-        $userId = Auth::id();
 
         return $emlo->getInsightsData(
             $request,
-            $userId,
             $emotion
         );
     }
 
-    public function getInsightsV2(Request $request, EmloInsightsService $emlo)
+    public function getInsightsV2(Request $request, InsightsV2Service $emlo)
     {
         return $emlo->getInsightsResponse(
             $request,

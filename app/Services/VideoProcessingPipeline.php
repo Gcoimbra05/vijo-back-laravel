@@ -10,6 +10,8 @@ use App\Services\VideoRequestProcessing\Steps\ProcessTranscriptionStep;
 use App\Services\VideoRequestProcessing\Steps\ProcessCsvStep;
 use App\Services\VideoRequestProcessing\Steps\ProcessLlamaStep;
 
+use App\Services\VideoRequestProcessing\Steps\ProcessInsightsAggregationStep;
+
 class VideoProcessingPipeline
 {
     protected $steps = [
@@ -17,6 +19,9 @@ class VideoProcessingPipeline
         ProcessTranscriptionStep::class,
         ProcessCsvStep::class,
         ProcessLlamaStep::class,
+        ProcessInsightsAggregationStep::class,
+        
+
     ];
 
     public function process($context)

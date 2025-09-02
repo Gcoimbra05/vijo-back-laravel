@@ -19,6 +19,7 @@ class EmloResponseValue extends Model implements AuditableContract
         'numeric_value',
         'string_value',
         'boolean_value',
+        'emlo_param_spec_id'
     ];
 
  

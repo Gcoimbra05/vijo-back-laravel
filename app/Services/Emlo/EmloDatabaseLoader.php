@@ -10,6 +10,10 @@ class EmloDatabaseLoader
     private static $zeroValuedSegments = [];
     private static $segmentsInUse = [];
     private static $paramsInUse = [];
+    private static $edpParamsInUse = [];
+    private static $secondaryMetricParams = [];
+    private static $catalogsInUse = [];
+    private static $metricCatalogsInUse = [];
     private static $initialized = false;
 
     /**
@@ -69,6 +73,28 @@ class EmloDatabaseLoader
                 ->get()
                 ->toArray();
 
+            self::$edpParamsInUse = $db->table('emlo_response_param_specs')
+                ->whereLike('param_name', '%EDP%')
+                ->get()
+                ->toArray();
+
+            self::$catalogsInUse = $db->table('catalogs')
+                ->get()
+                ->toArray();
+
+            self::$metricCatalogsInUse = $db->table('catalogs')
+                ->whereNot('video_type_id', 1)
+                ->get()
+                ->toArray();
+
+            self::$secondaryMetricParams= $db->table('emlo_response_param_specs')
+                ->where('param_name', 'Aggression')
+                ->orWhere('param_name', 'clStress')
+                ->orWhere('param_name', 'overallCognitiveActivity')
+                ->orWhere('param_name', 'self_honesty')
+                ->get()
+                ->toArray();
+
 
         } else {
             // Initialize with empty arrays if table doesn't exist
@@ -76,48 +102,51 @@ class EmloDatabaseLoader
             self::$zeroValuedSegments = [];
             self::$segmentsInUse = [];
             self::$paramsInUse = [];
+            self::$catalogsInUse = [];
+            self::$secondaryMetricParams = [];
+            self::$metricCatalogsInUse = [];
         }
 
         self::$initialized = true;
     }
 
-    /**
-     * Get the main examples data
-     *
-     * @return array
-     */
     public static function getSegments()
     {
         return self::$segments;
     }
 
-    /**
-     * Get the special examples data
-     *
-     * @return array
-     */
     public static function getZeroValuedSegments()
     {
         return self::$zeroValuedSegments;
     }
 
-    /**
-     * Get the special examples data
-     *
-     * @return array
-     */
     public static function getSegmentsInUse()
     {
         return self::$segmentsInUse;
     }
 
-    /**
-     * Get the special examples data
-     *
-     * @return array
-     */
     public static function getParamsInUse()
     {
         return self::$paramsInUse;
+    }
+
+    public static function getEdpParamsInUse()
+    {
+        return self::$edpParamsInUse;
+    }
+
+    public static function getCatalogsInUse()
+    {
+        return self::$catalogsInUse;
+    }
+
+    public static function getMetricCatalogsInUse()
+    {
+        return self::$metricCatalogsInUse;
+    }
+
+    public static function getSecondaryMetricParams()
+    {
+        return self::$secondaryMetricParams;
     }
 }

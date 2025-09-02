@@ -222,10 +222,12 @@ class EmloHelperService {
         
         if ($paramValue['string_value'] !== null) {
             $stringValue = (float) $paramValue['string_value'];
+            /*
             Log::debug('Using string_value converted to numeric', [
                 'original' => $paramValue['string_value'],
                 'converted' => $stringValue
             ]);
+            */
             return ['status' => true, 'value' => $stringValue];
         }
         
@@ -233,7 +235,7 @@ class EmloHelperService {
     }
 
     public static function applyNormalizationFormula($value) {
-        Log::debug('it ran for value: ' . $value);
+        //Log::debug('it ran for value: ' . $value);
         $normalized = ($value / 2000) * 100;
         return $normalized;
     }

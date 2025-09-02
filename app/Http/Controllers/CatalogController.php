@@ -147,7 +147,7 @@ class CatalogController extends Controller
             ->whereNotIn('id', $recordedCatalogIds)
             ->where('id', '<>', $this->catalog->id ?? 0)
             ->limit(3)
-            ->get(['id', 'title', 'description', 'emoji']);
+            ->get(['id', 'title', 'description', 'emoji', 'video_type_id']);
 
         // If not enough, recommend from another category
         if ($suggestedCatalogs->count() < 3) {
@@ -164,7 +164,7 @@ class CatalogController extends Controller
                 ->where('category_id', $otherCategoryId)
                 ->whereNotIn('id', $recordedCatalogIds)
                 ->limit($needed)
-                ->get(['id', 'title', 'description', 'emoji']);
+                ->get(['id', 'title', 'description', 'emoji', 'video_type_id']);
             $suggestedCatalogs = $suggestedCatalogs->concat($otherCatalogs);
             }
         }

@@ -10,9 +10,11 @@ use Illuminate\Support\Facades\Log;
 use App\Http\Controllers\TwoFactorAuthController;
 use App\Models\Catalog;
 use App\Models\MembershipPlan;
+use App\Services\Emlo\EmloInsights\EmloInsightsService;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Auth\Events\Verified;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 
 class UserController extends Controller
 {
@@ -386,60 +388,87 @@ class UserController extends Controller
             ->toArray();
     }
 
-    public function getDashboardData(Request $request)
+    public function getDashboardData(Request $request, EmloInsightsService $emlo)
     {
         $user = Auth::user();
+        $userId = $user->id;
 
-        return response()->json([
-            "status" => true,
-            "message" => "",
-            "results" => [
-                "guidedTours" => self::getGuidedTours(),
-                "categories" => CategoryController::getCategories(),
-                "promotionalCatalogs" => self::getPromotionalCatalogs(),
-                "timezoneMenus" => SettingsController::getTimezones(),
-                "myJournals" => VideoRequestController::getMyVideoRequests(),
-                "graphTypes" => [
-                    "bar" => "Bar",
-                    "area" => "Area",
-                    "line" => "Line"
-                ],
-                "filterByLabels" => [
-                    "current_week" => "Current Week",
-                    "last_5_weeks" => "Last 5 Weeks",
-                    "current_month" => "Current Month",
-                    "last_3_months" => "Last 3 Months",
-                    "last_6_months" => "Last 6 Months",
-                    "last_12_months" => "Last 12 Months",
-                    "since_start" => "Since Start"
-                ],
-                "viewByLabels" => [
-                    "daily" => "Daily",
-                    "day_of_week" => "Day of Week",
-                    "weekly" => "Weekly",
-                    "monthly" => "Monthly",
-                    "quarterly" => "Quarterly",
-                    "yearly" => "Yearly"
-                ],
-                "rangeTypeLabels" => [
-                    "lva" => "Normalized",
-                    "raw" => "Raw"
-                ],
-                "userTags" => TagController::getUserTags(),
-                "insightFilters" => SettingsController::getInsightFilters(),
-                "current_date" => now()->toDateString(),
-                "responceCount" => [
-                    "to_count" => 0,
-                    "from_count" => 0
-                ],
-                "userPlan" => [
-                    "user_status" => 'active', #SubscriptionController::getUserPlanStatus(),
-                ],
-                "membershipPlan" => MembershipPlanController::getMembershipPlans(), // 'id, slug, title, description'
-                "plans" => [], // 'id, slug, name, description, payment_link'
-                "guidedToursTaken" => $user->guided_tours,
-            ]
-        ]);
+        $cacheKey = "dashboard_data_user_{$userId}";
+
+        // time of cache in minutes
+        $cacheTtl = 60;
+
+        // Cache::forget($cacheKey) # use this to clear cache
+
+        $activity = $emlo->getUserActivity($userId, 'last_7_days');
+        $timezone = $user->timezone ?? config('app.timezone', 'America/New_York');
+        $hour = now()->setTimezone($timezone)->hour;
+        if ($hour < 12) {
+            $greetingTime = 'Good morning';
+        } else if ($hour < 18) {
+            $greetingTime = 'Good afternoon';
+        } else {
+            $greetingTime = 'Good evening';
+        }
+        $greeting = "{$greetingTime}, {$user->first_name}!";
+
+        $dashboardData = Cache::remember($cacheKey, $cacheTtl, function () use ($user, $activity, $greeting) {
+            return [
+                "status" => true,
+                "message" => "",
+                "results" => [
+                    "activity" => $activity,
+                    "guidedTours" => self::getGuidedTours(),
+                    "categories" => CategoryController::getCategories(),
+                    "promotionalCatalogs" => self::getPromotionalCatalogs(),
+                    "timezoneMenus" => SettingsController::getTimezones(),
+                    "myJournals" => VideoRequestController::getMyVideoRequests(),
+                    "graphTypes" => [
+                        "bar" => "Bar",
+                        "area" => "Area",
+                        "line" => "Line"
+                    ],
+                    "greeting" => $greeting,
+                    "currentDate" => now()->format('l, F j, Y'),
+                    "filterByLabels" => [
+                        "current_week" => "Current Week",
+                        "last_5_weeks" => "Last 5 Weeks",
+                        "current_month" => "Current Month",
+                        "last_3_months" => "Last 3 Months",
+                        "last_6_months" => "Last 6 Months",
+                        "last_12_months" => "Last 12 Months",
+                        "since_start" => "Since Start"
+                    ],
+                    "viewByLabels" => [
+                        "daily" => "Daily",
+                        "day_of_week" => "Day of Week",
+                        "weekly" => "Weekly",
+                        "monthly" => "Monthly",
+                        "quarterly" => "Quarterly",
+                        "yearly" => "Yearly"
+                    ],
+                    "rangeTypeLabels" => [
+                        "lva" => "Normalized",
+                        "raw" => "Raw"
+                    ],
+                    "userTags" => TagController::getUserTags(),
+                    "insightFilters" => SettingsController::getInsightFilters(),
+                    "current_date" => now()->toDateString(),
+                    "responceCount" => [
+                        "to_count" => 0,
+                        "from_count" => 0
+                    ],
+                    "userPlan" => [
+                        "user_status" => SubscriptionController::getUserPlanStatus(),
+                    ],
+                    "membershipPlan" => MembershipPlanController::getMembershipPlans(),
+                    "plans" => [],
+                    "guidedToursTaken" => $user->guided_tours,
+                ]
+            ];
+        });
+
+        return response()->json($dashboardData);
     }
 
     public function adminIndex()

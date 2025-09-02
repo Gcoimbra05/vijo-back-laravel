@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\CredScore;
 use App\Services\CredScore\CredScoreService;
+use Illuminate\Support\Facades\Auth;
 
 class CredScoreController {
 
@@ -11,7 +12,12 @@ class CredScoreController {
 
     public function getCredScore($requestId) 
     {
-        $credScore = $this->credScoreService->processCredScore($requestId);
+        $userId = Auth::id();
+        if (!$userId) {
+            return response()->json(['error' => 'user not found'], 404);
+        }
+
+        $credScore = $this->credScoreService->getCredScore($requestId);
         return response()->json([
             'status' => true,
             'message' => 'CRED score retrieved successfully.',

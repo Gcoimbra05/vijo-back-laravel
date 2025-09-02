@@ -21,6 +21,7 @@ return new class extends Migration
                     "type" => 'regular',
                     "path_key" => null,
                     "needs_normalization" => false,
+                    "distribution" => 'gaussian',
                 ],
 
                 [
@@ -32,6 +33,7 @@ return new class extends Migration
                     "type" => 'regular',
                     "path_key" => null,
                     "needs_normalization" => false,
+                    "distribution" => 'gaussian',
                 ],
 
                 [
@@ -43,6 +45,7 @@ return new class extends Migration
                     "type" => 'regular',
                     "path_key" => null,
                     "needs_normalization" => false,
+                    "distribution" => 'gaussian',
                 ],
 
                 [
@@ -54,6 +57,7 @@ return new class extends Migration
                     "type" => 'regular',
                     "path_key" => null,
                     "needs_normalization" => false,
+                    "distribution" => 'gaussian',
                 ],
 
                 [
@@ -65,6 +69,7 @@ return new class extends Migration
                     "type" => 'regular',
                     "path_key" => null,
                     "needs_normalization" => false,
+                    "distribution" => 'gaussian',
                 ],
 
                 [
@@ -76,6 +81,7 @@ return new class extends Migration
                     "type" => 'regular',
                     "path_key" => null,
                     "needs_normalization" => false,
+                    "distribution" => 'gaussian',
                 ],
 
                 [
@@ -87,6 +93,7 @@ return new class extends Migration
                     "type" => 'regular',
                     "path_key" => null,
                     "needs_normalization" => false,
+                    "distribution" => 'gaussian',
                 ],
 
                 [
@@ -98,6 +105,7 @@ return new class extends Migration
                     "type" => 'regular',
                     "path_key" => null,
                     "needs_normalization" => false,
+                    "distribution" => 'gaussian',
                 ],
 
                 [
@@ -109,6 +117,7 @@ return new class extends Migration
                     "type" => 'regular',
                     "path_key" => null,
                     "needs_normalization" => false,
+                    "distribution" => 'gaussian',
                 ],
 
                 [
@@ -120,6 +129,7 @@ return new class extends Migration
                     "type" => 'regular',
                     "path_key" => null,
                     "needs_normalization" => false,
+                    "distribution" => 'gaussian',
                 ],
 
                 [
@@ -131,6 +141,7 @@ return new class extends Migration
                     "type" => 'segment',
                     "path_key" => null,
                     "needs_normalization" => false,
+                    "distribution" => 'definitive_state',
                 ],
 
                 [
@@ -141,7 +152,8 @@ return new class extends Migration
                     "max" => 2000,
                     "type" => 'regular',
                     "needs_normalization" => true,
-                    "path_key" => 'overallCognitiveActivity.averageLevel'
+                    "path_key" => 'overallCognitiveActivity.averageLevel',
+                    "distribution" => 'definitive_state',
                 ],
 
                 [
@@ -153,6 +165,7 @@ return new class extends Migration
                     'type' => 'regular',
                     'path_key' => 'aggression.averageLevel',
                     "needs_normalization" => false,
+                    "distribution" => 'definitive_state',
                 ],
 
                 [
@@ -164,6 +177,7 @@ return new class extends Migration
                     'type' => 'regular',
                     'path_key' => 'clStress.clStress',
                     "needs_normalization" => false,
+                    "distribution" => 'definitive_state',
                 ]
             ];
 
@@ -197,6 +211,7 @@ return new class extends Migration
             $table->text('type');
             $table->boolean('needs_normalization')->default(false);
             $table->text('path_key')->nullable();
+            $table->text('distribution')->nullable();
         });
 
         // Clear and repopulate data
@@ -219,9 +234,10 @@ return new class extends Migration
 
         // Remove the type column
         Schema::table('emlo_response_param_specs', function (Blueprint $table) {
-            //$table->dropColumn('type');
-            //$table->dropColumn('needs_normalization');
-//$table->dropColumn('path_key');
+            $table->dropColumn('type');
+            $table->dropColumn('needs_normalization');
+            $table->dropColumn('path_key');
+            $table->dropColumn(columns: 'distribution');
         });
 
         // Clear data

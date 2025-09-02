@@ -71,7 +71,7 @@ Route::prefix('admin')->group(function () {
         Route::get('users/{id}/activate', [UserController::class, 'activate'])->name('users.activate');
         Route::get('users/{id}/journal-history', [UserController::class, 'journalHistoryView'])->name('users.journalHistory');
         Route::get('users/{id}/auditLogs', [UserController::class, 'auditLogsView'])->name('users.auditLogs');
-        // Route::resource('users', UserController::class)->except(['index']);
+        Route::resource('users', UserController::class)->except(['index']);
 
         Route::post('/logout', [AdminLoginController::class, 'logout'])->name('logout');
 
@@ -86,10 +86,12 @@ Route::prefix('admin')->group(function () {
         Route::resource('journal_types', VideoTypeController::class)->except(['index']);
         Route::get('journal_types', [VideoTypeController::class, 'journalTypesIndex'])->name('videoTypes.list');
         Route::get('journal_type/add', [VideoTypeController::class, 'add'])->name('videoTypes.form');
+
         Route::get('journal_type/edit/{id}', [VideoTypeController::class, 'edit'])->name('videoTypes.edit');
         Route::get('journal_type/deactivate/{id}', [VideoTypeController::class, 'deactivate'])->name('videoTypes.deactivate');
         Route::get('journal_type/activate/{id}', [VideoTypeController::class, 'activate'])->name('videoTypes.activate');
         Route::get('journal_type/delete/{id}', [VideoTypeController::class, 'destroy'])->name('videoTypes.destroy');
+
 
         // Journal Categories
         Route::resource('journal_categories', CategoryController::class)->except(['index']);
@@ -99,7 +101,7 @@ Route::prefix('admin')->group(function () {
         Route::get('journal_category/deactivate/{id}', [CategoryController::class, 'deactivate'])->name('journalCategories.deactivate');
         Route::get('journal_category/activate/{id}', [CategoryController::class, 'activate'])->name('journalCategories.activate');
         Route::get('journal_category/delete/{id}', [CategoryController::class, 'destroy'])->name('journalCategories.destroy');
-    // });
+        // });
 });
 
 // // Route::get('/admin/login', [AdminLoginController::class, 'showLoginForm'])->name('admin.login');

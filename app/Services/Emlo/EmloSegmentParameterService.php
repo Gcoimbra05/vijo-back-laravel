@@ -28,7 +28,7 @@ class EmloSegmentParameterService {
         }
 
         if (!EmloHelperService::validateDecodedResponse($decodedResponseData)) {
-            throw new Exception("failed validation for raw EMLO response");
+            throw new Exception ("failed validation for raw EMLO response w decodedResponseData: {$decodedResponseData}");
         }
 
         $segments = $decodedResponseData['data']['segments']['data'];

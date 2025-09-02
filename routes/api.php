@@ -24,8 +24,8 @@ use Illuminate\Support\Facades\Route;
 
 use App\Http\Controllers\EmloResponseController;
 use App\Http\Controllers\EmloResponseParamSpecsController;
-
-
+use App\Services\CredScore\CredScoreService;
+use App\Services\Emlo\EmloInsights\EmloInsightsService;
 
 Route::prefix('v2')->middleware(ForceJsonResponse::class)->group(function () {
     Route::post('/resend_2fa', [TwoFactorAuthController::class, 'resend2fa']);
@@ -49,8 +49,6 @@ Route::prefix('v2')->middleware(ForceJsonResponse::class)->group(function () {
     Route::get('/onboarding-contents', [SettingsController::class, 'getOnboardingContent']);
     Route::get('/information-contents', [SettingsController::class, 'getInformationContent']);
     Route::get('/static-pages', [SettingsController::class, 'getStaticPages']);
-    Route::post('/insights', [SettingsController::class, 'getInsights']); // chart_type=bar&view_by=days_of_week&filter_by=daily&datatype=emotion&metric1=emotion%23%231&no_zero_record=0
-    Route::post('/insights-v2', [SettingsController::class, 'getInsightsV2']);
     Route::get('shared-video-details/{id}', [VideoRequestController::class, 'shareJournalDetails']);
 
     Route::middleware('auth:sanctum')->group(function () {
@@ -110,6 +108,14 @@ Route::prefix('v2')->middleware(ForceJsonResponse::class)->group(function () {
             Route::get('{request_id}/{param}', [EmloResponseController::class, 'getParamValueByRequestId']);
         });
 
+        Route::get('/insights-v2', [EmloInsightsService::class, 'getInsightsDataV2'])
+            ->name('api.v2.insights.v2');
+
+        Route::get('/insights-v2/secondaryMetrics', [EmloInsightsService::class, 'getInsightsDataV2'])
+            ->name('api.v2.insights.v2.secondary-metrics');
+        Route::get('/insights-v2/vijos', [CredScoreService::class, 'getAllLatestCredScoreData']);
+
+        Route::get('/stripe/customer-portal', [StripeWebhookController::class, 'getCustomerPortal']);
     });
 
     // Stripe Webhook

@@ -2,16 +2,15 @@
 
 namespace App\Http\Controllers;
 
+use App\Exceptions\Emlo\EmloNotFoundException;
+use App\Exceptions\Emlo\NoRulesFoundException;
 use App\Services\QueryParamsHelperService;
 use Illuminate\Routing\Controller;
 use Illuminate\Http\Request;
-use App\Services\RuleEvaluationService;
+use App\Services\Rules\RuleEvaluationService;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
-
 use Exception;
-use App\Exceptions\Emlo\EmloNotFoundException;
-use App\Exceptions\Emlo\NoRulesFoundException;
 use App\Exceptions\UserNotFoundException;
 
 
