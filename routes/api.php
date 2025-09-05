@@ -84,6 +84,7 @@ Route::prefix('v2')->middleware(ForceJsonResponse::class)->group(function () {
         Route::apiResource('catalogs', CatalogController::class);
         Route::get('catalogs-by-category/{categoryId}', [CatalogController::class, 'getCatalogsByCategory']);
 
+
         Route::apiResource('categories', CategoryController::class);
         Route::apiResource('contacts', ContactController::class);
         Route::post('contacts/multiple', [ContactController::class, 'createMultiple']);

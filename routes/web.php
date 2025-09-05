@@ -102,6 +102,27 @@ Route::prefix('admin')->group(function () {
         Route::get('journal_category/activate/{id}', [CategoryController::class, 'activate'])->name('journalCategories.activate');
         Route::get('journal_category/delete/{id}', [CategoryController::class, 'destroy'])->name('journalCategories.destroy');
         // });
+
+        //Catalog
+        // Catalog routes
+       // Rotas do catálogo dentro do prefixo /admin/catalog
+    Route::prefix('catalog')->group(function () {
+    
+    // CRUD padrão
+    Route::get('/', [CatalogController::class, 'index'])->name('catalog.index');         // Listar
+    Route::get('/add', [CatalogController::class, 'add'])->name('catalog.add');           // Formulário de adicionar
+    Route::post('/', [CatalogController::class, 'store'])->name('catalog.store');         // Salvar novo
+    Route::get('/edit/{id}', [CatalogController::class, 'edit'])->name('catalog.edit');   // Editar
+    Route::put('/{id}', [CatalogController::class, 'update'])->name('catalog.update');    // Atualizar
+    Route::get('/delete/{id}', [CatalogController::class, 'destroy'])->name('catalog.delete'); // Deletar
+
+    // Métodos extras
+    Route::get('/activate/{id}', [CatalogController::class, 'activate'])->name('catalog.activate');
+    Route::get('/deactivate/{id}', [CatalogController::class, 'deactivate'])->name('catalog.deactivate');
+    });
+
+
+
 });
 
 // // Route::get('/admin/login', [AdminLoginController::class, 'showLoginForm'])->name('admin.login');
