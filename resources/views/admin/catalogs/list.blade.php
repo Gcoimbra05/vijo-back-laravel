@@ -15,20 +15,34 @@
                 <tr>
                     <th>Sr. No.</th>
                     <th>Title</th>
-                    <th>Description</th>
+                    <th>Emoji</th>
                     <th>Premium</th>
-                    <th>Deleted</th>
+                    <th>Promotional</th>
+                    <th>Multipart</th>
                     <th>Status</th>
                     <th>Actions</th>
                 </tr>
             </thead>
             <tbody class="table-border-bottom-0">
-                <?php if (isset($categories) && count($categories) > 0): ?>
-                    <?php foreach ($categories as $key => $catalog): ?>
+                <?php if (isset($catalogs) && count($catalogs) > 0): ?>
+                    <?php foreach ($catalogs as $key => $catalog): ?>
                         <tr>
                             <td><?= $key + 1; ?></td>
-                            <td><?= $catalog->name; ?></td>
-                            <td><?= $catalog->status; ?></td>
+                            <td><?= $catalog->title; ?></td>
+                            <td>
+                                <?= !empty($catalog->emoji) ? mb_convert_encoding('&#x' . $catalog->emoji . ';', 'UTF-8', 'HTML-ENTITIES') : '-' ?>
+                            </td>
+                            <td><?= $catalog->is_premium ? 'Yes' : 'No'; ?></td>
+                            <td><?= $catalog->is_promotional ? 'Yes' : 'No'; ?></td>
+                            <td><?= $catalog->is_multipart ? 'Yes' : 'No'; ?></td>
+                            <td>
+                                <?php
+                                    switch($catalog->status) {
+                                        case 1: echo 'Activate'; break;
+                                        case 0: echo 'Deactivate'; break;
+                                    }
+                                ?>
+                            </td>
                             <td><?= date('Y-m-d', strtotime($catalog->updated_at)); ?></td>
                             <td>
                                 <div class="dropdown">
@@ -37,12 +51,20 @@
                                     </button>
                                     <div class="dropdown-menu">
                                         <?php if ($catalog->status == 1) { ?>
-                                            <a class="dropdown-item" href="<?php echo url('admin/journal_catalog/deactivate/' . $catalog->id); ?>"><i class="bx bx-x me-1"></i> Deactivate</a>
+                                            <a class="dropdown-item" href="{{ route('catalog.deactivate', $catalog->id) }}">
+                                                <i class="bx bx-x me-1"></i> Deactivate
+                                            </a>
                                         <?php } else if ($catalog->status == 0) { ?>
-                                            <a class="dropdown-item" href="<?php echo url('admin/journal_catalog/activate/' . $catalog->id); ?>"><i class="bx bx-check me-1"></i> Activate</a>
+                                            <a class="dropdown-item" href="{{ route('catalog.activate', $catalog->id) }}">
+                                                <i class="bx bx-check me-1"></i> Activate
+                                            </a>
                                         <?php } ?>
-                                        <a class="dropdown-item" href="<?php echo url('admin/journal_catalog/edit/' . $catalog->id); ?>"><i class="bx bx-edit-alt me-1"></i> Edit</a>
-                                        <a class="dropdown-item" href="<?php echo url('admin/journal_catalog/delete/' . $catalog->id); ?>" onClick="return confirm('Are you sure you want to delete this record?');"><i class="bx bx-trash me-1"></i> Delete</a>
+                                        <a class="dropdown-item" href="{{ route('catalog.edit', $catalog->id) }}">
+                                            <i class="bx bx-edit-alt me-1"></i> Edit
+                                        </a>
+                                        <a class="dropdown-item" href="{{ route('catalog.delete', $catalog->id) }}" onClick="return confirm('Are you sure you want to delete this record?');">
+                                            <i class="bx bx-trash me-1"></i> Delete
+                                        </a>
                                     </div>
                                 </div>
                             </td>

@@ -79,6 +79,9 @@
         display: grid;
         grid-auto-flow: column;
     }
+    .wide-input { 
+        width: 150%; 
+    }
 </style>
 
 @section('content')
@@ -87,8 +90,8 @@
     $isEdit = $action === 'Edit';
     $pageAction = $isEdit ? 'catalog.update' : 'catalog.store';
     $formAction = $isEdit
-        ? url("admin/catalog/update/" . ($info[0]['id'] ?? ''))
-        : url("admin/catalog/add");
+        ? route('catalog.update', $info[0]['id'] ?? '')
+        : route('catalog.store');
     $formMethod = $isEdit ? 'PUT' : 'POST';
 @endphp
 
@@ -103,30 +106,36 @@
                     @if($isEdit)
                         @method('PUT')
                     @endif
-                    <?= csrf_field() ?>
+
+                    @if ($errors->any())
+                        <div class="alert alert-danger">
+                            <span>Error saving catalogs</span>
+                        </div>
+                    @endif
+
                     <div class="row">
                         <div class="mb-3 col-md-6">
-                            <label for="name" class="form-label">Name</label>
-                            <input class="form-control @error('name') is-invalid @enderror" type="text" id="name" name="name" placeholder="Ex: Career" autocomplete="off" value="{{ old('name', $info[0]['name'] ?? '') }}" autofocus />
-                            @error('name')
+                            <label for="title" class="form-label">Name</label>
+                            <input class="form-control wide-input @error('title') is-invalid @enderror" type="text" id="title" name="title" placeholder="Ex: Career" autocomplete="off" value="{{ old('title', $info[0]['title'] ?? '') }}" autofocus required />
+                            @error('title')
                                 <span class="invalid-feedback" role="alert"><strong>{{ $message }}</strong></span>
                             @enderror
                         </div>
 
                         <div class="mb-3 col-md-3">
-                            <label for="catalog_emoji" class="form-label">Emoji</label>
+                            <label for="emoji" class="form-label">Emoji</label>
                             <div class="input-container">
-                                <div id="fakeInput" class="fake-input form-control form-control-lg @error('catalog_emoji') is-invalid @enderror">
-                                    @if (!empty($info) && !empty($info[0]['catalog_emoji']) && $info[0]['catalog_emoji'])
-                                        <span>{{ $info[0]['catalog_emoji'] }}</span>
+                                <div id="fakeInput" class="fake-input form-control form-control-lg @error('emoji') is-invalid @enderror">
+                                    @if (!empty($info) && !empty($info[0]['emoji']) && $info[0]['emoji'])
+                                        <span>{{ $info[0]['emoji'] }}</span>
                                     @else
                                         <span>Select Emoji</span>
                                     @endif
                                 </div>
-                                <input type="hidden" id="base64Input" class="hidden-input" name="catalog_emoji" value="{{ old('catalog_emoji', $info[0]['catalog_emoji'] ?? '') }}">
+                                <input type="hidden" id="base64Input" class="hidden-input" name="emoji" value="{{ old('emoji', $info[0]['emoji'] ?? '') }}">
                                 <button id="toggleButton" class="toggle-button" type="button">😀</button>
                             </div>
-                            @error('catalog_emoji')
+                            @error('emoji')
                                 <span class="invalid-feedback" role="alert"><strong>{{ $message }}</strong></span>
                             @enderror
                         </div>
@@ -134,89 +143,131 @@
 
                     <div class="selects">
                         <div class="mb-3 col-md-6">
-                            <label for="is_delect">Delect</label>
-                                <select name="is_delect" id="is_delect" class="form-control @error('is_delect') is-invalid @enderror" style="cursor: pointer; appearance: menulist; width: 85%">
-                                    <option value="" disabled selected>Select</option>
-                                    <option value="1">Yes</option>
-                                    <option value="2">No</option>
-                                </select>
-                        </div>
-                        <div class="mb-3 col-md-6">
                             <label for="status">Status</label>
-                                <select name="status" id="status" class="form-control @error('is_delect') is-invalid @enderror" style="cursor: pointer; appearance: menulist; width: 85%">
+                                <select name="status" id="status" class="form-control wide-input @error('status') is-invalid @enderror" style="cursor: pointer; appearance: menulist">
                                     <option value="" disabled selected>Select</option>
-                                    <option value="1">Active</option>
-                                    <option value="2">Desactive</option>
+                                    <option value="1" {{ old('status', $info[0]['status'] ?? '') == 1 ? 'selected' : '' }}>Activate</option>
+                                    <option value="0" {{ old('status', $info[0]['status'] ?? '') == 0 ? 'selected' : '' }}>Deactivate</option>
                                 </select>
+                            @error('status')
+                                <span class="invalid-feedback" role="alert"><strong>{{ $message }}</strong></span>
+                            @enderror
                         </div>
                         <div class="mb-3 col-md-6">
                             <label for="is_promotional">Promotional</label>
-                                <select name="is_promotional" id="is_promotional" class="form-control @error('is_delect') is-invalid @enderror" style="cursor: pointer; appearance: menulist; width: 85%">
+                                <select name="is_promotional" id="is_promotional" class="form-control wide-input @error('is_promotional') is-invalid @enderror" style="cursor: pointer; appearance: menulist">
                                     <option value="" disabled selected>Select</option>
-                                    <option value="1">Yes</option>
-                                    <option value="2">No</option>
+                                    <option value="0" {{ old('is_promotional', $info[0]['is_promotional'] ?? '') == 1 ? 'selected' : '' }}>No</option>
+                                    <option value="1" {{ old('is_promotional', $info[0]['is_promotional'] ?? '') == 1 ? 'selected' : '' }}>Yes</option>
                                 </select>
+                            @error('is_promotional')
+                                <span class="invalid-feedback" role="alert"><strong>{{ $message }}</strong></span>
+                            @enderror
                         </div>
                         <div class="mb-3 col-md-6">
                             <label for="is_premium">Premium</label>
-                                <select name="is_premium" id="is_premium" class="form-control @error('is_delect') is-invalid @enderror" style="cursor: pointer; appearance: menulist; width: 85%">
+                                <select name="is_premium" id="is_premium" class="form-control wide-input @error('is_premium') is-invalid @enderror" style="cursor: pointer; appearance: menulist">
                                     <option value="" disabled selected>Select</option>
-                                    <option value="1">Yes</option>
-                                    <option value="2">No</option>
+                                    <option value="0" {{ old('is_premium', $info[0]['is_premium'] ?? '') == 1 ? 'selected' : '' }}>No</option>
+                                    <option value="1" {{ old('is_premium', $info[0]['is_premium'] ?? '') == 1 ? 'selected' : '' }}>Yes</option>
                                 </select>
+                            @error('is_premium')
+                                <span class="invalid-feedback" role="alert"><strong>{{ $message }}</strong></span>
+                            @enderror
                         </div>
                         <div class="mb-3 col-md-6">
                             <label for="is_multipart">Multipart</label>
-                                <select name="is_multipart" id="is_multipart" class="form-control @error('is_delect') is-invalid @enderror" style="cursor: pointer; appearance: menulist; width: 85%">
+                                <select name="is_multipart" id="is_multipart" class="form-control wide-input @error('is_multipart') is-invalid @enderror" style="cursor: pointer; appearance: menulist">
                                     <option value="" disabled selected>Select</option>
-                                    <option value="1">Yes</option>
-                                    <option value="2">No</option>
+                                    <option value="0" {{ old('is_multipart', $info[0]['is_multipart'] ?? '') == 1 ? 'selected' : '' }}>No</option>
+                                    <option value="1" {{ old('is_multipart', $info[0]['is_multipart'] ?? '') == 1 ? 'selected' : '' }}>Yes</option>
                                 </select>
+                             @error('is_multipart')
+                                <span class="invalid-feedback" role="alert"><strong>{{ $message }}</strong></span>
+                            @enderror
                         </div>
                     </div>
 
                     <div class="selects">
                         <div class="mb-3 col-md-6">
-                            <label for="video_type_id">Video Type ID</label>
-                            <input class="form-control @error('category_id') is-invalid @enderror" type="number" id="video_type_id" name="video_type_id" placeholder="Ex: 1234" autocomplete="off" value="" autofocus, style="width: 150%" />
-                        </div>
-                        <div class="mb-3 col-md-6">
-                            <label for="category_id">Category ID</label>
-                            <input class="form-control @error('category_id') is-invalid @enderror" type="number" id="category_id" name="category_id" placeholder="Ex: 1234" autocomplete="off" value="" autofocus, style="width: 150%" />
-                        </div>
+                        <label for="video_type_id">Video Type</label>
+                        <select name="video_type_id" id="video_type_id" class="form-control wide-input @error('video_type_id') is-invalid @enderror">
+                            <option value="" disabled selected>Select</option>
+                            @foreach($videoTypes as $type)
+                                <option value="{{ $type->id }}" {{ old('video_type_id', $info[0]['video_type_id'] ?? '') == $type->id ? 'selected' : '' }}>
+                                    {{ $type->name }}
+                                </option>
+                            @endforeach
+                        </select>
+                        @error('video_type_id')
+                            <span class="invalid-feedback" role="alert"><strong>{{ $message }}</strong></span>
+                        @enderror
                     </div>
 
-                    <div class="selects">
+                    <div class="mb-3 col-md-6">
+                        <label for="category_id">Category</label>
+                        <select name="category_id" id="category_id" class="form-control wide-input @error('category_id') is-invalid @enderror">
+                            <option value="" disabled selected>Select</option>
+                            @foreach($categories as $category)
+                                <option value="{{ $category->id }}" {{ old('category_id', $info[0]['category_id'] ?? '') == $category->id ? 'selected' : '' }}>
+                                    {{ $category->name }}
+                                </option>
+                            @endforeach
+                        </select>
+                        @error('category_id')
+                            <span class="invalid-feedback" role="alert"><strong>{{ $message }}</strong></span>
+                        @enderror
+                    </div>
+
                         <div class="mb-3 col-md-6">
-                            <label for="parent_catalog_id">Parent Catalog ID</label>
-                            <input class="form-control @error('parent_catalog_id') is-invalid @enderror" type="number" id="parent_catalog_id" name="parent_catalog_id" placeholder="Ex: 1234" autocomplete="off" value="" autofocus, style="width: 150%"/>
-                        </div>
-                        <div class="mb-3 col-md-6">
-                            <label for="admin_order">Admin Order</label>
-                            <input class="form-control @error('admin_order') is-invalid @enderror" type="number" id="admin_order" name="admin_order" placeholder="Ex: 1234" autocomplete="off" value="" autofocus, style="width: 150%" />
+                            <label for="parent_catalog_id">Parent Catalog</label>
+                            <select name="parent_catalog_id" id="parent_catalog_id" class="form-control wide-input @error('parent_catalog_id') is-invalid @enderror">
+                                <option value="" disabled selected>Select</option>
+                                @foreach($catalogs as $parent)
+                                    <option value="{{ $parent->id }}" {{ old('parent_catalog_id', $info[0]['parent_catalog_id'] ?? '') == $parent->id ? 'selected' : '' }}>
+                                        {{ $parent->title }}
+                                    </option>
+                                @endforeach
+                            </select>
+                            @error('parent_catalog_id')
+                                <span class="invalid-feedback" role="alert"><strong>{{ $message }}</strong></span>
+                            @enderror
                         </div>
                     </div>
 
                     <div class="selects">
                         <div class="mb-3 col-md-6">
                             <label for="min_record_time">Min Record Time</label>
-                            <input class="form-control @error('min_record_time') is-invalid @enderror" type="time" id="min_record_time" name="min_record_time" placeholder="Ex: 01:00" autocomplete="off" value="" autofocus, style="width: 150%"/>
+                            <input class="form-control wide-input @error('min_record_time') is-invalid @enderror" type="number" id="min_record_time" name="min_record_time" placeholder="Ex: 1" autocomplete="off" value="{{ old('min_record_time', $info[0]['min_record_time'] ?? '') }}" autofocus required />
+                            @error('min_record_time')
+                                <span class="invalid-feedback" role="alert"><strong>{{ $message }}</strong></span>
+                            @enderror
                         </div>
                         <div class="mb-3 col-md-6">
                             <label for="max_record_time">Max Record Time</label>
-                            <input class="form-control @error('max_record_time') is-invalid @enderror" type="time" id="max_record_time" name="max_record_time" placeholder="Ex: 15:00" autocomplete="off" value="" autofocus, style="width: 150%" />
+                            <input class="form-control wide-input @error('max_record_time') is-invalid @enderror" type="number" id="max_record_time" name="max_record_time" placeholder="Ex: 15" autocomplete="off" value="{{ old('max_record_time', $info[0]['max_record_time'] ?? '') }}" autofocus required />
+                            @error('max_record_time')
+                                <span class="invalid-feedback" role="alert"><strong>{{ $message }}</strong></span>
+                            @enderror
+                        </div>
+                        <div class="mb-3 col-md-6">
+                            <label for="admin_order">Admin Order</label>
+                            <input class="form-control wide-input @error('admin_order') is-invalid @enderror" type="number" id="admin_order" name="admin_order" placeholder="Ex: 1234" autocomplete="off" value="{{ old('admin_order', $info[0]['admin_order'] ?? '') }}" autofocus required  />
+                            @error('admin_order')
+                                <span class="invalid-feedback" role="alert"><strong>{{ $message }}</strong></span>
+                            @enderror
                         </div>
                     </div>
                     
                     <div class="mb-3 col-md-12">
                         <label for="tags" class="form-label">Tags</label>
-                        <textarea class="form-control @error('tags') is-invalid @enderror" id="tags" name="tags" placeholder="Ex: Tags" autocomplete="off"></textarea>
+                        <textarea class="form-control wide-input @error('tags') is-invalid @enderror" id="tags" name="tags" placeholder="Ex: Tags" autocomplete="off">{{ old('tags', $info[0]['tags'] ?? '') }}</textarea>
                     </div>
 
                     <div class="row">
                         <div class="mb-3 col-md-12">
                             <label for="description" class="form-label">Description</label>
-                            <textarea class="form-control @error('description') is-invalid @enderror" id="description" name="description" placeholder="Ex: Description" autocomplete="off">{{ old('description', $info[0]['description'] ?? '') }}</textarea>
+                            <textarea class="form-control wide-input @error('description') is-invalid @enderror" id="description" name="description" placeholder="Ex: Description" autocomplete="off">{{ old('description', $info[0]['description'] ?? '') }}</textarea>
                             @error('description')
                                 <span class="invalid-feedback" role="alert"><strong>{{ $message }}</strong></span>
                             @enderror

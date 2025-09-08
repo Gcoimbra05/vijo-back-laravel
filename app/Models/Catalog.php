@@ -14,21 +14,21 @@ class Catalog extends Model implements AuditableContract
     protected $table = 'catalogs';
 
     protected $fillable = [
-        'title', #text OK
-        'description', #text OK
-        'tags', #text OK
-        'min_record_time', #numerico
-        'max_record_time', #numerico
-        'emoji', #text OK
-        'is_deleted', #boleano (sim não) OK
-        'status', #boleano (sim não) OK
-        'parent_catalog_id', #numerico OK
-        'category_id', #numerico ok
-        'is_promotional', #boleano (sim não) OK
-        'is_premium', #booleano (sim não) OK
-        'video_type_id', #numerico OK
-        'is_multipart', #booleano (sim não) OK
-        'admin_order' #numerico OK
+        'title', 
+        'description', 
+        'tags',
+        'min_record_time', 
+        'max_record_time',
+        'emoji',
+        'is_deleted',
+        'status',
+        'parent_catalog_id',
+        'category_id',
+        'is_promotional',
+        'is_premium',
+        'video_type_id', 
+        'is_multipart',
+        'admin_order'
     ];
 
     public function videoRequests()
@@ -36,10 +36,6 @@ class Catalog extends Model implements AuditableContract
         return $this->hasMany(VideoRequest::class);
     }
 
-    public function category()
-    {
-        return $this->belongsTo(Category::class, 'category_id');
-    }
 
     public function parentCatalog()
     {
@@ -51,8 +47,13 @@ class Catalog extends Model implements AuditableContract
         return $this->hasMany(Catalog::class, 'parent_catalog_id');
     }
 
-    public function videoType()
+     public function videoType()
     {
-        return $this->belongsTo(VideoType::class, 'video_type_id');
+        return $this->belongsTo(VideoType::class);
+    }
+
+    public function category()
+    {
+        return $this->belongsTo(Category::class);
     }
 }
