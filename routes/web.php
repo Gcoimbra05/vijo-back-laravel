@@ -18,6 +18,7 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\VideoController;
 use App\Http\Controllers\VideoRequestController;
 use App\Http\Controllers\VideoTypeController;
+use App\Http\Controllers\TagController;
 
 Route::get('/', function () {
     return view('welcome');
@@ -103,9 +104,7 @@ Route::prefix('admin')->group(function () {
         Route::get('journal_category/delete/{id}', [CategoryController::class, 'destroy'])->name('journalCategories.destroy');
         // });
 
-        //Catalog
         // Catalog routes
-       // Rotas do catálogo dentro do prefixo /admin/catalog
     Route::prefix('catalog')->group(function () {
     
     // CRUD padrão
@@ -121,8 +120,20 @@ Route::prefix('admin')->group(function () {
     Route::get('/deactivate/{id}', [CatalogController::class, 'deactivate'])->name('catalog.deactivate');
     });
 
+    // Tag routes
+    Route::prefix('tags')->group(function () {
+    
+    // CRUD padrão
+    Route::get('/', [TagController::class, 'index'])->name('tag.index');         // Listar
+    Route::get('/add', [TagController::class, 'add'])->name('tag.add');           // Formulário de adicionar
+    Route::post('/', [TagController::class, 'store'])->name('tag.store');         // Salvar novo
+    Route::get('/edit/{id}', [TagController::class, 'edit'])->name('tag.edit');   // Editar
+    Route::put('/{id}', [TagController::class, 'update'])->name('tag.update');    // Atualizar
+    Route::get('/delete/{id}', [TagController::class, 'destroy'])->name('tag.delete'); // Deletar
 
-
+    Route::get('admin/tags/deactivate/{id}', [TagController::class, 'deactivate'])->name('tag.deactivate');
+    Route::get('admin/tags/activate/{id}', [TagController::class, 'activate'])->name('tag.activate');
+    });
 });
 
 // // Route::get('/admin/login', [AdminLoginController::class, 'showLoginForm'])->name('admin.login');

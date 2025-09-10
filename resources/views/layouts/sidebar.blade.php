@@ -43,7 +43,7 @@
             </ul>
         </li>
 
-        <li class="menu-item <?php if (in_array($nav_bar, array('journal_types', 'journal_categories', 'journal_subcategories', 'journal_tags', 'catalog_metric_question_labels', 'catalogs', 'promotional_catalogs', 'medias', 'catalogPrograms'))) { ?>open<?php } ?>">
+        <li class="menu-item <?php if (in_array($nav_bar, array('journal_types', 'journal_categories', 'journal_subcategories', 'journal_tags', 'catalog_metric_question_labels', 'catalogs', 'promotional_catalogs', 'medias', 'catalogPrograms', 'tags'))) { ?>open<?php } ?>">
             <a href="javascript:void(0);" class="menu-link menu-toggle">
                 <i class="menu-icon tf-icons bx bx-store"></i>
                 <div data-i18n="Marketplace">Catalog</div>
@@ -66,6 +66,18 @@
                 <li class="menu-item <?php if ($nav_bar == 'catalogs') { ?>active<?php } ?>">
                     <a href="{{ url('admin/catalogs') }}" class="menu-link">
                         <div data-i18n="Catalogs">Vijo Journals</div>
+                    </a>
+                </li>
+
+                <li class="menu-item <?php if ($nav_bar == 'tags') { ?>active<?php } ?>">
+                    <a href="{{ url('admin/tags') }}" class="menu-link">
+                        <div data-i18n="Tags">Tags</div>
+                    </a>
+                </li>
+
+                <li class="menu-item <?php if ($nav_bar == 'tags') { ?>active<?php } ?>">
+                    <a href="{{ url('admin/tags') }}" class="menu-link">
+                        <div data-i18n="Tags">Tags</div>
                     </a>
                 </li>
             </ul>

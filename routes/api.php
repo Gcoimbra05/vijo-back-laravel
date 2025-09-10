@@ -84,6 +84,12 @@ Route::prefix('v2')->middleware(ForceJsonResponse::class)->group(function () {
         Route::apiResource('catalogs', CatalogController::class);
         Route::get('catalogs-by-category/{categoryId}', [CatalogController::class, 'getCatalogsByCategory']);
 
+        Route::apiResource('tags', TagController::class);
+        Route::get('tags-by-category/{categoryId}', [TagController::class, 'getTagsByCategory']);
+        Route::prefix('tags')->group(function () {
+            Route::get('/', [TagController::class, 'index'])->name('tag.index');
+        });
+
 
         Route::apiResource('categories', CategoryController::class);
         Route::apiResource('contacts', ContactController::class);
