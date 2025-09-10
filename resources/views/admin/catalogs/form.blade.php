@@ -127,7 +127,8 @@
                             <div class="input-container">
                                 <div id="fakeInput" class="fake-input form-control form-control-lg @error('emoji') is-invalid @enderror">
                                     @if (!empty($info) && !empty($info[0]['emoji']) && $info[0]['emoji'])
-                                        <span>{{ $info[0]['emoji'] }}</span>
+                                        {{-- Converte o código hexadecimal em emoji --}}
+                                        <span>{!! mb_convert_encoding('&#x' . $info[0]['emoji'] . ';', 'UTF-8', 'HTML-ENTITIES') !!}</span>
                                     @else
                                         <span>Select Emoji</span>
                                     @endif
