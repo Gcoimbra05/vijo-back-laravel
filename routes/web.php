@@ -102,8 +102,8 @@ Route::prefix('admin')->group(function () {
         Route::get('journal_category/deactivate/{id}', [CategoryController::class, 'deactivate'])->name('journalCategories.deactivate');
         Route::get('journal_category/activate/{id}', [CategoryController::class, 'activate'])->name('journalCategories.activate');
         Route::get('journal_category/delete/{id}', [CategoryController::class, 'destroy'])->name('journalCategories.destroy');
-        // });
 
+    
         // Catalog routes
     Route::prefix('catalog')->group(function () {
     
@@ -120,6 +120,8 @@ Route::prefix('admin')->group(function () {
     Route::get('/deactivate/{id}', [CatalogController::class, 'deactivate'])->name('catalog.deactivate');
     });
 
+
+
     // Tag routes
     Route::prefix('tags')->group(function () {
     
@@ -133,6 +135,21 @@ Route::prefix('admin')->group(function () {
 
     Route::get('admin/tags/deactivate/{id}', [TagController::class, 'deactivate'])->name('tag.deactivate');
     Route::get('admin/tags/activate/{id}', [TagController::class, 'activate'])->name('tag.activate');
+    });
+
+    // Memberships routes
+    Route::prefix('memberships')->group(function () {
+    
+    // CRUD padrão
+    Route::get('/', [MembershipPlanController::class, 'index'])->name('membership.index');         // Listar
+    Route::get('/add', [MembershipPlanController::class, 'add'])->name('membership.add');           // Formulário de adicionar
+    Route::post('/', [MembershipPlanController::class, 'store'])->name('membership.store');         // Salvar novo
+    Route::get('/edit/{id}', [MembershipPlanController::class, 'edit'])->name('membership.edit');   // Editar
+    Route::put('/{id}', [MembershipPlanController::class, 'update'])->name('membership.update');    // Atualizar
+    Route::get('/delete/{id}', [MembershipPlanController::class, 'destroy'])->name('membership.delete'); // Deletar
+
+    Route::get('admin/membershipss/deactivate/{id}', [MembershipPlanController::class, 'deactivate'])->name('membership.deactivate');
+    Route::get('admin/membershipss/activate/{id}', [MembershipPlanController::class, 'activate'])->name('membership.activate');
     });
 });
 

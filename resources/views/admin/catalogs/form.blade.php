@@ -189,10 +189,10 @@
                         </div>
                     </div>
 
-                    <div class="selects">
+                    <div class="selects col-md-11">
                         <div class="mb-3 col-md-6">
                         <label for="video_type_id">Video Type</label>
-                        <select name="video_type_id" id="video_type_id" class="form-control wide-input @error('video_type_id') is-invalid @enderror">
+                        <select name="video_type_id" id="video_type_id" class="form-control wide-input @error('video_type_id') is-invalid @enderror" style="cursor: pointer; appearance: menulist"">
                             <option value="" disabled selected>Select</option>
                             @foreach($videoTypes as $type)
                                 <option value="{{ $type->id }}" {{ old('video_type_id', $info[0]['video_type_id'] ?? '') == $type->id ? 'selected' : '' }}>
@@ -207,7 +207,7 @@
 
                     <div class="mb-3 col-md-6">
                         <label for="category_id">Category</label>
-                        <select name="category_id" id="category_id" class="form-control wide-input @error('category_id') is-invalid @enderror">
+                        <select name="category_id" id="category_id" class="form-control wide-input @error('category_id') is-invalid @enderror" style="cursor: pointer; appearance: menulist"">
                             <option value="" disabled selected>Select</option>
                             @foreach($categories as $category)
                                 <option value="{{ $category->id }}" {{ old('category_id', $info[0]['category_id'] ?? '') == $category->id ? 'selected' : '' }}>
@@ -222,7 +222,7 @@
 
                         <div class="mb-3 col-md-6">
                             <label for="parent_catalog_id">Parent Catalog</label>
-                            <select name="parent_catalog_id" id="parent_catalog_id" class="form-control wide-input @error('parent_catalog_id') is-invalid @enderror">
+                            <select name="parent_catalog_id" id="parent_catalog_id" class="form-control wide-input @error('parent_catalog_id') is-invalid @enderror" style="cursor: pointer; appearance: menulist"">
                                 <option value="" disabled selected>Select</option>
                                 @foreach($catalogs as $parent)
                                     <option value="{{ $parent->id }}" {{ old('parent_catalog_id', $info[0]['parent_catalog_id'] ?? '') == $parent->id ? 'selected' : '' }}>
