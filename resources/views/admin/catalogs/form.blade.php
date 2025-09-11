@@ -82,6 +82,62 @@
     .wide-input { 
         width: 150%; 
     }
+
+    .custom-multiselect {
+        position: relative;
+        width: 200px;
+    }
+
+    .select-box {
+        border: 1px solid #ccc;
+        padding: 8px;
+        cursor: pointer;
+    }
+
+    .checkboxes {
+        border: 1px solid #ccc;
+        position: absolute;
+        background: #fff;
+        width: 100%;
+        max-height: 150px;
+        overflow-y: auto;
+        z-index: 10;
+        flex-direction: column; 
+        padding: 5px;
+    }
+
+    .checkboxes label {
+        display: block; 
+        margin-bottom: 4px;
+        cursor: pointer;
+    }
+
+    .checkboxes label:hover {
+    background-color: #f0f0f0;
+    }
+
+    .select-box {
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        border-bottom: none;
+        padding: 8px;
+        cursor: pointer;
+        position: relative;
+        width: 200px;
+    }
+
+    /* seta de dropdown simulada */
+    .select-box::after {
+        content: "";
+        position: absolute;
+        right: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+        border-left: 6px solid transparent;
+        border-right: 6px solid transparent;
+        border-top: 6px solid #666; 
+        pointer-events: none; 
+    }
 </style>
 
 @section('content')
@@ -222,7 +278,7 @@
 
                         <div class="mb-3 col-md-6">
                             <label for="parent_catalog_id">Parent Catalog</label>
-                            <select name="parent_catalog_id" id="parent_catalog_id" class="form-control wide-input @error('parent_catalog_id') is-invalid @enderror" style="cursor: pointer; appearance: menulist"">
+                            <select name="parent_catalog_id" id="parent_catalog_id" class="form-control wide-input @error('parent_catalog_id') is-invalid @enderror" style="cursor: pointer; appearance: menulist">
                                 <option value="" disabled selected>Select</option>
                                 @foreach($catalogs as $parent)
                                     <option value="{{ $parent->id }}" {{ old('parent_catalog_id', $info[0]['parent_catalog_id'] ?? '') == $parent->id ? 'selected' : '' }}>
@@ -262,7 +318,19 @@
                     
                     <div class="mb-3 col-md-12">
                         <label for="tags" class="form-label">Tags</label>
-                        <textarea class="form-control wide-input @error('tags') is-invalid @enderror" id="tags" name="tags" placeholder="Ex: Tags" autocomplete="off">{{ old('tags', $info[0]['tags'] ?? '') }}</textarea>
+                        <div class="custom-multiselect">
+                            <div id="selectBox" class="select-box" style="appearance: menulist">
+                                Select Tags
+                            </div>
+                            <div id="checkboxes" class="checkboxes" style="display: none;">
+                                @foreach($tags as $tag)
+                                <label>
+                                    <input type="checkbox" value="{{ $tag->name }}" class="option_checkbox" /> {{ $tag->name }}
+                                </label>
+                                @endforeach
+                            </div>
+                        </div>
+                         <textarea class="form-control wide-input @error('tags') is-invalid @enderror" id="tags_textarea" name="tags_text" placeholder="Ex: tags" autocomplete="off" style="cursor: default" readonly>{{ old('tags', $info[0]['tags'] ?? '') }}</textarea>
                     </div>
 
                     <div class="row">
@@ -361,5 +429,50 @@
     });
 
     initEmojiPicker('bottom');
+
+    const selectBox = document.getElementById('selectBox');
+    const checkboxes = document.getElementById('checkboxes');
+    const textarea = document.getElementById('tags_textarea');
+
+    // Recuperar tags existentes do catálogo
+    let selectedTags = [];
+    const existingTags = textarea.value ? textarea.value.split(',').map(t => t.trim()) : [];
+
+    // Marcar checkboxes correspondentes e popular selectedTags
+    checkboxes.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+        if (existingTags.includes(checkbox.value)) {
+            checkbox.checked = true;
+            selectedTags.push(checkbox.value);
+        }
+
+        // Listener para atualizar selectedTags quando o usuário marcar/desmarcar
+        checkbox.addEventListener('change', (e) => {
+            const value = e.target.value;
+            if (e.target.checked) {
+                selectedTags.push(value);
+            } else {
+                selectedTags = selectedTags.filter(tag => tag !== value);
+            }
+            textarea.value = selectedTags.join(', ');
+        });
+    });
+
+    // Mostrar/ocultar lista de checkboxes ao clicar no selectBox
+    selectBox.addEventListener('click', () => {
+        checkboxes.style.display = checkboxes.style.display === 'none' ? 'block' : 'none';
+    });
+
+    // Fechar lista ao clicar fora
+    document.addEventListener('click', (e) => {
+        if (!selectBox.contains(e.target) && !checkboxes.contains(e.target)) {
+            checkboxes.style.display = 'none';
+        }
+    });
+
+    // Inicializa textarea com os valores existentes
+    textarea.value = selectedTags.join(', ');
+
+
+
 </script>
 @endsection

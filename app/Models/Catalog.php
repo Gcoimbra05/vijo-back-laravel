@@ -56,4 +56,9 @@ class Catalog extends Model implements AuditableContract
     {
         return $this->belongsTo(Category::class);
     }
+
+    public function tags()
+    {
+        return $this->belongsToMany(\App\Models\Tag::class, 'catalog_tag', 'catalog_id', 'tag_id');
+}
 }

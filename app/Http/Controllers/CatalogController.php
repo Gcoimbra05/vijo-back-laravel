@@ -9,6 +9,7 @@ use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Log;
 use App\Models\VideoType;
 use App\Models\Category;
+use App\Models\Tag;
 
 class CatalogController extends Controller
 {
@@ -52,6 +53,7 @@ class CatalogController extends Controller
     public function add()
     {
         Log::info('CatalogController@create chamado');
+        $catalog = null;
         $pageTitle = "Add Catalog";
         $nav_bar = "catalogs";
         $videoTypes = VideoType::all();
@@ -61,6 +63,7 @@ class CatalogController extends Controller
             ['label' => 'Catalogs', 'url' => route('catalog.index')],
             ['label' => 'Add Catalog', 'url' => null],
         ];
+        $tags = Tag::all();
 
         return view('admin.catalogs.form', [
             'action' => 'Add',
@@ -71,8 +74,8 @@ class CatalogController extends Controller
             'videoTypes' => $videoTypes,
             'categories' => $categories,
             'catalogs' => $catalogs,
+            'tags' => $tags
         ]);
-
     }
 
     public function store(Request $request){
@@ -90,23 +93,37 @@ class CatalogController extends Controller
             'category_id' => 'nullable|integer|exists:categories,id',
             'is_promotional' => 'nullable|boolean',
             'is_premium' => 'nullable|boolean',
-            'video_type_id' => 'required|integer',  // necessário
+            'video_type_id' => 'required|integer',
         ]);
 
 
-    $catalog = Catalog::create($request->all());
+        $catalog = Catalog::create([
+            'title' => $request->title,
+            'description' => $request->description,
+            'tags' => $request->tags_text, // salva o conteúdo do textarea na coluna tags
+            'min_record_time' => $request->min_record_time,
+            'max_record_time' => $request->max_record_time,
+            'emoji' => $request->emoji,
+            'status' => $request->status,
+            'parent_catalog_id' => $request->parent_catalog_id,
+            'category_id' => $request->category_id,
+            'is_promotional' => $request->is_promotional,
+            'is_premium' => $request->is_premium,
+            'video_type_id' => $request->video_type_id,
+        ]);
 
-    Log::info('Catalog criado', ['id' => $catalog->id]);
 
-    if ($request->wantsJson()) {
-        return response()->json([
-            'success' => true,
-            'message' => 'Catalog created successfully.',
-            'data' => $catalog->load(['category']),
-        ], 201);
-    }
+        Log::info('Catalog criado', ['id' => $catalog->id]);
 
-    return redirect()->route('catalog.index')->with('success', 'Catalog created successfully.');
+        if ($request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Catalog created successfully.',
+                'data' => $catalog->load(['category']),
+            ], 201);
+        }
+
+        return redirect()->route('catalog.index')->with('success', 'Catalog created successfully.');
     }
 
 
@@ -133,6 +150,7 @@ class CatalogController extends Controller
             ['label' => 'Catalogs', 'url' => route('catalog.index')],
             ['label' => 'Edit Catalog', 'url' => null],
         ];
+        $tags = Tag::all();
 
         return view('admin.catalogs.form', [
             'action' => 'Edit',
@@ -144,36 +162,52 @@ class CatalogController extends Controller
             'videoTypes' => $videoTypes,
             'categories' => $categories,
             'catalogs' => $catalogs,
+            'tags' => $tags
         ]);
 
     }
 
     public function update(Request $request, $id){
-    // Validação
-    $request->validate([
-        'title' => 'required|string|max:100',
-        'description' => 'nullable|string',
-        'tags' => 'nullable|string|max:255',
-        'min_record_time' => 'required|integer|min:1',
-        'max_record_time' => 'required|integer|max:30',
-        'emoji' => 'nullable|string|max:100',
-        'status' => 'required|integer|in:0,1',
-        'parent_catalog_id' => 'nullable|integer|exists:catalogs,id',
-        'category_id' => 'nullable|integer|exists:categories,id',
-        'is_promotional' => 'nullable|boolean',
-        'is_premium' => 'nullable|boolean',
-        'video_type_id' => 'required|integer',
-    ]);
+        // Validação
+        $request->validate([
+            'title' => 'required|string|max:100',
+            'description' => 'nullable|string',
+            'tags_text' => 'nullable|string|max:255', // use tags_text aqui
+            'min_record_time' => 'required|integer|min:1',
+            'max_record_time' => 'required|integer|max:30',
+            'emoji' => 'nullable|string|max:100',
+            'status' => 'required|integer|in:0,1',
+            'parent_catalog_id' => 'nullable|integer|exists:catalogs,id',
+            'category_id' => 'nullable|integer|exists:categories,id',
+            'is_promotional' => 'nullable|boolean',
+            'is_premium' => 'nullable|boolean',
+            'video_type_id' => 'required|integer',
+        ]);
 
-    // Buscar catálogo
-    $catalog = Catalog::findOrFail($id);
+        // Buscar catálogo
+        $catalog = Catalog::findOrFail($id);
 
-    // Atualizar com os dados do request
-    $catalog->update($request->all());
+        // Atualizar campos normais
+        $catalog->update([
+            'title' => $request->title,
+            'description' => $request->description,
+            'min_record_time' => $request->min_record_time,
+            'max_record_time' => $request->max_record_time,
+            'emoji' => $request->emoji,
+            'status' => $request->status,
+            'parent_catalog_id' => $request->parent_catalog_id,
+            'category_id' => $request->category_id,
+            'is_promotional' => $request->is_promotional ?? 0,
+            'is_premium' => $request->is_premium ?? 0,
+            'video_type_id' => $request->video_type_id,
+            'tags' => $request->tags_text,
+        ]);
 
-    // Redirecionar com mensagem de sucesso
-    return redirect()->route('catalog.index')->with('success', 'Catalog updated successfully.');
+
+        // Redirecionar com mensagem de sucesso
+        return redirect()->route('catalog.index')->with('success', 'Catalog updated successfully.');
     }
+
 
     public function activate($id){
         $catalog = Catalog::findOrFail($id);
