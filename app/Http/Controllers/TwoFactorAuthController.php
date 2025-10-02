@@ -63,7 +63,7 @@ class TwoFactorAuthController extends Controller
             $appUrl = config('app.url');
             $envUrl = str_replace('.com', '.me', $appUrl);
             try {
-                Mail::send('emails.template', [
+                Mail::send('emails.template_new', [
                     'title' => 'Your Vijo account verification code',
                     'contentView' => 'emails.verification_code',
                     'contentData' => [
@@ -139,9 +139,9 @@ class TwoFactorAuthController extends Controller
             $userEmail = $user->email;
             if (!empty($userEmail)) {
                 try {
-                    Mail::send('emails.template', [
+                    Mail::send('emails.template_new', [
                         'title' => "You're in! Welcome to the world of Vijo",
-                        'contentView' => 'emails.welcome_vijo',
+                        'contentView' => 'emails.welcome',
                         'contentData' => [
                             'recipientName'     => $user->first_name,
                         ]
