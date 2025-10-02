@@ -73,6 +73,9 @@ Route::prefix('admin')->group(function () {
         Route::get('users/{id}/journal-history', [UserController::class, 'journalHistoryView'])->name('users.journalHistory');
         Route::get('users/{id}/auditLogs', [UserController::class, 'auditLogsView'])->name('users.auditLogs');
         Route::resource('users', UserController::class)->except(['index']);
+        Route::get('admin/users/{user:name}/edit', [UserController::class, 'edit']);
+        Route::get('users/{userId}/contacts', [UserController::class, 'contactsByUser'])
+            ->name('users.contacts');
 
         Route::post('/logout', [AdminLoginController::class, 'logout'])->name('logout');
 

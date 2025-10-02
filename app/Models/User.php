@@ -14,23 +14,35 @@ class User extends Authenticatable implements AuditableContract
 
     protected $fillable = [
         'first_name',
-        'last_name',
-        'email',
-        'password',
-        'country_code',
-        'mobile',
-        'guided_tours',
-        'reminders',
-        'notifications',
-        'timezone',
+        'last_name', 
+        'email', 
+        'mobile',  
+
+        'country_code', 
+        'timezone', 
+        'email_verified_at', 
+        'last_login_date', 
+        
+
+        'status', 
+        'is_verified', 
+        'is_admin', 
+
+        
+        'notifications', 
+        'guided_tours', 
+
+        'plan_id',  
+        'plan_start_date', 
+
+        'password', 
+        'refresh_token', 
+        'remember_token', 
+        
+        'notifications', 
+        'reminders', 
         'optInNewsUpdates',
-        'last_login_date',
-        'status',
-        'is_verified',
-        'plan_id',
-        'plan_start_date',
-        'refresh_token',
-        'is_admin',
+        'description',
     ];
 
     protected $hidden = [
@@ -72,4 +84,6 @@ class User extends Authenticatable implements AuditableContract
     {
         return $this->hasMany(Contact::class);
     }
+
+    
 }

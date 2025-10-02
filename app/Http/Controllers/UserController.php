@@ -15,6 +15,10 @@ use Illuminate\Support\Facades\Password;
 use Illuminate\Auth\Events\Verified;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
+use Symfony\Component\Intl\Countries;
+use App\Models\Contact;
+use App\Models\ContactGroup;
+use App\Models\Affiliate;
 
 class UserController extends Controller
 {
@@ -98,33 +102,64 @@ class UserController extends Controller
 
     public function update(Request $request, $id)
     {
-        $user = User::find($id);
-        if (!$user) {
-            return response()->json(['message' => 'User not found'], 404);
-        }
+        Log::info('Update chamado para o usuário', ['id' => $id, 'request' => $request->all()]);
+
+        $user = User::findOrFail($id);
 
         $request->validate([
-            'first_name' => 'sometimes|required|string|max:100',
-            'last_name' => 'sometimes|required|string|max:100',
-            'email' => 'sometimes|required|string|email|max:255|unique:users,email,' . $user->id,
-            'password' => 'sometimes|required|string|min:8',
+            'first_name' => 'required|string|max:100',
+            'last_name' => 'required|string|max:100',
+            'email' => 'required|string|email|max:255|unique:users,email,' . $user->id,
+            'password' => 'nullable|string|min:8',
             'country_code' => 'nullable|string|max:10',
             'mobile' => 'nullable|string|max:20',
-            'reminders' => 'sometimes|boolean',
+            'timezone' => 'nullable|string|max:50',
+            'status' => 'required|boolean',
+            'is_verified' => 'required|boolean',
+            'is_admin' => 'required|boolean',
+            'guided_tours' => 'required|boolean',
+            'plan_id' => 'nullable|exists:membership_plans,id',
+            'plan_start_date' => 'nullable|date',
+            'email_verified_at' => 'nullable|date',
+            'last_login_date' => 'nullable|date',
+            'description' => 'nullable|string|max:255',
             'notifications' => 'sometimes|boolean',
-            'timezone' => 'sometimes|string|max:50',
+            'reminders' => 'sometimes|boolean',
             'optInNewsUpdates' => 'sometimes|boolean',
         ]);
 
-        $user->update($request->only('first_name', 'last_name', 'email', 'country_code', 'mobile', 'reminders', 'notifications', 'timezone', 'optInNewsUpdates'));
+        // Campos comuns
+        $user->first_name = $request->first_name;
+        $user->last_name = $request->last_name;
+        $user->email = $request->email;
+        $user->country_code = $request->country_code;
+        $user->mobile = $request->mobile;
+        $user->timezone = $request->timezone;
+        $user->status = $request->status;
+        $user->is_verified = $request->is_verified;
+        $user->is_admin = $request->is_admin;
+        $user->guided_tours = $request->guided_tours;
+        $user->plan_id = $request->plan_id;
+        $user->plan_start_date = $request->plan_start_date;
+        $user->email_verified_at = $request->email_verified_at;
+        $user->last_login_date = $request->last_login_date;
+        $user->description = $request->description;
 
+        // Checkboxes
+        $user->notifications = $request->notifications ?? 0;
+        $user->reminders = $request->reminders ?? 0;
+        $user->optInNewsUpdates = $request->optInNewsUpdates ?? 0;
+
+        // Senha (apenas se preenchida)
         if ($request->filled('password')) {
             $user->password = bcrypt($request->password);
-            $user->save();
         }
 
-        return response()->json($user);
+        $user->save();
+
+        return redirect('admin/users')->with('success', 'User updated successfully.');
     }
+
 
     public function destroy($id)
     {
@@ -560,4 +595,42 @@ class UserController extends Controller
 
         return view('admin.users.journal_history', compact('user', 'journalHistory', 'nav_bar', 'breadcrumbs'));
     }
+
+    
+    public function edit(User $user)
+    {
+        Log::info('UserController@edit chamado', ['id' => $user->id]);
+
+        $pageTitle = "Edit Person";
+        $nav_bar = "Users";
+        $breadcrumbs = [
+            ['label' => 'Users', 'url' => route('users.adminIndex')],
+            ['label' => 'Edit Person', 'url' => null],
+        ];
+        $countries = Countries::getNames();
+        $membershipPlans = MembershipPlan::all();
+        $contacts = Contact::getByUser($user->id);
+        $contactgroups = ContactGroup::getByUser($user->id);
+        $affiliates = Affiliate::getByUser($user->id);
+
+        // Timezones agrupados por país
+        $timezonesByCountry = [];
+        foreach (array_keys($countries) as $code) {
+            $timezonesByCountry[$code] = \DateTimeZone::listIdentifiers(\DateTimeZone::PER_COUNTRY, $code);
+        }
+        return view('admin.users.edit', compact('user', 'pageTitle', 'nav_bar', 'breadcrumbs', 'countries', 'timezonesByCountry', 'membershipPlans', 'contacts', 'contactgroups', 'affiliates'));
+    }
+
+    public function contactsByUser($userId)
+    {
+        $contacts = Contact::getByUser($userId);
+        $contactgroups = ContactGroup::getByUser($userId);
+        $affiliates = Affiliate::getByUser($userId);
+
+        // Se quiser, também pode passar o usuário para mostrar nome, etc
+        $user = User::findOrFail($userId);
+
+        return view('admin.users.contacts', compact('contacts', 'user', 'contactgroups', 'affiliates'));
+    }
+    
 }

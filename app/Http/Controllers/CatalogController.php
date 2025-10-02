@@ -133,7 +133,7 @@ class CatalogController extends Controller
         $catalog = Catalog::find($id);
 
         if (!$catalog) {
-            Log::warning('Catalog não encontrado para edição', ['id' => $id]);
+            Log::warning('Catalog not found for edition', ['id' => $id]);
             abort(404, 'Catalog not found.');
         }
 

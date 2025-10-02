@@ -330,7 +330,16 @@
                                 @endforeach
                             </div>
                         </div>
-                         <textarea class="form-control wide-input @error('tags') is-invalid @enderror" id="tags_textarea" name="tags_text" placeholder="Ex: tags" autocomplete="off" style="cursor: default" readonly>{{ old('tags', $info[0]['tags'] ?? '') }}</textarea>
+
+                        <!-- Div que exibirá as tags selecionadas com botão de remover -->
+                        
+
+                        <div class="form-control wide-input @error('tags') is-invalid @enderror" id="tags_textarea" name="tags_text" placeholder="Ex: tags" autocomplete="off" style="cursor: default" readonly>
+                            <div id="tagsContainer" class="d-flex flex-wrap gap-2 mt-2"></div>
+                        </div>
+
+                         <!-- Hidden input para envio -->
+                        <input type="hidden" id="hiddenTags" name="tags_text" value="{{ old('tags', $info[0]['tags'] ?? '') }}">
                     </div>
 
                     <div class="row">
@@ -432,46 +441,67 @@
 
     const selectBox = document.getElementById('selectBox');
     const checkboxes = document.getElementById('checkboxes');
-    const textarea = document.getElementById('tags_textarea');
+    const tagsContainer = document.getElementById('tagsContainer');
+    const hiddenTags = document.getElementById('hiddenTags');
 
-    // Recuperar tags existentes do catálogo
-    let selectedTags = [];
-    const existingTags = textarea.value ? textarea.value.split(',').map(t => t.trim()) : [];
+    // Inicializar selectedTags com valores existentes
+    let selectedTags = hiddenTags.value ? hiddenTags.value.split(',').map(t => t.trim()) : [];
 
-    // Marcar checkboxes correspondentes e popular selectedTags
+    // Função para renderizar as tags dentro do container
+    function renderTags() {
+        tagsContainer.innerHTML = '';
+        selectedTags.forEach(tag => {
+            const tagEl = document.createElement('div');
+            tagEl.className = 'badge bg-primary d-flex align-items-center gap-1';
+            tagEl.innerHTML = `
+                ${tag} <button type="button" class="btn-close btn-close-white btn-sm"></button>
+            `;
+            // Remover tag ao clicar no X
+            tagEl.querySelector('button').addEventListener('click', () => {
+                selectedTags = selectedTags.filter(t => t !== tag);
+                hiddenTags.value = selectedTags.join(', ');
+                // Desmarca checkbox correspondente
+                checkboxes.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+                    if(cb.value === tag) cb.checked = false;
+                });
+                renderTags();
+            });
+            tagsContainer.appendChild(tagEl);
+        });
+    }
+
+    // Inicializar checkboxes de acordo com selectedTags
     checkboxes.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
-        if (existingTags.includes(checkbox.value)) {
+        if (selectedTags.includes(checkbox.value)) {
             checkbox.checked = true;
-            selectedTags.push(checkbox.value);
         }
 
-        // Listener para atualizar selectedTags quando o usuário marcar/desmarcar
         checkbox.addEventListener('change', (e) => {
             const value = e.target.value;
             if (e.target.checked) {
-                selectedTags.push(value);
+                if (!selectedTags.includes(value)) selectedTags.push(value);
             } else {
                 selectedTags = selectedTags.filter(tag => tag !== value);
             }
-            textarea.value = selectedTags.join(', ');
+            hiddenTags.value = selectedTags.join(', ');
+            renderTags();
         });
     });
 
-    // Mostrar/ocultar lista de checkboxes ao clicar no selectBox
+    // Mostrar/ocultar checkboxes ao clicar no selectBox
     selectBox.addEventListener('click', () => {
         checkboxes.style.display = checkboxes.style.display === 'none' ? 'block' : 'none';
     });
 
-    // Fechar lista ao clicar fora
+    // Fechar checkboxes ao clicar fora
     document.addEventListener('click', (e) => {
         if (!selectBox.contains(e.target) && !checkboxes.contains(e.target)) {
             checkboxes.style.display = 'none';
         }
     });
 
-    // Inicializa textarea com os valores existentes
-    textarea.value = selectedTags.join(', ');
-
+    // Renderizar tags iniciais
+    renderTags();
 
 
 </script>
