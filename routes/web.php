@@ -74,8 +74,7 @@ Route::prefix('admin')->group(function () {
         Route::get('users/{id}/auditLogs', [UserController::class, 'auditLogsView'])->name('users.auditLogs');
         Route::resource('users', UserController::class)->except(['index']);
         Route::get('admin/users/{user:name}/edit', [UserController::class, 'edit']);
-        Route::get('users/{userId}/contacts', [UserController::class, 'contactsByUser'])
-            ->name('users.contacts');
+        Route::get('users/{userId}/contacts', [UserController::class, 'contactsByUser'])->name('users.contacts');
 
         Route::post('/logout', [AdminLoginController::class, 'logout'])->name('logout');
 
@@ -96,7 +95,6 @@ Route::prefix('admin')->group(function () {
         Route::get('journal_type/activate/{id}', [VideoTypeController::class, 'activate'])->name('videoTypes.activate');
         Route::get('journal_type/delete/{id}', [VideoTypeController::class, 'destroy'])->name('videoTypes.destroy');
 
-
         // Journal Categories
         Route::resource('journal_categories', CategoryController::class)->except(['index']);
         Route::get('journal_categories', [CategoryController::class, 'index'])->name('journalCategories.list');
@@ -106,54 +104,41 @@ Route::prefix('admin')->group(function () {
         Route::get('journal_category/activate/{id}', [CategoryController::class, 'activate'])->name('journalCategories.activate');
         Route::get('journal_category/delete/{id}', [CategoryController::class, 'destroy'])->name('journalCategories.destroy');
 
-    
-        // Catalog routes
-    Route::prefix('catalog')->group(function () {
-    
-    // CRUD padrão
-    Route::get('/', [CatalogController::class, 'index'])->name('catalog.index');         // Listar
-    Route::get('/add', [CatalogController::class, 'add'])->name('catalog.add');           // Formulário de adicionar
-    Route::post('/', [CatalogController::class, 'store'])->name('catalog.store');         // Salvar novo
-    Route::get('/edit/{id}', [CatalogController::class, 'edit'])->name('catalog.edit');   // Editar
-    Route::put('/{id}', [CatalogController::class, 'update'])->name('catalog.update');    // Atualizar
-    Route::get('/delete/{id}', [CatalogController::class, 'destroy'])->name('catalog.delete'); // Deletar
+        Route::prefix('catalog')->group(function () {
+            Route::get('/', [CatalogController::class, 'index'])->name('catalog.index');
+            Route::get('/add', [CatalogController::class, 'add'])->name('catalog.add');
+            Route::post('/', [CatalogController::class, 'store'])->name('catalog.store');
+            Route::get('/edit/{id}', [CatalogController::class, 'edit'])->name('catalog.edit');
+            Route::put('/{id}', [CatalogController::class, 'update'])->name('catalog.update');
+            Route::get('/delete/{id}', [CatalogController::class, 'destroy'])->name('catalog.delete');
 
-    // Métodos extras
-    Route::get('/activate/{id}', [CatalogController::class, 'activate'])->name('catalog.activate');
-    Route::get('/deactivate/{id}', [CatalogController::class, 'deactivate'])->name('catalog.deactivate');
-    });
+            Route::get('/activate/{id}', [CatalogController::class, 'activate'])->name('catalog.activate');
+            Route::get('/deactivate/{id}', [CatalogController::class, 'deactivate'])->name('catalog.deactivate');
+        });
 
+        Route::prefix('tags')->group(function () {
+            Route::get('/', [TagController::class, 'index'])->name('tag.index');
+            Route::get('/add', [TagController::class, 'add'])->name('tag.add');
+            Route::post('/', [TagController::class, 'store'])->name('tag.store');
+            Route::get('/edit/{id}', [TagController::class, 'edit'])->name('tag.edit');
+            Route::put('/{id}', [TagController::class, 'update'])->name('tag.update');
+            Route::get('/delete/{id}', [TagController::class, 'destroy'])->name('tag.delete');
 
+            Route::get('admin/tags/deactivate/{id}', [TagController::class, 'deactivate'])->name('tag.deactivate');
+            Route::get('admin/tags/activate/{id}', [TagController::class, 'activate'])->name('tag.activate');
+        });
 
-    // Tag routes
-    Route::prefix('tags')->group(function () {
-    
-    // CRUD padrão
-    Route::get('/', [TagController::class, 'index'])->name('tag.index');         // Listar
-    Route::get('/add', [TagController::class, 'add'])->name('tag.add');           // Formulário de adicionar
-    Route::post('/', [TagController::class, 'store'])->name('tag.store');         // Salvar novo
-    Route::get('/edit/{id}', [TagController::class, 'edit'])->name('tag.edit');   // Editar
-    Route::put('/{id}', [TagController::class, 'update'])->name('tag.update');    // Atualizar
-    Route::get('/delete/{id}', [TagController::class, 'destroy'])->name('tag.delete'); // Deletar
+        Route::prefix('memberships')->group(function () {
+            Route::get('/', [MembershipPlanController::class, 'index'])->name('membership.index');
+            Route::get('/add', [MembershipPlanController::class, 'add'])->name('membership.add');
+            Route::post('/', [MembershipPlanController::class, 'store'])->name('membership.store');
+            Route::get('/edit/{id}', [MembershipPlanController::class, 'show'])->name('membership.edit');
+            Route::put('/{id}', [MembershipPlanController::class, 'update'])->name('membership.update');
+            Route::get('/delete/{id}', [MembershipPlanController::class, 'destroy'])->name('membership.delete');
 
-    Route::get('admin/tags/deactivate/{id}', [TagController::class, 'deactivate'])->name('tag.deactivate');
-    Route::get('admin/tags/activate/{id}', [TagController::class, 'activate'])->name('tag.activate');
-    });
-
-    // Memberships routes
-    Route::prefix('memberships')->group(function () {
-    
-    // CRUD padrão
-    Route::get('/', [MembershipPlanController::class, 'index'])->name('membership.index');         // Listar
-    Route::get('/add', [MembershipPlanController::class, 'add'])->name('membership.add');           // Formulário de adicionar
-    Route::post('/', [MembershipPlanController::class, 'store'])->name('membership.store');         // Salvar novo
-    Route::get('/edit/{id}', [MembershipPlanController::class, 'edit'])->name('membership.edit');   // Editar
-    Route::put('/{id}', [MembershipPlanController::class, 'update'])->name('membership.update');    // Atualizar
-    Route::get('/delete/{id}', [MembershipPlanController::class, 'destroy'])->name('membership.delete'); // Deletar
-
-    Route::get('admin/membershipss/deactivate/{id}', [MembershipPlanController::class, 'deactivate'])->name('membership.deactivate');
-    Route::get('admin/membershipss/activate/{id}', [MembershipPlanController::class, 'activate'])->name('membership.activate');
-    });
+            Route::get('admin/memberships/deactivate/{id}', [MembershipPlanController::class, 'deactivate'])->name('membership.deactivate');
+            Route::get('admin/memberships/activate/{id}', [MembershipPlanController::class, 'activate'])->name('membership.activate');
+        });
 });
 
 // // Route::get('/admin/login', [AdminLoginController::class, 'showLoginForm'])->name('admin.login');

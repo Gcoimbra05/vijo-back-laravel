@@ -6,7 +6,6 @@ use App\Models\Catalog;
 use App\Models\VideoRequest;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
-use Illuminate\Support\Facades\Log;
 use App\Models\VideoType;
 use App\Models\Category;
 use App\Models\Tag;
@@ -17,20 +16,12 @@ class CatalogController extends Controller
 
     public function __construct(?Catalog $catalog = null)
     {
-        Log::info('CatalogController::__construct chamado');
         $this->catalog = $catalog;
     }
 
     public function index(Request $request)
     {
-          // Filtro por search (title)
-        if ($request->has('search') && !empty($request->search)) {
-            $query->where('title', 'like', '%' . $request->search . '%');
-        }
-
-        Log::info('CatalogController@index chamado');
-        $catalogs = Catalog::orderBy('admin_order', 'asc')->get();
-        Log::info('Catalogs encontrados', ['count' => $catalogs->count()]);
+        $catalogs = Catalog::with(['category'])->where('is_deleted', 0)->orderBy('admin_order', 'asc')->get();
 
         if (request()->wantsJson()) {
             return response()->json([
@@ -52,13 +43,11 @@ class CatalogController extends Controller
 
     public function add()
     {
-        Log::info('CatalogController@create chamado');
-        $catalog = null;
         $pageTitle = "Add Catalog";
         $nav_bar = "catalogs";
         $videoTypes = VideoType::all();
         $categories = Category::all();
-        $catalogs   = Catalog::all();;
+        $catalogs   = Catalog::all();
         $breadcrumbs = [
             ['label' => 'Catalogs', 'url' => route('catalog.index')],
             ['label' => 'Add Catalog', 'url' => null],
@@ -78,9 +67,8 @@ class CatalogController extends Controller
         ]);
     }
 
-    public function store(Request $request){
-        Log::info('CatalogController@store chamado', ['request' => $request->all()]);
-
+    public function store(Request $request)
+    {
         $request->validate([
             'title' => 'required|string|max:100',
             'description' => 'nullable|string',
@@ -96,11 +84,10 @@ class CatalogController extends Controller
             'video_type_id' => 'required|integer',
         ]);
 
-
         $catalog = Catalog::create([
             'title' => $request->title,
             'description' => $request->description,
-            'tags' => $request->tags_text, // salva o conteúdo do textarea na coluna tags
+            'tags' => $request->tags_text,
             'min_record_time' => $request->min_record_time,
             'max_record_time' => $request->max_record_time,
             'emoji' => $request->emoji,
@@ -111,9 +98,6 @@ class CatalogController extends Controller
             'is_premium' => $request->is_premium,
             'video_type_id' => $request->video_type_id,
         ]);
-
-
-        Log::info('Catalog criado', ['id' => $catalog->id]);
 
         if ($request->wantsJson()) {
             return response()->json([
@@ -126,15 +110,11 @@ class CatalogController extends Controller
         return redirect()->route('catalog.index')->with('success', 'Catalog created successfully.');
     }
 
-
     public function edit($id)
     {
-        Log::info('CatalogController@edit chamado', ['id' => $id]);
         $catalog = Catalog::find($id);
-
         if (!$catalog) {
-            Log::warning('Catalog not found for edition', ['id' => $id]);
-            abort(404, 'Catalog not found.');
+            return redirect()->route('catalog.index')->with('error', 'Catalog not found.');
         }
 
         $pageTitle = "Edit Catalog";
@@ -142,9 +122,7 @@ class CatalogController extends Controller
 
         $videoTypes = VideoType::all();
         $categories = Category::all();
-        $catalogs   = Catalog::all();
 
-        $catalog = Catalog::findOrFail($id);
         $catalogs = Catalog::with(['videoType', 'category', 'parentCatalog'])->get();
         $breadcrumbs = [
             ['label' => 'Catalogs', 'url' => route('catalog.index')],
@@ -167,12 +145,12 @@ class CatalogController extends Controller
 
     }
 
-    public function update(Request $request, $id){
-        // Validação
+    public function update(Request $request, $id)
+    {
         $request->validate([
             'title' => 'required|string|max:100',
             'description' => 'nullable|string',
-            'tags_text' => 'nullable|string|max:255', // use tags_text aqui
+            'tags_text' => 'nullable|string|max:255',
             'min_record_time' => 'required|integer|min:1',
             'max_record_time' => 'required|integer|max:30',
             'emoji' => 'nullable|string|max:100',
@@ -184,10 +162,8 @@ class CatalogController extends Controller
             'video_type_id' => 'required|integer',
         ]);
 
-        // Buscar catálogo
         $catalog = Catalog::findOrFail($id);
 
-        // Atualizar campos normais
         $catalog->update([
             'title' => $request->title,
             'description' => $request->description,
@@ -203,41 +179,36 @@ class CatalogController extends Controller
             'tags' => $request->tags_text,
         ]);
 
-
-        // Redirecionar com mensagem de sucesso
         return redirect()->route('catalog.index')->with('success', 'Catalog updated successfully.');
     }
 
 
-    public function activate($id){
+    public function activate($id)
+    {
         $catalog = Catalog::findOrFail($id);
-        $catalog->status = 1; // Ativo
+        $catalog->status = 1;
         $catalog->save();
 
         return redirect()->route('catalog.index')->with('success', 'Catalog activated successfully.');
     }
 
-    public function deactivate($id){
+    public function deactivate($id)
+    {
         $catalog = Catalog::findOrFail($id);
-        $catalog->status = 0; // Inativo
+        $catalog->status = 0;
         $catalog->save();
 
         return redirect()->route('catalog.index')->with('success', 'Catalog deactivated successfully.');
     }
 
-    public function destroy($id){
-        Log::info('CatalogController@destroy chamado', ['id' => $id]);
-
+    public function destroy($id)
+    {
         $catalog = Catalog::find($id);
-
         if (!$catalog) {
-            Log::warning('Catalog não encontrado para deletar', ['id' => $id]);
             return redirect()->route('catalog.index')->with('error', 'Catalog not found.');
         }
 
         $catalog->delete();
-
-        Log::info('Catalog deletado', ['id' => $id]);
 
         return redirect()->route('catalog.index')->with('success', 'Catalog deleted successfully.');
     }

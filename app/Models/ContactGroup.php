@@ -19,13 +19,15 @@ class ContactGroup extends Model implements AuditableContract
     protected $fillable = [
         'user_id',
         'name',
+        'created_at',
+        'updated_at',
         'status'
     ];
 
     public $timestamps = true;
+
     const CREATED_AT = 'created_at';
     const UPDATED_AT = 'updated_at';
-
 
     // Relationships
     public function contacts()

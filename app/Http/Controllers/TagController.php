@@ -6,62 +6,44 @@ use App\Models\Tag;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Log;
-
 use App\Models\User;
 use App\Models\Category;
-
 
 class TagController extends Controller
 {
     public function index()
     {
-    if (request()->wantsJson()) {
         $tags = Tag::with(['category', 'creator'])->get();
-        return response()->json([
-            'success' => true,
-            'message' => 'Tags retrieved successfully.',
-            'data' => $tags,
-        ]);
-    }
+        if (request()->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Tags retrieved successfully.',
+                'data' => $tags,
+            ]);
+        }
 
-    $tags = Tag::with(['category', 'creator'])->get();
+        $breadcrumbs = [
+            ['label' => 'Tags', 'url' => null],
+        ];
+        $nav_bar = 'tags';
+        $pageTitle = 'Tags';
 
-    $breadcrumbs = [
-        ['label' => 'Tags', 'url' => null],
-    ];
-
-    $nav_bar = 'tags';
-    $pageTitle = 'Tags';
-
-    return view('admin.tags.list', compact('tags', 'pageTitle', 'nav_bar', 'breadcrumbs'));
+        return view('admin.tags.list', compact('tags', 'pageTitle', 'nav_bar', 'breadcrumbs'));
     }
 
     public function add()
     {
-        Log::info('TagController@create chamado');
         $pageTitle = "Add Tag";
         $nav_bar = "tags";
 
-          // Pega todos os usuários e categorias
         $users = User::all();
-        $selectedUserId = old('created_by_user', $info[0]->created_by_user ?? null);
         $categories = Category::all();
-
-        // Pega os valores do enum 'type' da tabela tags
-        $typeColumn = \DB::select("SHOW COLUMNS FROM tags LIKE 'type'");
-        $types = [];
-
-        if (!empty($typeColumn)) {
-            // $typeColumn[0]->Type contém algo como: enum('catalog','journalTag','custom')
-            $types = explode("','", preg_replace("/^enum\('(.*)'\)$/", "$1", $typeColumn[0]->Type));
-        }
+        $types = Tag::$type;
 
         $breadcrumbs = [
             ['label' => 'tags', 'url' => route('tag.index')],
             ['label' => 'Add Tags', 'url' => null],
         ];
-          
 
         return view('admin.tags.form', [
             'action' => 'Add',
@@ -107,10 +89,16 @@ class TagController extends Controller
         ]);
 
         $tag = Tag::create($request->all());
+        if ($request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Tag created successfully.',
+                'data' => $tag->load(['category', 'creator']),
+            ], 201);
+        }
 
-        // Redireciona para a lista de tags
         return redirect()->route('tag.index')
-        ->with('success', 'Tag created successfully.');
+            ->with('success', 'Tag created successfully.');
     }
 
     public function update(Request $request, $id)
@@ -134,26 +122,40 @@ class TagController extends Controller
         ]);
 
         $tag->update($request->all());
-         // Redireciona para a lista de tags
+        if ($request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Tag updated successfully.',
+                'data' => $tag->load(['category', 'creator']),
+            ]);
+        }
+
         return redirect()->route('tag.index')
-        ->with('success', 'Tag update successfully.');
+            ->with('success', 'Tag update successfully.');
     }
 
-    public function destroy($id){
-    Log::info('TagController@destroy chamado', ['id' => $id]);
+    public function destroy(Request $request, $id)
+    {
+        $tag = Tag::find($id);
+        if (!$tag) {
+            return $request->wantsJson()
+                ? response()->json([
+                    'success' => false,
+                    'message' => 'Tag not found.',
+                    'data' => null,
+                ], 404)
+                : redirect()->route('tag.index')->with('error', 'Tag not found.');
+        }
 
-    $tag = Tag::find($id);
+        $tag->delete();
 
-    if (!$tag) {
-        Log::warning('Tag não encontrado para deletar', ['id' => $id]);
-        return redirect()->route('tag.index')->with('error', 'Catalog not found.');
-    }
-
-    $tag->delete();
-
-    Log::info('Tag deletado', ['id' => $id]);
-
-    return redirect()->route('tag.index')->with('success', 'Tag deleted successfully.');
+        return $request->wantsJson()
+            ? response()->json([
+                'success' => true,
+                'message' => 'Tag deleted successfully.',
+                'data' => null,
+            ])
+            : redirect()->route('tag.index')->with('success', 'Tag deleted successfully.');
     }
 
     public static function handleProvidedTags($tags, $categoryId = null)
@@ -180,7 +182,6 @@ class TagController extends Controller
             $tagTitle = isset($tagParts[1]) ? $tagParts[1] : null;
 
             if ($tagId == 0 && $tagTitle) {
-                // Verifica se já existe tag custom com mesmo nome, categoria e usuário
                 $existingTag = Tag::where('category_id', $categoryId)
                     ->where('name', $tagTitle)
                     ->where('type', 'custom')
@@ -237,11 +238,17 @@ class TagController extends Controller
         return $catalogTags;
     }
 
-    public function edit($id)
+    public function edit(Request $request, $id)
     {
         $tag = Tag::find($id);
         if (!$tag) {
-            return redirect()->route('tag.index')->with('error', 'Tag not found.');
+            return $request->wantsJson()
+                ? response()->json([
+                    'success' => false,
+                    'message' => 'Tag not found.',
+                    'data' => null,
+                ], 404)
+                : redirect()->route('tag.index')->with('error', 'Tag not found.');
         }
 
         $pageTitle = "Edit Tag";
@@ -249,12 +256,7 @@ class TagController extends Controller
 
         $users = User::all();
         $categories = Category::all();
-        $typeColumn = \DB::select("SHOW COLUMNS FROM tags LIKE 'type'");
-        $types = [];
-
-        if (!empty($typeColumn)) {
-            $types = explode("','", preg_replace("/^enum\('(.*)'\)$/", "$1", $typeColumn[0]->Type));
-        }
+        $types = Tag::$type;
 
         $breadcrumbs = [
             ['label' => 'Tags', 'url' => route('tag.index')],
@@ -277,27 +279,27 @@ class TagController extends Controller
     }
 
 
-    public function deactivate($id){
+    public function deactivate($id)
+    {
         $tag = Tag::find($id);
-
         if (!$tag) {
             return redirect()->route('tag.index')->with('error', 'Tag not found.');
         }
 
-        $tag->status = 0; // 0 = desativada
+        $tag->status = 0;
         $tag->save();
 
         return redirect()->route('tag.index')->with('success', 'Tag deactivated successfully.');
     }
 
-    public function activate($id){
+    public function activate($id)
+    {
         $tag = Tag::find($id);
-
         if (!$tag) {
             return redirect()->route('tag.index')->with('error', 'Tag not found.');
         }
 
-        $tag->status = 1; // 1 = ativada
+        $tag->status = 1;
         $tag->save();
 
         return redirect()->route('tag.index')->with('success', 'Tag activated successfully.');

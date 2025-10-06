@@ -204,22 +204,22 @@ class UserController extends Controller
 
     public function update(Request $request, $id)
     {
-        Log::info('Update chamado para o usuário', ['id' => $id, 'request' => $request->all()]);
-
-        $user = User::findOrFail($id);
+        $user = User::find($id);
+        if (!$user) {
+            return response()->json(['message' => 'User not found'], 404);
+        }
 
         $request->validate([
-            'first_name' => 'required|string|max:100',
-            'last_name' => 'required|string|max:100',
-            'email' => 'required|string|email|max:255|unique:users,email,' . $user->id,
-            'password' => 'nullable|string|min:8',
+            'first_name' => 'sometimes|required|string|max:100',
+            'last_name' => 'sometimes|required|string|max:100',
+            'email' => 'sometimes|required|string|email|max:255|unique:users,email,' . $user->id,
+            'password' => 'sometimes|required|string|min:8',
             'country_code' => 'nullable|string|max:10',
             'mobile' => 'nullable|string|max:20',
-            'timezone' => 'nullable|string|max:50',
-            'status' => 'required|boolean',
-            'is_verified' => 'required|boolean',
-            'is_admin' => 'required|boolean',
-            'guided_tours' => 'required|boolean',
+            'status' => 'sometimes|boolean',
+            'is_verified' => 'sometimes|boolean',
+            'is_admin' => 'sometimes|boolean',
+            'guided_tours' => 'sometimes|boolean',
             'plan_id' => 'nullable|exists:membership_plans,id',
             'plan_start_date' => 'nullable|date',
             'email_verified_at' => 'nullable|date',
@@ -232,7 +232,6 @@ class UserController extends Controller
             'two_factor_enabled' => 'sometimes|boolean',
         ]);
 
-        // Campos comuns
         $user->first_name = $request->first_name;
         $user->last_name = $request->last_name;
         $user->email = $request->email;
@@ -248,23 +247,21 @@ class UserController extends Controller
         $user->email_verified_at = $request->email_verified_at;
         $user->last_login_date = $request->last_login_date;
         $user->description = $request->description;
-
-        // Checkboxes
         $user->notifications = $request->notifications ?? 0;
         $user->reminders = $request->reminders ?? 0;
         $user->optInNewsUpdates = $request->optInNewsUpdates ?? 0;
         $user->two_factor_enabled = $request->two_factor_enabled ?? 0;
 
-        // Senha (apenas se preenchida)
         if ($request->filled('password')) {
             $user->password = bcrypt($request->password);
         }
 
         $user->save();
 
-        return redirect('admin/users')->with('success', 'User updated successfully.');
+        return request()->wantsJson()
+            ? response()->json(['message' => 'User updated successfully.'])
+            : redirect('admin/users')->with('success', 'User updated successfully.');
     }
-
 
     public function destroy($id)
     {
@@ -720,11 +717,9 @@ class UserController extends Controller
 
         return view('admin.users.journal_history', compact('user', 'journalHistory', 'nav_bar', 'breadcrumbs'));
     }
-    
+
     public function edit(User $user)
     {
-        Log::info('UserController@edit chamado', ['id' => $user->id]);
-
         $pageTitle = "Edit Person";
         $nav_bar = "Users";
         $breadcrumbs = [
@@ -737,11 +732,11 @@ class UserController extends Controller
         $contactgroups = ContactGroup::getByUser($user->id);
         $affiliates = Affiliate::getByUser($user->id);
 
-        // Timezones agrupados por país
         $timezonesByCountry = [];
         foreach (array_keys($countries) as $code) {
             $timezonesByCountry[$code] = \DateTimeZone::listIdentifiers(\DateTimeZone::PER_COUNTRY, $code);
         }
+
         return view('admin.users.edit', compact('user', 'pageTitle', 'nav_bar', 'breadcrumbs', 'countries', 'timezonesByCountry', 'membershipPlans', 'contacts', 'contactgroups', 'affiliates'));
     }
 
@@ -751,12 +746,11 @@ class UserController extends Controller
         $contactgroups = ContactGroup::getByUser($userId);
         $affiliates = Affiliate::getByUser($userId);
 
-        // Se quiser, também pode passar o usuário para mostrar nome, etc
         $user = User::findOrFail($userId);
 
         return view('admin.users.contacts', compact('contacts', 'user', 'contactgroups', 'affiliates'));
     }
-    
+
     public function handleVijoOfDay($timezone = 'America/New_York')
     {
         $catalogs = Catalog::where('status', 1)

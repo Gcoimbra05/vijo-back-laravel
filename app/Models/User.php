@@ -14,33 +14,25 @@ class User extends Authenticatable implements AuditableContract
 
     protected $fillable = [
         'first_name',
-        'last_name', 
-        'email', 
-        'mobile',  
-
-        'country_code', 
-        'timezone', 
-        'email_verified_at', 
-        'last_login_date', 
-        
-
-        'status', 
-        'is_verified', 
-        'is_admin', 
-
-        
-        'notifications', 
-        'guided_tours', 
-
-        'plan_id',  
-        'plan_start_date', 
-
-        'password', 
-        'refresh_token', 
-        'remember_token', 
-        
-        'notifications', 
-        'reminders', 
+        'last_name',
+        'email',
+        'mobile',
+        'country_code',
+        'timezone',
+        'email_verified_at',
+        'last_login_date',
+        'status',
+        'is_verified',
+        'is_admin',
+        'notifications',
+        'guided_tours',
+        'plan_id',
+        'plan_start_date',
+        'password',
+        'refresh_token',
+        'remember_token',
+        'notifications',
+        'reminders',
         'optInNewsUpdates',
         'description',
     ];

@@ -18,13 +18,17 @@ class Tag extends Model
         'status',
     ];
 
-    // Relação com a categoria
+    public static $type = [
+        'catalog',
+        'journalTag',
+        'custom'
+    ];
+
     public function category()
     {
-        return $this->belongsTo(Category::class);
+        return $this->belongsTo(Category::class, 'category_id');
     }
 
-    // Relação com o usuário que criou
     public function creator()
     {
         return $this->belongsTo(User::class, 'created_by_user');
