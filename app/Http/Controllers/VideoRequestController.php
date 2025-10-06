@@ -215,6 +215,9 @@ class VideoRequestController extends Controller
             $fullTmpPath = storage_path('app/' . $tmpPath);
             Log::info('File stored at: ' . $fullTmpPath);
 
+            $quickGoalController = new QuickGoalController();
+            $quickGoalController->incrementRecorded($data['user_id']);
+
             ProcessVideoUpload::dispatch(
                 $videoRequest->id,
                 $fullTmpPath,
@@ -251,6 +254,10 @@ class VideoRequestController extends Controller
             $tmpPath = $file->storeAs('temp', $filename, 'local');
             $fullTmpPath = storage_path('app/' . $tmpPath);
             Log::info('File stored at: ' . $fullTmpPath);
+
+            $quickGoalController = new QuickGoalController();
+            $quickGoalController->incrementRecorded($videoRequest->user_id);
+
             ProcessVideoUpload::dispatch(
                 $videoRequest->id,
                 $fullTmpPath,
@@ -280,6 +287,7 @@ class VideoRequestController extends Controller
             'note'        => 'required|string',
             'recordUrl'   => 'required|string',
         ]);
+
         if (empty($request->input('contact_ids')) && empty($request->input('group_ids'))) {
             return response()->json([
                 'success' => false,
@@ -287,6 +295,7 @@ class VideoRequestController extends Controller
                 'results' => null
             ], 422);
         }
+
         $user = Auth::user();
         $catalogId = $request->input('catalog_id');
         $note = $request->input('note');
@@ -391,9 +400,8 @@ class VideoRequestController extends Controller
                 }
 
                 if (!empty($videoRequest->ref_country_code) && !empty($videoRequest->ref_mobile)) {
-                    $fullPhoneNumber = $videoRequest->ref_country_code . $videoRequest->ref_mobile;
-                    $twilio = new TwilioService();
-                    $twilio->sendSms($fullPhoneNumber, "You have received a new video request. Check it out: {$recordUrl}");
+                    $twoFactorController = new TwoFactorAuthController();
+                    $twoFactorController->sendSms($videoRequest->ref_country_code, $videoRequest->ref_mobile, "You have received a new video request. Check it out: {$recordUrl}");
                 }
             }
         }
@@ -765,6 +773,8 @@ class VideoRequestController extends Controller
 
         $userTags = TagController::getUserTags($catalog->category_id, $userId, false);
 
+        $suggestedCatalogs = (new CatalogController($catalog))->getSuggestedCatalogs($userId, 1);
+
         return response()->json([
             'status' => true,
             'message' => '',
@@ -774,11 +784,12 @@ class VideoRequestController extends Controller
                 'request_id' => $videoRequest->id,
                 'record_date' => now()->toDateString(),
                 'video_types' => $videoType,
-                'video_type_id' => $catalog->video_type_id,
+                'video_type_id' => $catalog->video_type_id ?? null,
                 'min_record_time' => (string)$minRecordTime,
                 'record_time' => (string)$recordTime,
                 'questions' => $questions,
                 'userTags' => $userTags,
+                'next_vijo' => $suggestedCatalogs,
             ]
         ]);
     }
@@ -844,6 +855,7 @@ class VideoRequestController extends Controller
 
             return [
                 'catalog_id'      => (string)$catalog->id,
+                'category_name'   => $catalog->category ? $catalog->category->name : '',
                 'title'           => $catalog->title,
                 'description'     => $catalog->description,
                 'mediaId'         => (string)($mediaId ?? 0),
@@ -872,6 +884,7 @@ class VideoRequestController extends Controller
         $requestId = $request->input('request_id');
         $journalName = $request->input('journal_name', '');
         $tags = $request->input('journal_tags', []);
+        $isPrivate = $request->input('make_journal_private', 0);
 
         $categoryId = null;
         $videoRequest = VideoRequest::find($requestId);
@@ -891,6 +904,7 @@ class VideoRequestController extends Controller
 
         $videoRequest->title = $journalName;
         $videoRequest->tags = implode(',', $tags);
+        $videoRequest->is_private = $isPrivate ? 1 : 0;
         $videoRequest->save();
         Log::info('Video request updated with title: ' . $journalName . ' and tags: ' . implode(',', $tags));
 
@@ -918,19 +932,24 @@ class VideoRequestController extends Controller
             ->orderBy('created_at', 'desc')
             ->get();
 
-        $requestData = $allRequests->map(function($req) {
+        $requestData = $allRequests->map(function($req) use ($userId) {
             $video = $req->latestVideo;
             $catalog = $req->catalog;
             $user = $req->user;
             $videoTags = $req->tags ? explode(',', $req->tags) : [];
             $tags = Tag::whereIn('id', $videoTags)->get(['id', 'name'])->toArray();
 
+            $type = 'request';
+            if ($req->type === 'share') {
+                $type = ($userId == $req->ref_user_id) ? 'shared_with_me' : 'shared_by_me';
+            }
+
             return [
                 'id'                  => $req->id,
                 'user_id'             => $req->user_id,
                 'journal_title'       => $req->title ?? ($catalog->title ?? ''),
                 'ref_user_id'         => $req->ref_user_id ?? 0,
-                'journal_type'        => $req->type ?? 'daily',
+                'journal_type'        => $type,
                 'recommendation_id'   => $req->recommendation_id ?? '',
                 'category_name'       => $catalog && $catalog->category ? $catalog->category->name : '',
                 'is_private'          => $req->is_private ?? 0,
@@ -941,7 +960,8 @@ class VideoRequestController extends Controller
                 'recordedBy'          => $req->user_id == $req->ref_user_id ? 'self' : 'other',
                 'parent_catalog_id'   => $catalog->parent_catalog_id ?? 0,
                 'cp_id'               => $catalog->cp_id ?? 0,
-                'created_at'          => $req->created_at ? date('M d, Y', strtotime($req->created_at)) : '',
+                'created_at'          => $req->created_at ? date('M d, Y H:i', strtotime($req->created_at)) : '',
+                'date'                => $req->created_at ? date('M d, Y g:iA', strtotime($req->created_at)) : '',
                 'mediaId'             => $video ? $video->id : 0,
                 'catalogEmoji'        => $catalog->emoji ?? '',
                 'user_name'           => $user ? ($user->name ?? trim(($user->first_name ?? '') . ' ' . ($user->last_name ?? ''))) : '',
@@ -1017,7 +1037,7 @@ class VideoRequestController extends Controller
         $category = $catalog ? $catalog->category : null;
         $video = $videoRequest->latestVideo;
 
-        $transcription = Transcript::select('id', 'text', 'text_w_segment_emotions')
+        $transcription = Transcript::select('id', 'text')
                                 ->where('request_id', $id)->first();
 
         $transcriptions = null;
@@ -1036,7 +1056,7 @@ class VideoRequestController extends Controller
         }
 
         try {
-            $formattedEmotions = $this->emotionService->getFormattedEmotions($videoRequest->id, $userId);
+            $formattedEmotions = $this->emotionService->getCatalogSpecificEmotions($videoRequest->id, $userId);
         } catch(Exception $e) {
             Log::error("Formatted emotions not found: " . $e->getTraceAsString());
             $formattedEmotions = [];
@@ -1074,12 +1094,12 @@ class VideoRequestController extends Controller
         try {
             $allScores = $this->credScoreService->getCredScore($videoRequest->id);
             $credScore = round($allScores['credScore'] ?? 0);
-            $percievedScore = $allScores['percievedScore'] ?? 0;
+            $perceivedScore = $allScores['perceivedScore'] ?? 0;
             $measuredScore = $allScores['measuredScore'] ?? 0;
         } catch(CredScoreNotFoundException $e) {
             Log::debug("CredScoreNotFound: " . $e->getTraceAsString());
             $credScore = 0;
-            $percievedScore = 0;
+            $perceivedScore = 0;
             $measuredScore = 0;
         }
         $isEmotionalCategory = $catalog ? in_array($catalog->category_id, [2, 3]) : true;
@@ -1092,9 +1112,9 @@ class VideoRequestController extends Controller
             'catalog_emoji'           => $catalog->emoji ?? '',
             'category_name'           => $category ? $category->name : '',
             'contacts'                => $contacts,
-            'created_at'              => $videoRequest->created_at ? $videoRequest->created_at->format('M d, Y') : '',
+            'created_at'              => $videoRequest->created_at ? $videoRequest->created_at->format('M d, Y g:iA') : '',
             'cred_score'              => $credScore ?? 75,
-            'percieved_score'         => $percievedScore ?? 0,
+            'perceived_score'         => $perceivedScore ?? 0,
             'actual_score'            => $measuredScore ?? 0,
             'emotional_insights'      => $formattedEmotions ?? [],
             'final_video_transcript'  => $staticData['final_video_transcript'],
@@ -1126,6 +1146,58 @@ class VideoRequestController extends Controller
             'message' => '',
             'results' => [
                 'journal_data' => [$data]
+            ]
+        ]);
+    }
+
+    public function getVideoResults(Request $request, $id = 0)
+    {
+        $userId = Auth::user()->id;
+
+        if ($id <= 0) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Id parameter is required',
+                'results' => null
+            ], 400);
+        }
+
+        $videoRequest = VideoRequest::with([
+            'catalog.category',
+            'latestVideo',
+            'user'
+        ])->where('id', $id)
+          ->where(function($q) use ($userId) {
+              $q->where('user_id', $userId)
+                ->orWhere('ref_user_id', $userId);
+          })
+          ->first();
+
+        if (!$videoRequest) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Journal not found or access denied.',
+                'results' => null
+            ], 404);
+        }
+        $catalog = $videoRequest->catalog;
+        $category = $catalog ? $catalog->category : null;
+
+        $suggestedCatalogs = (new CatalogController($catalog))->getSuggestedCatalogs($userId);
+
+        return response()->json([
+            'status' => true,
+            'message' => '',
+            'results' => [
+                'id'                      => $videoRequest->id,
+                'catalog_id'              => $catalog->id ?? '',
+                'catalog_message'         => $catalog->message ?? 'Checking in on your stress takes awareness and courage.',
+                'catalog_message_title'   => $catalog->message_title ?? 'Well Done!',
+                'catalog_name'            => $catalog->title ?? '',
+                'catalog_emoji'           => $catalog->emoji ?? '',
+                'category_name'           => $category ? $category->name : '',
+                'quick_goals'             => QuickGoalController::getQuickGoalInfo($userId),
+                'suggested_catalogs'      => $suggestedCatalogs,
             ]
         ]);
     }
@@ -1206,7 +1278,8 @@ class VideoRequestController extends Controller
 
         $requestIds = [];
         $skippedContacts = [];
-
+        $appUrl = config('app.url');
+        $envUrl = str_replace('.com', '.me', $appUrl);
         foreach ($phoneNumbers as $row) {
             // Do not create for the current user
             if ($user->mobile && $row['mobile'] && $user->mobile == $row['mobile']) {
@@ -1256,13 +1329,14 @@ class VideoRequestController extends Controller
             $requestIds[] = $videoRequest->id;
 
             // Notifications
-            $full_name = trim(($user->first_name ?? '') . ' ' . ($user->last_name ?? ''));
-            $url = rtrim($recordUrl, "/") . '/' . base64_encode($videoRequest->id);
+            $encodedId = base64_encode($videoRequest->id);
+            $url = $envUrl . '/journal/external-record/' . $encodedId;
+            $fullName = trim(($user->first_name ?? '') . ' ' . ($user->last_name ?? ''));
 
             // Send email
             if (!empty($row['email'])) {
                 try {
-                    Mail::to($row['email'])->send(new VideoRequestShared($videoRequest, $full_name, $url));
+                    Mail::to($row['email'])->send(new VideoRequestShared($videoRequest, $fullName, $url));
                 } catch (\Exception $e) {
                     // Log::error('Error sending email: ' . $e->getMessage());
                 }
@@ -1271,8 +1345,8 @@ class VideoRequestController extends Controller
             // Send SMS
             if (!empty($row['country_code']) && !empty($row['mobile'])) {
                 try {
-                    $twilio = new TwilioService();
-                    $twilio->sendSms('+' . $row['country_code'] . $row['mobile'], "Hello {$full_name}, you have received a new video request. Access: {$url}");
+                    $twoFactorController = new TwoFactorAuthController();
+                    $twoFactorController->sendSms($row['country_code'], $row['mobile'], "Hello {$fullName}, you have received a new video request. Access: {$url}");
                 } catch (\Exception $e) {
                     // Log::error('Error sending SMS: ' . $e->getMessage());
                 }
@@ -1292,14 +1366,9 @@ class VideoRequestController extends Controller
         ]);
     }
 
-    public function shareJournalDetails($share_id = null)
+    public function shareJournalDetails($sharedId = null)
     {
-        $userId = Auth::id();
-        if (!$userId) {
-            return response()->json(['error' => 'user not found'], 404);
-        }
-
-        if (empty($share_id)) {
+        if (empty($sharedId)) {
             return response()->json([
                 'status' => false,
                 'message' => 'Id parameter is required',
@@ -1307,8 +1376,8 @@ class VideoRequestController extends Controller
             ], 400);
         }
 
-        // Decodifica o share_id (base64)
-        // $share_id = base64_decode($share_id);
+        // Decodifica o sharedId (base64)
+        $sharedId = base64_decode($sharedId);
 
         // Busca o VideoRequest compartilhado (usando o id do video_request)
         $videoRequest = VideoRequest::with([
@@ -1317,7 +1386,7 @@ class VideoRequestController extends Controller
             'user',
             'contact',
             'group'
-        ])->find($share_id);
+        ])->find($sharedId);
 
         if (!$videoRequest) {
             return response()->json([
@@ -1334,16 +1403,16 @@ class VideoRequestController extends Controller
         $tags = !empty($tags) ? explode(',', $tags) : [];
         $tags = Tag::whereIn('id', $tags)->get(['id', 'name'])->toArray();
 
-        $transcript = Transcript::select('text')
-                        ->where('request_id', $videoRequest->id)
-                        ->first()?->text ?? '';
+        $transcription = Transcript::select('id', 'text', 'text_w_segment_emotions')
+                                ->where('request_id', $videoRequest->id)->first();
 
         $transcriptions = null;
-        if ($transcript) {
+        $transcriptWEmotions = '';
+        if ($transcription) {
             $transcriptions = [
                 [
-                    'id' => 0,
-                    'answer' => $transcript ?? '',
+                    'id' => $transcription->id ?? 0,
+                    'answer' => $transcription->text ?? '',
                     'thumb' => 'https://placehold.co/300x200/0066cc/ffffff?text=Work+Day',
                     'emoji' => 'U+1F4AA',
                     'emotion_score' => 0.85,
@@ -1351,17 +1420,15 @@ class VideoRequestController extends Controller
                     'emotion' => 'proud'
                 ]
             ];
-        }
 
-        $transcriptWEmotions = Transcript::select('text_w_segment_emotions')
-                        ->where('request_id', $videoRequest->id)
-                        ->first()?->text_w_segment_emotions ?? '';
+            $transcriptWEmotions = $transcription->text_w_segment_emotions ?? '';
+        }
 
         $llmResponse = LlmResponse::select('text')
                         ->where('request_id', $videoRequest->id)
                         ->first()?->text ?? '';
 
-        $emotions = $this->emloResponseService->getParamValueByRequestId($videoRequest->id, $userId, 'EDP-Stressful');
+        $emotions = $this->emloResponseService->getParamValueByRequestId($videoRequest->id, $videoRequest->user_id, 'EDP-Stressful');
 
         // Main journal data
         $journalData = [
@@ -1374,22 +1441,19 @@ class VideoRequestController extends Controller
             'video'             => $video ? $video->video_url : '',
             'video_thumb'       => $video ? $video->thumbnail_url : '',
             'user_tags'         => $tags,
-
             'emotions'          => $emotions,
-
             // waiting to see with Stu his involvement with this will look like before coding
             'outcomes'          => '', // implement if needed
             'emotional_insights'=> '', // implement if needed
             'emotional_outcomes'=> '', // implement if needed
-
             'transcription'     => $transcriptions,
             'final_video_transcript' => $transcriptWEmotions,
-
             'summaryReport'     => $llmResponse,
-
             'video_type_id'   => $catalog->video_type_id ?? '',
             'catalog_id'        => $catalog->id ?? '',
             'catalog_name'      => $catalog->title ?? '',
+            'catalog_emoji'     => $catalog->emoji ?? '',
+            'shared_by'         => trim(($videoRequest->user->first_name ?? '') . ' ' . ($videoRequest->user->last_name ?? '')),
             'created_at'        => $videoRequest->created_at ? $videoRequest->created_at->format('M d, Y') : '',
             'contact'           => $videoRequest->contact ? [
                 'id'         => $videoRequest->contact->id,
@@ -1426,13 +1490,11 @@ class VideoRequestController extends Controller
             'group_ids' => 'nullable|array',
             'group_ids.*' => 'integer|exists:contact_groups,id',
             'request_id' => 'required|integer|min:1|exists:video_requests,id',
-            'videoUrl' => 'required|string',
         ]);
 
         $originalRequestId = $validated['request_id'];
         $contactIds = $validated['contact_ids'] ?? [];
         $groupIds = $validated['group_ids'] ?? [];
-        $videoUrl = base64_decode($validated['videoUrl']);
 
         // Find the original request to copy relevant data
         $originalRequest = VideoRequest::find($originalRequestId);
@@ -1536,7 +1598,7 @@ class VideoRequestController extends Controller
             }
 
             // Create the share as a new VideoRequest (type = 'share')
-            $shareRequest = VideoRequest::create([
+            VideoRequest::create([
                 'user_id'         => $userId,
                 'catalog_id'      => $originalRequest->catalog_id,
                 'contact_id'      => $row['contact_id'],
@@ -1558,7 +1620,8 @@ class VideoRequestController extends Controller
 
             $appUrl = config('app.url');
             $envUrl = str_replace('.com', '.me', $appUrl);
-            $url = $envUrl . '/gallery-share/' . $originalRequestId;
+            $encodedId = base64_encode($originalRequestId);
+            $url = $envUrl . '/gallery-share/' . $encodedId;
 
             // Send email notification
             if (!empty($refEmail)) {
@@ -1586,8 +1649,8 @@ class VideoRequestController extends Controller
             // Send SMS notification
             if (!empty($countryCode) && !empty($mobile)) {
                 try {
-                    $twilio = new \App\Services\TwilioService();
-                    $twilio->sendSms('+' . $countryCode . $mobile, "Hello {$fullName}, you have received a shared video. Access: {$url}");
+                    $twoFactorController = new TwoFactorAuthController();
+                    $twoFactorController->sendSms($countryCode, $mobile, "Hello {$fullName}, you have received a shared video. Access: {$url}");
                 } catch (\Exception $e) {
                     Log::error('Error sending SMS: ' . $e->getMessage());
                 }
@@ -1668,11 +1731,11 @@ class VideoRequestController extends Controller
             // Send reminder SMS
             if (!empty($req->ref_country_code) && !empty($req->ref_mobile)) {
                 try {
-                    $twilio = new \App\Services\TwilioService();
+                    $twoFactorController = new TwoFactorAuthController();
                     $smsMessage = "Hello {$fullName}, you have a pending video to record. {$note}";
-                    $twilio->sendSms('+' . $req->ref_country_code . $req->ref_mobile, $smsMessage);
+                    $twoFactorController->sendSms($req->ref_country_code, $req->ref_mobile, $smsMessage);
                 } catch (\Exception $e) {
-                    // Log::error('Error sending reminder SMS: ' . $e->getMessage());
+                    Log::error('Error sending reminder SMS: ' . $e->getMessage());
                 }
             }
         }
@@ -1850,9 +1913,11 @@ class VideoRequestController extends Controller
         ]);
     }
 
-    public function getResponseRequestDetails(Request $request, $requestId = null)
+    public function getResponseRequestDetails(Request $request, $sharedId = null)
     {
-        if (empty($requestId) || !is_numeric($requestId)) {
+        Log::info('Starting external video request process');
+
+        if (empty($sharedId)) {
             return response()->json([
                 'status' => false,
                 'message' => 'Id parameter is required',
@@ -1860,65 +1925,89 @@ class VideoRequestController extends Controller
             ], 400);
         }
 
-        // Fetch the VideoRequest with catalog and user
-        $videoRequest = VideoRequest::with(['catalog', 'user'])
-            ->find($requestId);
+        // Decodifica o sharedId (base64)
+        $requestId = base64_decode($sharedId);
+        Log::info('Decoded Request ID: ' . $requestId);
+        if (!$requestId) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Invalid Id parameter',
+                'results' => null
+            ], 400);
+        }
 
+        $videoRequest = VideoRequest::find($requestId);
         if (!$videoRequest) {
             return response()->json([
                 'status' => false,
-                'message' => 'No record found',
-                'results' => null
-            ], 404);
+                'message' => 'Unauthorized access to this request.'
+            ], 403);
         }
-
+        $catalogId = $videoRequest->catalog_id;
         $catalog = $videoRequest->catalog;
 
-        // Fetch the first video question from the catalog (if any)
-        $videoQuestion = null;
-        $question = CatalogQuestion::where('catalog_id', $videoRequest->catalog_id)
-            ->where('status',  1)
-            ->where('reference_type', 0)
+        $questions = [];
+        $credScoreId = CredScore::select('id')
+            ->where('catalog_id', $catalogId)
             ->first();
-        if ($question) {
-            $videoQuestion = $question->video_question;
-        }
-
-        // Fetch catalog tags (userTags)
-        $userTags = [];
-        if (!empty($catalog->tags)) {
-            $tagIds = array_filter(explode(',', $catalog->tags));
-            $userTags = Tag::whereIn('id', $tagIds)
-                ->where('status', 1)
-                ->where('type', 'journalTag')
-                ->get(['id', 'name'])
-                ->map(function($tag) {
-                    return [
-                        'id' => (string)$tag->id,
-                        'name' => $tag->name
+        if ($credScoreId) {
+            $kpiMetricSpecs = KpiMetricSpecification::select('*')
+                ->whereNull('emlo_param_spec_id')
+                ->whereHas('credScoreKpi.credScore', function ($subQuery) use ($credScoreId) {
+                    $subQuery->where('cred_score_id', $credScoreId->id);})
+                ->get();
+            if ($kpiMetricSpecs) {
+                foreach ($kpiMetricSpecs as $metricSpec) {
+                    $questions [] = [
+                        'id' => $metricSpec->id,
+                        'name' => $metricSpec->name,
+                        'question' => $metricSpec->question,
+                        'video_question' => $metricSpec->video_question ?? '',
+                        'range' => $metricSpec->range,
                     ];
-                })->toArray();
+                }
+            }
         }
 
-        $results = [
-            'catalog_id'        => (string)$videoRequest->catalog_id,
-            'ref_country_code'  => (string)($videoRequest->ref_country_code ?? ''),
-            'ref_mobile'        => $videoRequest->ref_mobile ?? '',
-            'dashboard_id'      => '', // Fill if you have dashboard_id
-            'request_id'        => (string)$videoRequest->id,
-            'video_type'        => $videoRequest->type ?? '',
-            'record_category'   => '0', // Adjust if you have logic for recording category
-            'min_record_time'   => (string)($catalog->min_record_time ?? ''),
-            'record_time'       => (string)($catalog->max_record_time ?? ''),
-            'video_type_id'     => (string)($catalog->video_type_id ?? ''),
-            'video_question'    => $videoQuestion,
-            'userTags'          => $userTags,
+        $recordTime = $catalog->max_record_time ?? '60';
+        $minRecordTime = $catalog->min_record_time ?? '15';
+        $parentCatalogId = $catalog->parent_catalog_id ?? '0';
+
+
+############################# TEMP #############################
+
+        $vtMetricNo = $vtKpiNo = $vtKpiMetrics = 0;
+        if ($catalog->videoType) {
+            $vtMetricNo = (int) ($catalog->videoType->metric_no ?? 0);
+            $vtKpiNo    = (int) ($catalog->videoType->kpi_no ?? 0);
+            $vtKpiMetrics = ($vtKpiNo > 0) ? floor($vtMetricNo / $vtKpiNo) : 0;
+        }
+        Log::info('Video Type Metrics: ' . $vtMetricNo . ', KPIs: ' . $vtKpiNo . ', KPI Metrics: ' . $vtKpiMetrics);
+        // $questions = CatalogQuestionController::getQuestionsByCatalogId($catalog, $vtKpiMetrics, $vtKpiNo);
+
+        $videoType = [
+            'metrics' => $vtMetricNo,
+            'kpis' => $vtKpiNo,
+            'kpi_metrics' => count(array_filter($questions, function($q) { return !empty($q['question']); })),
         ];
+        Log::info('Video Type: ', $videoType);
+
+##########################################################
 
         return response()->json([
             'status' => true,
             'message' => '',
-            'results' => $results
+            'results' => [
+                'parent_catalog_id' => (string)$parentCatalogId,
+                'catalog_id' => (string)$catalogId,
+                'request_id' => $videoRequest->id,
+                'record_date' => now()->toDateString(),
+                'video_types' => $videoType,
+                'video_type_id' => $catalog->video_type_id,
+                'min_record_time' => (string)$minRecordTime,
+                'record_time' => (string)$recordTime,
+                'questions' => $questions,
+            ]
         ]);
     }
 
@@ -1952,4 +2041,39 @@ class VideoRequestController extends Controller
         return $average;
     }
 
+    public function getEmotionalSnapshot(Request $request)
+    {
+        $userId = Auth::id();
+        if (!$userId) {
+            return response()->json(['error' => 'user not found'], 404);
+        }
+
+        $formattedEmotions = [];
+        $videoRequest = VideoRequest::with('latestVideo')
+        ->where('user_id', $userId)
+        ->where('status', 'Accept')
+        ->whereHas('catalog', function ($query) {
+            $query->whereIn('category_id', [2, 3]);
+        })
+        ->latest('created_at')
+        ->first();
+
+        if ($videoRequest) {
+            $formattedEmotions = $this->emotionService->getCatalogSpecificEmotions($videoRequest->id, $userId);
+        }
+
+        return response()->json([
+            'status' => true,
+            'message' => '',
+            'results' => [
+                'emotional_snapshot' => $formattedEmotions,
+                'last_vijo' => $videoRequest ? [
+                    'id' => $videoRequest->id,
+                    'title' => $videoRequest->title ?? ($videoRequest->catalog ? $videoRequest->catalog->title : ''),
+                    'catalog_title' => $videoRequest->catalog ? $videoRequest->catalog->title : null,
+                    'created_at' => $videoRequest->created_at ? $videoRequest->created_at->format('M d, Y g:iA') : null,
+                ] : null
+            ]
+        ]);
+    }
 }

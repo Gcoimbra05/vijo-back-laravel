@@ -219,7 +219,7 @@ class StripeWebhookController extends Controller
             ]],
             'mode' => 'subscription',
             'success_url' => $envUrl . '/subscription/success',
-            'cancel_url' => $envUrl . '/subscription/canceled',
+            'cancel_url' => $envUrl . '/home', // '/subscription/canceled',
             'client_reference_id' => $userId,
             'subscription_data' => [
                 'metadata' => [

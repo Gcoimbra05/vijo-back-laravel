@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\TrustedDevice;
 use App\Models\User;
 use App\Models\UserLogin;
 use App\Models\UserVerification;
@@ -9,6 +10,7 @@ use App\Services\TwilioService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Session;
@@ -29,11 +31,22 @@ class TwoFactorAuthController extends Controller
     public function sendCode(Request $request)
     {
         $request->validate([
-            'mobile' => 'required',
-            'country_code' => 'required',
+            'type' => 'required|in:email,phone',
+            'email' => $request->type === 'email' ? 'required|string|email' : 'nullable|string|email',
+            'mobile' => $request->type === 'phone' ? 'required|string' : 'nullable|string',
+            'country_code' => $request->type === 'phone' ? 'required|string' : 'nullable|string',
+            'password' => 'nullable|string',
+            'trust_device' => 'nullable|boolean',
+            'device_token' => 'nullable|string',
+            'device_name' => 'nullable|string',
         ]);
 
-        $user = User::where('mobile', $request->mobile)->where('country_code', $request->country_code)->first();
+        if ($request->type === 'email' && !empty($request->email)) {
+            $user = User::where('email', $request->email)->first();
+        } else if ($request->type === 'phone' && !empty($request->mobile) && !empty($request->country_code)) {
+            $user = User::where('mobile', $request->mobile)->where('country_code', $request->country_code)->first();
+        }
+
         if (!$user) {
             return response()->json([
                 'status' => false,
@@ -47,6 +60,82 @@ class TwoFactorAuthController extends Controller
             ], 404);
         }
 
+        // Validate password
+        if (!empty($request->password)) {
+            if (!Hash::check($request->password, $user->password)) {
+                return response()->json([
+                    'status' => false,
+                    'errors' => [
+                        'statusCode' => 401,
+                        'title' => 'Unauthorized',
+                        'detail' => [
+                            'message' => 'Invalid password.'
+                        ]
+                    ]
+                ], 401);
+            }
+        }
+
+        $trustedDevice = null;
+        $trustedValid = false;
+        // Trusted Device: save if requested
+        if ($request->boolean('trust_device') && !empty($request->device_token)) {
+            $trustedDevice = TrustedDevice::updateOrCreate(
+                [
+                    'user_id' => $user->id,
+                    'device_token' => $request->device_token,
+                ],
+                [
+                    'trusted_until' => now()->addDays(30),
+                    'device_name' => $request->device_name ?? null,
+                    'user_agent' => $request->userAgent(),
+                ]
+            );
+            $trustedValid = true;
+        } elseif (!empty($request->device_token)) {
+            // check if trusted device is valid
+            $trustedDevice = TrustedDevice::where('user_id', $user->id)
+                ->where('device_token', $request->device_token)
+                ->where('trusted_until', '>', now())
+                ->first();
+            if ($trustedDevice) {
+                $trustedValid = true;
+            }
+        }
+
+        // If the device is trusted and valid, do not send SMS/email or create code
+        if ($trustedValid || isset($user->two_factor_enabled) && !$user->two_factor_enabled) {
+            $token = $user->createToken('auth_token')->plainTextToken;
+
+            // Generate and save the refresh_token
+            $refreshToken = Str::random(60);
+            $user->refresh_token = $refreshToken;
+            $user->is_verified = true;
+            $user->last_login_date = Carbon::now();
+            $user->save();
+
+            UserLogin::create([
+                'user_id'    => $user->id,
+                'logged_in_at' => now(),
+                'ip_address' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+            ]);
+
+            return response()->json([
+                "status" => true,
+                'message' => 'Trusted device or Two-factor authentication is disabled for this user. No code required.',
+                'results' => [
+                    'otp_id' => null,
+                    'skip_code' => true,
+                    'userData' => $user->toArray(),
+                    'access_token' => $token,
+                    'refresh_token' => $refreshToken,
+                    'expires_in' => Carbon::now()->addMinutes(self::EXPIRES_IN)->timestamp,
+                    'loggedIn' => true,
+                ],
+            ]);
+        }
+
         $code = rand(100000, 999999);
         $verification = UserVerification::create([
             'user_id' => $user->id,
@@ -54,8 +143,10 @@ class TwoFactorAuthController extends Controller
             'expires_at' => Carbon::now()->addMinutes(10),
         ]);
 
-        $fullPhoneNumber = $request->country_code . $request->mobile;
-        $this->twilio->sendSms($fullPhoneNumber, "Your Vijo verification code is: \n{$code}");
+        if (!empty($user->country_code) && !empty($user->mobile)) {
+            $message = "Your Vijo verification code is: \n{$code}";
+            $this->sendSms($user->country_code, $user->mobile, $message);
+        }
 
         // Send email notification
         $userEmail = $user->email;
@@ -85,6 +176,8 @@ class TwoFactorAuthController extends Controller
             'message' => 'Verification code has been successfully sent to your mobile number.',
             'results' => [
                 'otp_id' => $verification->id,
+                'skip_code' => false,
+                'last_4_digits' => !empty($user->mobile) ? substr($user->mobile, -4) : null
             ],
         ]);
     }
@@ -132,8 +225,6 @@ class TwoFactorAuthController extends Controller
 
         $verification->update(['is_used' => true]);
 
-        $token = $user->createToken('auth_token')->plainTextToken;
-
         if (!$user->is_verified) {
             // Send email notification
             $userEmail = $user->email;
@@ -154,6 +245,8 @@ class TwoFactorAuthController extends Controller
                 }
             }
         }
+
+        $token = $user->createToken('auth_token')->plainTextToken;
 
         // Generate and save the refresh_token
         $refreshToken = Str::random(60);
@@ -286,14 +379,6 @@ class TwoFactorAuthController extends Controller
             ], 401);
         }
 
-        // Optional: Check if the token is expired (if using custom expiration)
-        // if ($accessToken->expires_at && $accessToken->expires_at->isPast()) {
-        //     return response()->json([
-        //         'status' => false,
-        //         'message' => 'Token expired.',
-        //     ], 401);
-        // }
-
         return response()->json([
             'status' => true,
             'message' => 'Token is valid.',
@@ -358,8 +443,8 @@ class TwoFactorAuthController extends Controller
         }
 
         if ($user->mobile && $user->country_code) {
-            $fullPhoneNumber = $user->country_code . $user->mobile;
-            $this->twilio->sendSms($fullPhoneNumber, "Your 2FA authentication code: $otp");
+            $message = "Your 2FA authentication code: $otp";
+            $this->sendSms($user->country_code, $user->mobile, $message);
         }
 
         // Return JSON success response
@@ -371,5 +456,21 @@ class TwoFactorAuthController extends Controller
                 'expires_at' => $newVerification->expires_at,
             ],
         ]);
+    }
+
+    public function sendSms($countryCode, $mobile, $message)
+    {
+        // Send SMS
+        try {
+            $fullPhoneNumber = preg_replace('/[^0-9]/', '', $countryCode . $mobile);
+            if (strlen($fullPhoneNumber) < 10 || strlen($fullPhoneNumber) > 15) {
+                return response()->json(['status' => false, 'message' => 'Invalid phone number format.'], 400);
+            }
+            $fullPhoneNumber = '+' . $fullPhoneNumber;
+            $this->twilio->sendSms($fullPhoneNumber, $message);
+            Log::info('SMS sent to ' . $fullPhoneNumber);
+        } catch (\Exception $e) {
+            Log::error('Error sending SMS: ' . $e->getMessage());
+        }
     }
 }

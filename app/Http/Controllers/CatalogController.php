@@ -226,20 +226,76 @@ class CatalogController extends Controller
     }
 
     public function destroy($id){
-    Log::info('CatalogController@destroy chamado', ['id' => $id]);
+        Log::info('CatalogController@destroy chamado', ['id' => $id]);
 
-    $catalog = Catalog::find($id);
+        $catalog = Catalog::find($id);
 
-    if (!$catalog) {
-        Log::warning('Catalog não encontrado para deletar', ['id' => $id]);
-        return redirect()->route('catalog.index')->with('error', 'Catalog not found.');
+        if (!$catalog) {
+            Log::warning('Catalog não encontrado para deletar', ['id' => $id]);
+            return redirect()->route('catalog.index')->with('error', 'Catalog not found.');
+        }
+
+        $catalog->delete();
+
+        Log::info('Catalog deletado', ['id' => $id]);
+
+        return redirect()->route('catalog.index')->with('success', 'Catalog deleted successfully.');
     }
 
-    $catalog->delete();
+    public function getSuggestedCatalogs($userId = null, $limit = 3)
+    {
+        // Find all active catalogs in the category
+        $categoryId = $this->catalog->category_id ?? 0;
+        $allCatalogs = Catalog::where('is_deleted', 0)
+            ->where('status', 1)
+            ->where('category_id', $categoryId)
+            ->get(['id', 'title', 'description', 'emoji', 'video_type_id']);
 
-    Log::info('Catalog deletado', ['id' => $id]);
+        // Count how many times each catalog was recorded by the user
+        $catalogCounts = VideoRequest::where('user_id', $userId)
+            ->whereIn('catalog_id', $allCatalogs->pluck('id'))
+            ->selectRaw('catalog_id, COUNT(*) as count')
+            ->groupBy('catalog_id')
+            ->pluck('count', 'catalog_id');
 
-    return redirect()->route('catalog.index')->with('success', 'Catalog deleted successfully.');
+        // Find the lowest number of recordings
+        $minCount = $catalogCounts->count() ? $catalogCounts->min() : 0;
+
+        // Filter catalogs that the user recorded the least number of times
+        $leastRecordedCatalogs = $allCatalogs->filter(function($catalog) use ($catalogCounts, $minCount) {
+            return ($catalogCounts[$catalog->id] ?? 0) == $minCount;
+        });
+
+        // Avoid recommending the same catalog that is currently being displayed
+        $leastRecordedCatalogs = $leastRecordedCatalogs->filter(function($catalog) {
+            return $catalog->id !== ($this->catalog->id ?? 0);
+        });
+
+        // If there are not at least 3, complete with the next least recorded catalogs
+        if ($leastRecordedCatalogs->count() < 3) {
+            $nextMinCount = $minCount + 1;
+            $nextCatalogs = $allCatalogs->filter(function($catalog) use ($catalogCounts, $nextMinCount) {
+            return ($catalogCounts[$catalog->id] ?? 0) == $nextMinCount;
+            })->filter(function($catalog) {
+            return $catalog->id !== ($this->catalog->id ?? 0);
+            });
+            $leastRecordedCatalogs = $leastRecordedCatalogs->concat($nextCatalogs)->take($limit);
+        } else {
+            $leastRecordedCatalogs = $leastRecordedCatalogs->take($limit);
+        }
+
+        // If there are still not 3, fetch from another category
+        if ($leastRecordedCatalogs->count() < $limit) {
+            $needed = $limit - $leastRecordedCatalogs->count();
+            $otherCatalogs = Catalog::where('is_deleted', 0)
+            ->where('status', 1)
+            ->where('category_id', '<>', $categoryId)
+            ->limit($needed)
+            ->get(['id', 'title', 'description', 'emoji', 'video_type_id']);
+            $leastRecordedCatalogs = $leastRecordedCatalogs->concat($otherCatalogs);
+        }
+
+        return $leastRecordedCatalogs->values();
     }
 
 }

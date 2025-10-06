@@ -60,6 +60,15 @@ class User extends Authenticatable implements AuditableContract
         'is_admin' => 'boolean',
     ];
 
+    public function setPasswordAttribute($value)
+    {
+        if ($value && strlen($value) < 60) {
+            $this->attributes['password'] = bcrypt($value);
+        } else {
+            $this->attributes['password'] = $value;
+        }
+    }
+
     public function plan()
     {
         return $this->belongsTo(MembershipPlan::class, 'plan_id');
@@ -85,5 +94,13 @@ class User extends Authenticatable implements AuditableContract
         return $this->hasMany(Contact::class);
     }
 
-    
+    public function trustedDevices()
+    {
+        return $this->hasMany(TrustedDevice::class);
+    }
+
+    public function quickGoals()
+    {
+        return $this->hasMany(QuickGoal::class);
+    }
 }

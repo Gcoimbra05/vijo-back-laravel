@@ -9,8 +9,13 @@ use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Log;
 use App\Http\Controllers\TwoFactorAuthController;
 use App\Models\Catalog;
+use App\Models\EmloResponse;
 use App\Models\MembershipPlan;
+use App\Models\UserLogin;
+use App\Models\UserVerification;
+use App\Models\Video;
 use App\Services\Emlo\EmloInsights\EmloInsightsService;
+use App\Services\TwilioService;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Auth\Events\Verified;
 use Illuminate\Support\Facades\Auth;
@@ -19,6 +24,9 @@ use Symfony\Component\Intl\Countries;
 use App\Models\Contact;
 use App\Models\ContactGroup;
 use App\Models\Affiliate;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
 
 class UserController extends Controller
 {
@@ -37,15 +45,86 @@ class UserController extends Controller
         return response()->json($user);
     }
 
+    /**
+     * Permanently delete all user data from the system (account closure).
+     * This method deletes the user and all related records to avoid foreign key issues.
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function deleteAccount(Request $request)
+    {
+        Log::info('deleteAccount');
+        $userId = Auth::id();
+        if (!$userId) {
+            return response()->json(['status' => false, 'message' => 'User not authenticated.'], 401);
+        }
+
+        \DB::beginTransaction();
+        try {
+            $videoRequests = \App\Models\VideoRequest::where('user_id', $userId)->get();
+            foreach ($videoRequests as $vr) {
+                $videos = Video::where('request_id', $vr->id)->get();
+                foreach ($videos as $video) {
+                    $video->delete();
+                }
+                \App\Models\Transcript::where('request_id', $vr->id)->delete();
+                \App\Models\LlmResponse::where('request_id', $vr->id)->delete();
+                $emloResponses = EmloResponse::where('request_id', $vr->id)->get();
+                foreach ($emloResponses as $emloResponse) {
+                    \App\Models\EmloResponseValue::where('response_id', $emloResponse->id)->delete();
+                    $emloResponse->delete();
+                }
+                \App\Models\LlmResponse::where('request_id', $vr->id)->delete();
+                \App\Models\KpiMetricValue::where('request_id', $vr->id)->delete();
+                \App\Models\EmloInsightsParamAggregate::where('request_id', $vr->id)->delete();
+                \App\Models\CredScoreValue::where('request_id', $vr->id)->delete();
+                \App\Models\CredScoreInsightsAggregate::where('request_id', $vr->id)->delete();
+                $vr->delete();
+            }
+            \App\Models\Tag::where('created_by_user', $userId)->delete();
+            \App\Models\CatalogAnswer::where('user_id', $userId)->delete();
+            \App\Models\Subscription::where('user_id', $userId)->delete();
+            \App\Models\Affiliate::where('user_id', $userId)->delete();
+            \App\Models\TrustedDevice::where('user_id', $userId)->delete();
+            \App\Models\UserVerification::where('user_id', $userId)->delete();
+            \App\Models\UserLogin::where('user_id', $userId)->delete();
+            \App\Models\Contact::where('user_id', $userId)->delete();
+            \App\Models\ContactGroup::where('user_id', $userId)->delete();
+            \App\Models\LlmTemplate::where('user_id', $userId)->delete();
+            \App\Models\VideoRequest::where('ref_user_id', $userId)->update(['ref_user_id' => null]);
+            \App\Models\UserLogin::where('user_id', $userId)->delete();
+            \App\Models\QuickGoal::where('user_id', $userId)->delete();
+            \App\Models\UserFeedback::where('user_id', $userId)->delete();
+            $user = User::where('id', $userId)->first();
+            $user->delete();
+
+            \DB::commit();
+
+            Log::info('User and related data deleted successfully.');
+
+            if ($user && method_exists($user, 'tokens')) {
+                $user->tokens()->delete();
+            }
+
+            return response()->json(['status' => true, 'message' => 'Account and all user data deleted successfully.']);
+        } catch (\Exception $e) {
+            \DB::rollBack();
+            return response()->json(['status' => false, 'message' => 'Error deleting account: ' . $e->getMessage()], 500);
+        }
+    }
+
     public function store(Request $request)
     {
         $request->validate([
             'first_name' => 'required|string|max:100',
-            // 'last_name' => 'required|string|max:100',
+            'last_name' => 'nullable|string|max:100',
             'email' => 'required|string|email',
-            // 'password' => 'required|string',
+            'password' => 'required|string',
+            'confirm_password' => 'nullable|string|same:password',
             'country_code' => 'nullable|string|max:10',
             'mobile' => 'nullable|string|max:20',
+            'optInNewsUpdates' => 'sometimes|boolean',
+            'timezone' => 'nullable|string|max:100',
         ]);
 
         if (User::where('email', $request->email)->exists()) {
@@ -55,18 +134,41 @@ class UserController extends Controller
             ], 409);
         }
 
+        if (!empty($request->mobile) && !empty($request->country_code)) {
+            $existsPhone = User::where('mobile', $request->mobile)
+                ->where('country_code', $request->country_code)
+                ->exists();
+            if ($existsPhone) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'A user with this phone number already exists.',
+                ], 409);
+            }
+        }
+
+        if ($request->password !== $request->confirm_password) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Password and confirm password do not match.',
+            ], 422);
+        }
+
         $user = User::create([
             'first_name' => $request->first_name,
             'last_name' => $request->last_name,
             'email' => $request->email,
             'password' => bcrypt($request->password),
             'country_code' => $request->country_code,
-            'mobile' => $request->mobile
+            'mobile' => $request->mobile,
+            'optInNewsUpdates' => $request->optInNewsUpdates ?? 0,
+            'timezone' => $request->timezone,
         ]);
 
         // Send OTP
         $twoFactorAuth = new TwoFactorAuthController();
         $otp_result = $twoFactorAuth->sendCode(new Request([
+            'type' => 'email',
+            'email' => $request->email,
             'mobile' => $request->mobile,
             'country_code' => $request->country_code,
         ]));
@@ -125,7 +227,9 @@ class UserController extends Controller
             'description' => 'nullable|string|max:255',
             'notifications' => 'sometimes|boolean',
             'reminders' => 'sometimes|boolean',
+            'timezone' => 'sometimes|string|max:100',
             'optInNewsUpdates' => 'sometimes|boolean',
+            'two_factor_enabled' => 'sometimes|boolean',
         ]);
 
         // Campos comuns
@@ -149,6 +253,7 @@ class UserController extends Controller
         $user->notifications = $request->notifications ?? 0;
         $user->reminders = $request->reminders ?? 0;
         $user->optInNewsUpdates = $request->optInNewsUpdates ?? 0;
+        $user->two_factor_enabled = $request->two_factor_enabled ?? 0;
 
         // Senha (apenas se preenchida)
         if ($request->filled('password')) {
@@ -174,11 +279,13 @@ class UserController extends Controller
 
     public function logout(Request $request)
     {
-        $user = $request->user();
+        $userId = Auth::id();
+        $user = User::find($userId);
         if ($user) {
             $user->tokens()->delete();
             return response()->json(['message' => 'Logged out successfully']);
         }
+
         return response()->json(['message' => 'User not found'], 404);
     }
 
@@ -364,20 +471,20 @@ class UserController extends Controller
         return [
             [
                 "id" => "1",
-                "title" => "Welcome to vijo",
+                "title" => "Welcome to Vijo",
                 "description" => "Let's quickly show you around so you get to journaling.",
                 "target" => ""
             ],
             [
                 "id" => "2",
                 "title" => "Home",
-                "description" => "Think of this as your vijo hub for journals and recommendations.",
+                "description" => "Think of this as your Vijo hub for journals and recommendations.",
                 "target" => "home"
             ],
             [
                 "id" => "3",
                 "title" => "Gallery",
-                "description" => "Here is where you'll find vijo's and memories you've recorded.",
+                "description" => "Here is where you'll find Vijo's and memories you've recorded.",
                 "target" => "gallery"
             ],
             [
@@ -388,8 +495,8 @@ class UserController extends Controller
             ],
             [
                 "id" => "5",
-                "title" => "Let's vijo",
-                "description" => "Tap the icon to begin a new vijo and share your thoughts.",
+                "title" => "Let's Vijo",
+                "description" => "Tap the icon to begin a new Vijo and share your thoughts.",
                 "target" => "add_new"
             ]
         ];
@@ -423,19 +530,8 @@ class UserController extends Controller
             ->toArray();
     }
 
-    public function getDashboardData(Request $request, EmloInsightsService $emlo)
+    public static function getGreeting($user, $timezone = 'America/New_York')
     {
-        $user = Auth::user();
-        $userId = $user->id;
-
-        $cacheKey = "dashboard_data_user_{$userId}";
-
-        // time of cache in minutes
-        $cacheTtl = 60;
-
-        // Cache::forget($cacheKey) # use this to clear cache
-
-        $activity = $emlo->getUserActivity($userId, 'last_7_days');
         $timezone = $user->timezone ?? config('app.timezone', 'America/New_York');
         $hour = now()->setTimezone($timezone)->hour;
         if ($hour < 12) {
@@ -445,26 +541,44 @@ class UserController extends Controller
         } else {
             $greetingTime = 'Good evening';
         }
-        $greeting = "{$greetingTime}, {$user->first_name}!";
 
-        $dashboardData = Cache::remember($cacheKey, $cacheTtl, function () use ($user, $activity, $greeting) {
+        return "{$greetingTime}, {$user->first_name}!";
+    }
+
+    public function getDashboardData(Request $request, EmloInsightsService $emlo)
+    {
+        $user = Auth::user();
+        $userId = $user->id;
+
+        $cacheKey = "dashboard_data_user_{$userId}";
+        $cacheTtl = 60;
+
+        $activity = $emlo->getUserActivity($userId, 'last_7_days');
+
+        $timezone = $user->timezone ?? config('app.timezone', 'America/New_York');
+        $vijoOfDay = $this->handleVijoOfDay($timezone);
+
+        $dashboardData = Cache::remember($cacheKey, $cacheTtl, function () use ($user, $activity, $timezone, $vijoOfDay) {
             return [
                 "status" => true,
                 "message" => "",
                 "results" => [
                     "activity" => $activity,
-                    "guidedTours" => self::getGuidedTours(),
                     "categories" => CategoryController::getCategories(),
-                    "promotionalCatalogs" => self::getPromotionalCatalogs(),
-                    "timezoneMenus" => SettingsController::getTimezones(),
-                    "myJournals" => VideoRequestController::getMyVideoRequests(),
-                    "graphTypes" => [
-                        "bar" => "Bar",
-                        "area" => "Area",
-                        "line" => "Line"
+                    "coming_soon" => [
+                        'headline' => 'COMING SOON',
+                        'emoji' => '🌍',
+                        'title' => 'Create your World',
+                        'description' => 'Build your personalized experience and shape your journey. Coming soon...',
                     ],
-                    "greeting" => $greeting,
+                    "current_date" => now()->toDateString(),
                     "currentDate" => now()->format('l, F j, Y'),
+                    "daily_message" => [
+                        'headline' => 'DAILY INSPIRATION',
+                        'emoji' => '💌',
+                        'title' => 'Message from Vijo',
+                        'description' => 'Receive personalized insights and encouragement tailored to your journey',
+                    ],
                     "filterByLabels" => [
                         "current_week" => "Current Week",
                         "last_5_weeks" => "Last 5 Weeks",
@@ -474,6 +588,34 @@ class UserController extends Controller
                         "last_12_months" => "Last 12 Months",
                         "since_start" => "Since Start"
                     ],
+                    "graphTypes" => [
+                        "bar" => "Bar",
+                        "area" => "Area",
+                        "line" => "Line"
+                    ],
+                    "greeting" => self::getGreeting($user, $timezone),
+                    "guidedTours" => self::getGuidedTours(),
+                    "guidedToursTaken" => $user->guided_tours,
+                    "insightFilters" => SettingsController::getInsightFilters(),
+                    "membershipPlan" => MembershipPlanController::getMembershipPlans(),
+                    "myJournals" => VideoRequestController::getMyVideoRequests(),
+                    "plans" => [],
+                    "promotionalCatalogs" => self::getPromotionalCatalogs(),
+                    "quick_goals" => QuickGoalController::getQuickGoalInfo($user->id),
+                    "rangeTypeLabels" => [
+                        "lva" => "Normalized",
+                        "raw" => "Raw"
+                    ],
+                    "responceCount" => [
+                        "to_count" => 0,
+                        "from_count" => 0
+                    ],
+                    "timezoneMenus" => SettingsController::getTimezones(),
+                    "userPlan" => [
+                        "user_status" => 'active', //SubscriptionController::getUserPlanStatus(),
+                    ],
+                    "userTags" => TagController::getUserTags(),
+                    "vijo_of_day" => $vijoOfDay,
                     "viewByLabels" => [
                         "daily" => "Daily",
                         "day_of_week" => "Day of Week",
@@ -481,24 +623,7 @@ class UserController extends Controller
                         "monthly" => "Monthly",
                         "quarterly" => "Quarterly",
                         "yearly" => "Yearly"
-                    ],
-                    "rangeTypeLabels" => [
-                        "lva" => "Normalized",
-                        "raw" => "Raw"
-                    ],
-                    "userTags" => TagController::getUserTags(),
-                    "insightFilters" => SettingsController::getInsightFilters(),
-                    "current_date" => now()->toDateString(),
-                    "responceCount" => [
-                        "to_count" => 0,
-                        "from_count" => 0
-                    ],
-                    "userPlan" => [
-                        "user_status" => SubscriptionController::getUserPlanStatus(),
-                    ],
-                    "membershipPlan" => MembershipPlanController::getMembershipPlans(),
-                    "plans" => [],
-                    "guidedToursTaken" => $user->guided_tours,
+                    ]
                 ]
             ];
         });
@@ -595,7 +720,6 @@ class UserController extends Controller
 
         return view('admin.users.journal_history', compact('user', 'journalHistory', 'nav_bar', 'breadcrumbs'));
     }
-
     
     public function edit(User $user)
     {
@@ -633,4 +757,275 @@ class UserController extends Controller
         return view('admin.users.contacts', compact('contacts', 'user', 'contactgroups', 'affiliates'));
     }
     
+    public function handleVijoOfDay($timezone = 'America/New_York')
+    {
+        $catalogs = Catalog::where('status', 1)
+            ->where('is_deleted', 0)
+            ->orderBy('id', 'ASC')
+            ->get(['id', 'video_type_id', 'emoji', 'title', 'description']);
+
+        $dayOfMonth = now()->setTimezone($timezone)->day;
+        $catalogIndex = $dayOfMonth - 1;
+        if ($catalogIndex >= $catalogs->count()) {
+            $catalogIndex = $catalogs->count() - 1;
+        }
+        $vijoCatalog = $catalogs[$catalogIndex] ?? null;
+
+        $vijoOfDay = $vijoCatalog ? [
+            'id' => $vijoCatalog->id,
+            'vijo_type_id' => $vijoCatalog->video_type_id,
+            'emoji' => $vijoCatalog->emoji,
+            'title' => $vijoCatalog->title,
+            'description' => $vijoCatalog->description,
+        ] : [];
+
+        return $vijoOfDay;
+    }
+
+    /**
+     * Envia o link de redefinição de senha para o email informado
+     */
+    public function sendResetLink(Request $request)
+    {
+        $request->validate(['email' => 'required|email']);
+        $frontendUrl = config('app.url', 'https://test.vijo.me');
+        $envUrl = str_replace('.com', '.me', $frontendUrl);
+
+        $user = User::where('email', $request->email)->first();
+        if (!$user) {
+            return response()->json(['status' => false, 'message' => 'User not found.'], 404);
+        }
+
+        $token = $user->createToken('auth_token')->plainTextToken;
+        \DB::table('password_resets')->updateOrInsert(
+            ['email' => $user->email],
+            [
+                'email' => $user->email,
+                'token' => $token,
+                'created_at' => now()
+            ]
+        );
+        $redirectLink = $envUrl . '/reset-password?token=' . $token . '&email=' . urlencode($user->email);
+
+        Mail::send('emails.reset_link', ['user' => $user, 'redirect_link' => $redirectLink], function ($message) use ($user) {
+            $message->to($user->email);
+            $message->subject('Password Reset - Vijo');
+        });
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Reset link sent to your email.',
+        ]);
+    }
+
+    /**
+     * Redefine a senha e faz login
+     */
+    public function resetPasswordAndLogin(Request $request)
+    {
+        $request->validate([
+            'email' => 'required|email',
+            'token' => 'required',
+            'password' => 'required|string|min:8',
+        ]);
+
+        $user = User::where('email', $request->email)->first();
+        if (!$user) {
+            return response()->json(['status' => false, 'message' => 'User not found.'], 404);
+        }
+
+        $reset = DB::table('password_resets')
+            ->where('email', $request->email)
+            ->where('token', $request->token)
+            ->first();
+        if (!$reset) {
+            return response()->json(['status' => false, 'message' => 'Invalid token or email.'], 400);
+        }
+
+        $user->password = bcrypt($request->password);
+        $refreshToken = Str::random(60);
+        $user->refresh_token = $refreshToken;
+        $user->is_verified = true;
+        $user->last_login_date = Carbon::now();
+        $user->save();
+
+        Auth::login($user);
+
+        DB::table('password_resets')->where('email', $request->email)->delete();
+        $token = $user->createToken('auth_token')->plainTextToken;
+
+        UserLogin::create([
+            'user_id'    => $user->id,
+            'logged_in_at' => now(),
+            'ip_address' => $request->ip(),
+            'user_agent' => $request->userAgent(),
+        ]);
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Login successful.',
+            'results' => [
+                'userData' => $user->toArray(),
+                'access_token' => $token,
+                'refresh_token' => $refreshToken,
+                'expires_in' => Carbon::now()->addMinutes(60)->timestamp,
+                'loggedIn' => true,
+            ],
+        ]);
+    }
+
+    /**
+     * Valida os dados do perfil do usuário
+     */
+    public function validateProfile(Request $request)
+    {
+        $request->validate([
+            'type' => 'required|in:email,phone',
+            'password' => 'required|string',
+            'new_email' => 'required_if:type,email|email',
+            'country_code' => 'required_if:type,phone|string',
+            'mobile' => 'required_if:type,phone|string',
+        ]);
+        $user = Auth::user();
+        if (!$user) {
+            return response()->json(['status' => false, 'message' => 'User not authenticated.'], 401);
+        }
+        if (!password_verify($request->password, $user->password)) {
+            return response()->json(['status' => false, 'message' => 'Incorrect password.'], 400);
+        }
+
+        $code = rand(100000, 999999);
+        $verification = UserVerification::create([
+            'user_id' => $user->id,
+            'code' => $code,
+            'expires_at' => Carbon::now()->addMinutes(10),
+        ]);
+
+        // Send email notification
+        $userEmail = $request->new_email;
+        if ($request->type === 'email' && !empty($userEmail)) {
+            $appUrl = config('app.url');
+            $envUrl = str_replace('.com', '.me', $appUrl);
+            try {
+                Mail::send('emails.template', [
+                    'title' => 'Your Vijo account verification code',
+                    'contentView' => 'emails.verification_code',
+                    'contentData' => [
+                        'recipientName'     => $user->first_name,
+                        'verificationCode'  => $code,
+                        'signUpUrl'         => $envUrl,
+                    ]
+                ], function ($message) use ($userEmail, $code) {
+                    $message->to($userEmail)
+                        ->subject('🔑 Your verification code is ' . $code);
+                });
+            } catch (\Exception $e) {
+                Log::error('Error sending email: ' . $e->getMessage());
+            }
+        } else if (!empty($request->country_code) && !empty($request->mobile)) {
+            // Send SMS
+            $twoFactorController = new TwoFactorAuthController();
+            $twoFactorController->sendSms($request->country_code, $request->mobile, "Your Vijo verification code is: \n{$code}");
+        }
+
+        return response()->json([
+            "status" => true,
+            'message' => 'Verification code has been successfully sent to your mobile number.',
+            'results' => [
+                'otp_id' => $verification->id,
+            ],
+        ]);
+    }
+
+    /**
+     * Atualiza os dados do perfil do usuário logado
+     */
+    public function updateProfile(Request $request)
+    {
+        $request->validate([
+            'type' => 'required|in:email,phone',
+            'password' => 'required|string',
+            'confirmation_code' => 'required',
+            'otp_id' => 'required|integer',
+            'new_email' => 'required_if:type,email|email',
+            'country_code' => 'required_if:type,phone|string',
+            'mobile' => 'required_if:type,phone|string',
+        ]);
+        $user = User::find(Auth::id());
+        if (!$user) {
+            return response()->json(['status' => false, 'message' => 'User not authenticated.'], 401);
+        }
+        if (!password_verify($request->password, $user->password)) {
+            return response()->json(['status' => false, 'message' => 'Incorrect password.'], 400);
+        }
+
+        $verification = UserVerification::where('id', $request->otp_id)
+            ->where('code', $request->confirmation_code)
+            ->where('is_used', false)
+            ->where('expires_at', '>', Carbon::now())
+            ->first();
+        if (!$verification) {
+            return response()->json([
+                'status' => false,
+                'message' => 'The provided code is invalid, expired, or has already been used.'
+            ], 400);
+        }
+
+        $verification->update(['is_used' => true]);
+        if ($request->type === 'email') {
+            $user->email = $request->new_email;
+        } else {
+            $user->country_code = $request->country_code;
+            $user->mobile = $request->mobile;
+        }
+        $user->save();
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Profile updated successfully.',
+            'results' => $user
+        ]);
+    }
+
+    /**
+     * Salva nova senha para o usuário logado
+     */
+    public function saveNewPassword(Request $request)
+    {
+        $user = User::find(Auth::id());
+        if (!$user) {
+            return response()->json(['status' => false, 'message' => 'User not authenticated.'], 401);
+        }
+        $request->validate([
+            'current_password' => 'required|string',
+            'new_password' => 'required|string|min:8|confirmed',
+        ]);
+        if (!password_verify($request->current_password, $user->password)) {
+            return response()->json(['status' => false, 'message' => 'Current password is incorrect.'], 400);
+        }
+        $user->password = bcrypt($request->new_password);
+        $user->save();
+
+        return response()->json(['status' => true, 'message' => 'Password changed successfully.']);
+    }
+
+    /**
+     * Atualiza o status do 2FA do usuário logado
+     */
+    public function updateTwoFactor(Request $request)
+    {
+        $user = User::find(Auth::id());
+        if (!$user) {
+            return response()->json(['status' => false, 'message' => 'User not found'], 401);
+        }
+        $request->validate([
+            'enabled' => 'required|boolean',
+        ]);
+        $user->two_factor_enabled = $request->enabled;
+        $user->save();
+
+        return response()->json(['status' => true, 'message' => '2FA updated.', 'results' => ['enabled' => $user->two_factor_enabled]]);
+    }
+
+
 }

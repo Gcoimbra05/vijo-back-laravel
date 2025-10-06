@@ -289,12 +289,16 @@ class AveragesService {
         // Generate last 30 days
         for ($i = 29; $i >= 0; $i--) {
             $date = date('Y-m-d', strtotime("-$i days"));
-            $label = date('M j', strtotime($date));
+            $label = date('n/j', strtotime($date));
 
-            $value = (int) ($daysLookup[$date] ?? 0); // default to 0 if missing
-
-            $allDays[] = ['label' => $label, 'value' => $value];
+            if (!empty($daysLookup[$date])) {
+                $allDays[] = [
+                    'label' => $label,
+                    'value' => (int) $daysLookup[$date],
+                ];
+            }
         }
+
 
         return $allDays;
     }

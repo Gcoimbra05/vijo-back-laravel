@@ -24,7 +24,7 @@ class SecondaryMetricsService {
 
         $oCA = $this->emloResponseService->getAllValuesOfParam('overallCognitiveActivity', $userId, []);
         foreach ($oCA as $ocaValue) {
-            $normalizedValue = EmloHelperService::applyNormalizationFormula($ocaValue->value);
+            $normalizedValue = EmloHelperService::applyNormalizationFormula($ocaValue->value, 'overallCognitiveActivity');
             $ocaValue->value = $normalizedValue;
         }
         $oCAPercentages = $this->sortOCAByValue($oCA);
@@ -47,7 +47,7 @@ class SecondaryMetricsService {
     public function getOcaInfo($oCA)
     {
         foreach ($oCA as $ocaValue) {
-            $normalizedValue = EmloHelperService::applyNormalizationFormula($ocaValue->value);
+            $normalizedValue = EmloHelperService::applyNormalizationFormula($ocaValue->value, 'overallCognitiveActivity');
             $ocaValue->value = $normalizedValue;
         }
         $oCAPercentages = $this->sortOCAByValue($oCA);

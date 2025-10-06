@@ -28,10 +28,8 @@ class ProcessEmotionsStep extends VideoProcessingStep
             return ['success' => false, 'error' => 'AWS S3 configuration is missing'];
         }
 
-        $videoS3ObjectUrl = 'https://s3.' . $awsDefaultRegion . '.amazonaws.com/' . $awsBucket . '/' . $path;
-
         $emloPayload = [
-            'url' => $videoS3ObjectUrl,
+            'url' => $videoUrl,
             'outputType' => 'json',
             'sensitivity' => 'normal'
         ];
@@ -52,13 +50,16 @@ class ProcessEmotionsStep extends VideoProcessingStep
         }
 
         $context['apiService']->sendWebhookNotification('emotional analysis complete', $context['videoRequest']->id, 'video_request');
+        
         $rawResponse = json_encode($emotionData->response);
+        Log::debug("The raw EMLO response is: " . $rawResponse);
 
         $emloResponseController = app(\App\Http\Controllers\EmloResponseController::class);
         $newRequest = new Request([
             'request_id' => $context['videoRequest']->id,
             'raw_response' => $rawResponse
         ]);
+        // here
         $response = $emloResponseController->store($newRequest);
 
         return [
@@ -66,7 +67,7 @@ class ProcessEmotionsStep extends VideoProcessingStep
             'context' => [
                 'emotionData' => $emotionData,
                 'responseResult' => $response,
-                'videoS3ObjectUrl' => $videoS3ObjectUrl
+                'videoS3ObjectUrl' => $videoUrl
             ]
         ];
     }

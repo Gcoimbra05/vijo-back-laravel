@@ -234,10 +234,58 @@ class EmloHelperService {
         return ['status' => false, 'value' => null];
     }
 
-    public static function applyNormalizationFormula($value) {
-        //Log::debug('it ran for value: ' . $value);
-        $normalized = ($value / 2000) * 100;
-        return $normalized;
+    public static function applyNormalizationFormula($value, $paramName) {
+        
+        switch ($paramName) {
+            case 'overallCognitiveActivity':
+                $normalized = ($value / 2000) * 100;
+                return $normalized;
+
+            case 'risk1':
+                if ($value > 100) {
+                    return 100;
+                } else {
+                    return $value;
+                }
+            
+            case 'clStress':
+                $normalized = round(100 - ($value * 90/6), 0);
+                return $normalized;
+
+            case 'Aggression':
+                
+                $normalized = round(10 + (min($value, 10) * 9), 0);
+                return $normalized;
+
+            default:
+                return $value;
+        }
+    }
+
+    public function orderInsightsFinalArray($emotions)
+    {
+        foreach ($emotions as $index => &$emotion) {
+            $emotion['_originalIndex'] = $index;
+        }
+        unset($emotion);
+
+        usort($emotions, function ($a, $b) {
+            $dateA = strtotime($a['lastMeasured'] ?? '1970-01-01 00:00:00');
+            $dateB = strtotime($b['lastMeasured'] ?? '1970-01-01 00:00:00');
+
+            if ($dateA === $dateB) {
+                return $a['_originalIndex'] <=> $b['_originalIndex'];
+            }
+
+            return $dateB <=> $dateA; // newest first
+        });
+
+        foreach ($emotions as &$emotion) {
+            unset($emotion['_originalIndex']);
+        }
+        unset($emotion);
+
+        return $emotions; // ✅ return sorted
     }
 
 }

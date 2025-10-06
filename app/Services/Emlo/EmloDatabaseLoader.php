@@ -14,6 +14,7 @@ class EmloDatabaseLoader
     private static $secondaryMetricParams = [];
     private static $catalogsInUse = [];
     private static $metricCatalogsInUse = [];
+    private static $emotionalSnapshotParams = [];
     private static $initialized = false;
 
     /**
@@ -73,6 +74,12 @@ class EmloDatabaseLoader
                 ->get()
                 ->toArray();
 
+            self::$emotionalSnapshotParams  = $db->table('emlo_response_param_specs')
+                ->whereNot('param_name', 'finalRiskLevel')
+                ->whereNot('param_name', 'risk1')
+                ->get()
+                ->toArray();
+
             self::$edpParamsInUse = $db->table('emlo_response_param_specs')
                 ->whereLike('param_name', '%EDP%')
                 ->get()
@@ -83,7 +90,7 @@ class EmloDatabaseLoader
                 ->toArray();
 
             self::$metricCatalogsInUse = $db->table('catalogs')
-                ->whereNot('video_type_id', 1)
+                ->whereNot('category_id', 1)
                 ->get()
                 ->toArray();
 
@@ -102,6 +109,7 @@ class EmloDatabaseLoader
             self::$zeroValuedSegments = [];
             self::$segmentsInUse = [];
             self::$paramsInUse = [];
+            self::$emotionalSnapshotParams = [];
             self::$catalogsInUse = [];
             self::$secondaryMetricParams = [];
             self::$metricCatalogsInUse = [];
@@ -148,5 +156,10 @@ class EmloDatabaseLoader
     public static function getSecondaryMetricParams()
     {
         return self::$secondaryMetricParams;
+    }
+
+    public static function getEmotionalSnapshotParams()
+    {
+        return self::$emotionalSnapshotParams;
     }
 }

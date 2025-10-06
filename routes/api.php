@@ -6,6 +6,7 @@ use App\Http\Controllers\CatalogAnswerController;
 use App\Http\Controllers\CatalogController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\ContactController;
+use App\Http\Controllers\CouponController;
 use App\Http\Controllers\CredScoreController;
 use App\Http\Controllers\GroupController;
 use App\Http\Controllers\MembershipPlanController;
@@ -24,20 +25,22 @@ use Illuminate\Support\Facades\Route;
 
 use App\Http\Controllers\EmloResponseController;
 use App\Http\Controllers\EmloResponseParamSpecsController;
+use App\Http\Controllers\QuickGoalController;
+use App\Http\Controllers\UserFeedbackController;
 use App\Services\CredScore\CredScoreService;
 use App\Services\Emlo\EmloInsights\EmloInsightsService;
 
 Route::prefix('v2')->middleware(ForceJsonResponse::class)->group(function () {
     Route::post('/resend_2fa', [TwoFactorAuthController::class, 'resend2fa']);
+    Route::post('/send-reset-link', [UserController::class, 'sendResetLink']);
+    Route::post('/password/reset', [UserController::class, 'resetPasswordAndLogin']);
 
     Route::prefix('auth')->group(function () {
         Route::post('/sign-up', [UserController::class, 'store']);
-        Route::post('/logout', [UserController::class, 'logout']);
         Route::post('/forgot-password', [UserController::class, 'forgotPassword']);
         Route::post('/reset-password', [UserController::class, 'resetPassword']);
         Route::post('/verify-email', [UserController::class, 'verifyEmail']);
         Route::post('/verify-email-resend', [UserController::class, 'resendEmailVerification']);
-
         Route::post('/sign-in', [TwoFactorAuthController::class, 'sendCode']);
         Route::post('/validate_2fa', [TwoFactorAuthController::class, 'verifyCode']);
         Route::post('/refresh-token', [TwoFactorAuthController::class, 'refreshToken']);
@@ -49,11 +52,21 @@ Route::prefix('v2')->middleware(ForceJsonResponse::class)->group(function () {
     Route::get('/onboarding-contents', [SettingsController::class, 'getOnboardingContent']);
     Route::get('/information-contents', [SettingsController::class, 'getInformationContent']);
     Route::get('/static-pages', [SettingsController::class, 'getStaticPages']);
+
+    // video request details for shared links
     Route::get('shared-video-details/{id}', [VideoRequestController::class, 'shareJournalDetails']);
+    Route::get('response-request-details/{id}', [VideoRequestController::class, 'getResponseRequestDetails']);
 
     Route::middleware('auth:sanctum')->group(function () {
+        Route::post('auth/logout', [UserController::class, 'logout']);
+
         Route::apiResource('users', UserController::class);
+
+        Route::post('user/feedback', [UserFeedbackController::class, 'store']);
+        Route::delete('user/delete-account', [UserController::class, 'deleteAccount']);
+
         Route::get('dashboard', [UserController::class, 'getDashboardData']);
+        Route::get('emotional-snapshot', [EmloResponseController::class, 'getEmotionalSnapshot']);
         Route::post('update-guided-tours', [UserController::class, 'updateGuidedTour']);
         Route::get('subscription-plans', [UserController::class, 'getSubscriptionPlans']);
 
@@ -63,12 +76,14 @@ Route::prefix('v2')->middleware(ForceJsonResponse::class)->group(function () {
         Route::apiResource('video-requests', VideoRequestController::class);
         Route::get('video-galleries', [VideoRequestController::class, 'getVideoGalleries']);
         Route::get('video-detail/{id}', [VideoRequestController::class, 'getVideoDetail']);
+        Route::get('video-results/{id}', [VideoRequestController::class, 'getVideoResults']);
         Route::post('make-request', [VideoRequestController::class, 'makeVideoRequest']);
+
         Route::post('share-video-contacts', [VideoRequestController::class, 'shareVideoToContactsAndGroups']);
+
         Route::post('send-reminder', [VideoRequestController::class, 'sendReminder']);
         Route::post('unshare-video', [VideoRequestController::class, 'unshareVideoRequest']);
         Route::get('request-details/{id}', [VideoRequestController::class, 'getRequestDetails']);
-        Route::get('response-request-details/{id}', [VideoRequestController::class, 'getResponseRequestDetails']);
 
         Route::post('cancel-decline-request', [VideoRequestController::class, 'cancelDeclineRecordRequest']);
         Route::post('share-video-requests', [VideoRequestController::class, 'shareVideoRequests']);
@@ -108,8 +123,6 @@ Route::prefix('v2')->middleware(ForceJsonResponse::class)->group(function () {
         Route::get('cred-score/{request_id}', [CredScoreController::class, 'getCredScore']);
 
         Route::prefix('emlo-response')->group(function () {
-            Route::get('get-emotion-insights/{param}', [EmloResponseController::class, 'getInsights']);
-
             Route::get('{request_id}/{param}/compare', [RuleEvaluationController::class, 'evaluateRules']);
             Route::get('{param}/specification', [EmloResponseParamSpecsController::class, 'showByParamName']);
             Route::get('{request_id}/{param}', [EmloResponseController::class, 'getParamValueByRequestId']);
@@ -123,6 +136,20 @@ Route::prefix('v2')->middleware(ForceJsonResponse::class)->group(function () {
         Route::get('/insights-v2/vijos', [CredScoreService::class, 'getAllLatestCredScoreData']);
 
         Route::get('/stripe/customer-portal', [StripeWebhookController::class, 'getCustomerPortal']);
+
+        Route::apiResource('coupons', CouponController::class);
+
+        // Profile and Security
+        Route::post('/validate-profile', [UserController::class, 'validateProfile']);
+        Route::post('/update-profile', [UserController::class, 'updateProfile']);
+        Route::post('/save-new-password', [UserController::class, 'saveNewPassword']);
+        Route::post('/update-2fa', [UserController::class, 'updateTwoFactor']);
+
+        Route::get('quick-goals', [QuickGoalController::class, 'index']);
+        Route::post('quick-goals', [QuickGoalController::class, 'store']);
+        Route::put('quick-goals', [QuickGoalController::class, 'update']);
+        Route::get('quick-goals/{quick_goal}', [QuickGoalController::class, 'show']);
+        Route::delete('quick-goals/{quick_goal}', [QuickGoalController::class, 'destroy']);
     });
 
     // Stripe Webhook

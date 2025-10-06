@@ -8,10 +8,8 @@ use App\Models\EmloResponseParamSpecs;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 
-use App\Exceptions\Emlo\NoRulesFoundException;
 use App\Exceptions\Emlo\NotEnoughEmloParamValuesException;
-
-
+use App\Models\RuleCondition;
 
 class RulesEngineService {
     public function ruleCheck($paramValue, $allValuesOfParam, $paramSpec)
@@ -21,33 +19,70 @@ class RulesEngineService {
             ->where('active', true)
             ->first();
         if (!$rule) {
-            throw new NoRulesFoundException("No rules found for given EMLO parameter");
+            return [];
         }
 
-        $conditionParams = self::getOtherParamsNeededForConditions($rule->conditions, $paramSpec->param_name);
-        $paramDisributions = self::getDistributionTypesForConditionParams($conditionParams);
-        $paramDisributions [] = ["param" => $paramSpec->param_name, "distribution" => $paramSpec->distribution];
+        $longMessage = "";
+        $conditionsMet = [];
+        
+        if (!$paramSpec->secondary) {
+            $statusInfo = $this->getStatusInfo($allValuesOfParam);
+            $shortMessage = $statusInfo['message'];
 
-        $paramsWValues = [];
-        foreach ($paramDisributions as $distribution) {
-            if ($distribution['distribution'] == 'gaussian') {
-                $standardDeviation = self::standardDeviation($allValuesOfParam);
-                $paramsWValues[$distribution['param']] = $standardDeviation;
+            if ($statusInfo['order_index'] != null) {
+                $message = RuleCondition::select('message')
+                    ->where('rule_id', $rule->id)
+                    ->where('order_index', $statusInfo['order_index'])
+                    ->first();
+                $longMessage = $message?->message;
+            }
 
-            } else if ($distribution['distribution'] == 'definitive_state') {
+            $conditionMet = (object) [
+                "message" => $longMessage,
+                "emotion_performance" => $shortMessage
+            ];
+
+            $conditionsMet [] = $conditionMet;
+
+
+
+        } else {
+            $statusInfo = $this->getStatusInfo($allValuesOfParam);
+            $shortMessage = $statusInfo['message'];
+
+            $conditionParams = self::getOtherParamsNeededForConditions($rule->conditions, $paramSpec->param_name);
+            $paramDisributions = self::getDistributionTypesForConditionParams($conditionParams);
+            $paramDisributions [] = ["param" => $paramSpec->param_name, "distribution" => $paramSpec->distribution];
+
+            $paramsWValues = [];
+            foreach ($paramDisributions as $distribution) {
                 $paramsWValues[$distribution['param']] = $paramValue;
             }
-        }
 
-        $conditionsMet = [];
-        foreach ($rule->conditions as $condition) {
-            $conditionResult = $this->evaluateCondition($condition->condition, $paramsWValues);
-            if ($conditionResult) {
-                $conditionsMet[] = $condition;
+            foreach ($rule->conditions as $condition) {
+                $conditionResult = $this->evaluateCondition($condition->condition, $paramsWValues);
+                if ($conditionResult) {
+                    $conditionMet = (object) [
+                        "message" => $condition->message,
+                        "emotion_performance" => $shortMessage,
+                        "emotion_performance_secondary" => $condition->emotion_performance
+                    ];
+
+                    $conditionsMet [] = $conditionMet;
+                }
+
             }
-
         }
+
+        Log::debug("conditions met are: " . json_encode($conditionsMet));
         return $conditionsMet;
+    }
+
+    private function getStatusInfo($allValuesOfParam)
+    {
+        $standardDeviation = self::standardDeviation($allValuesOfParam);
+        $statusInfo = $this->evaluateStandardDeviation($standardDeviation);
+        return $statusInfo;
     }
 
     private function evaluateOperator($leftValue, $operator, $rightValue): bool
@@ -73,6 +108,23 @@ class RulesEngineService {
                 return !in_array($leftValue, $rightValue);
             default:
                 return false;
+        }
+    }
+
+    private function evaluateStandardDeviation($value)
+    {
+        switch (true) {
+            case ($value > -1.5 && $value < -0.5):
+                return ["message" => "Below Average", "order_index" => 1];
+            
+            case ($value > -0.5 && $value < 0.5):
+                return ["message" => "Average", "order_index" => 2];
+
+            case ($value > 0.5 && $value < 1.5):
+                return ["message" => "Above Average", "order_index" => 3];
+
+            default:
+                return ["message" => "", "order_index" => null];
         }
     }
 

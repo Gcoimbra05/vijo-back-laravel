@@ -13,7 +13,7 @@ class CredScoreValue extends Model implements AuditableContract{
     protected $fillable = [
         'request_id',
         'cred_score',
-        'percieved_score',
+        'perceived_score',
         'measured_score'
     ];
 
