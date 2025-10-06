@@ -125,14 +125,24 @@ class TagController extends Controller
             $tagTitle = isset($tagParts[1]) ? $tagParts[1] : null;
 
             if ($tagId == 0 && $tagTitle) {
-                $newTag = Tag::create([
-                    'category_id'     => $categoryId,
-                    'name'            => $tagTitle,
-                    'type'            => 'custom',
-                    'created_by_user' => $userId,
-                    'status'          => 1,
-                ]);
-                $tagIds[] = $newTag->id;
+                // Verifica se já existe tag custom com mesmo nome, categoria e usuário
+                $existingTag = Tag::where('category_id', $categoryId)
+                    ->where('name', $tagTitle)
+                    ->where('type', 'custom')
+                    ->where('created_by_user', $userId)
+                    ->first();
+                if ($existingTag) {
+                    $tagIds[] = $existingTag->id;
+                } else {
+                    $newTag = Tag::create([
+                        'category_id'     => $categoryId,
+                        'name'            => $tagTitle,
+                        'type'            => 'custom',
+                        'created_by_user' => $userId,
+                        'status'          => 1,
+                    ]);
+                    $tagIds[] = $newTag->id;
+                }
             } elseif ($tagId > 0) {
                 $tagIds[] = $tagId;
             }

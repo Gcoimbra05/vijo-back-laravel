@@ -68,7 +68,7 @@ class VideoRequest extends Model implements AuditableContract
     {
         return $this->hasOne(Video::class, 'request_id')->latestOfMany();
     }
-    # escreva um método de delete para excluir o video que está relacionado a esse video request
+
     public function deleteVideo()
     {
         if ($this->latestVideo) {

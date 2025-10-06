@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\Emlo\EmloInsights\SnapshotService;
 use Illuminate\Routing\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -11,14 +12,15 @@ use App\Services\Emlo\EmloHelperService;
 use App\Services\Emlo\EmloInsights\EmloInsightsService;
 
 use App\Exceptions\Emlo\EmloNotFoundException;
-
-use Illuminate\Support\Facades\Log;
+use App\Models\VideoRequest;
+use Symfony\Component\HttpKernel\Event\RequestEvent;
 
 class EmloResponseController extends Controller {
 
     public function __construct(
         protected EmloResponseService $emloResponseService, 
-        protected EmloInsightsService $emloInsightsService
+        protected EmloInsightsService $emloInsightsService,
+        protected SnapshotService $snapshotService
     ){}
 
     public function index()
@@ -161,18 +163,37 @@ class EmloResponseController extends Controller {
         }
     }
 
-    public function getInsights(Request $request, $paramName)
+    public function getEmotionalSnapshot()
     {
-        try {
-            $result = $this->emloInsightsService->getInsightsData($request, $paramName);
-
-            return $result;
-        } catch (EmloNotFoundException $e) {
-            Log::debug($e->getTraceAsString());
-            return response()->json(['error' => 'insights values not found'], 404);
-        } catch (\Exception $e) {
-            Log::debug($e->getTraceAsString());
-            return response()->json(['error' => 'internal server error'], 500);
+        $userId = Auth::id();
+        if (!$userId) {
+                return response()->json([
+                'success' => false,
+                'message' => 'User not found',
+                'data' => [],
+            ], 404);
         }
-    } 
+
+        $request = VideoRequest::where('user_id', $userId)
+            ->whereHas('videos')
+            ->whereHas('emloInsightsParamAggregates')
+            ->orderBy('created_at', 'desc')
+            ->first();
+
+        $snapshot = $lastVijo = null;
+        if ($request){
+            $snapshot = $this->snapshotService->getEmotionalSnapshot($request->id);
+            $lastVijo = [
+                'title' => $request->title,
+                'date' => $request->created_at->format('M d, Y'),
+            ];
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Emotional snapshot retrieved successfully.',
+            'data' => $snapshot,
+            'last_vijo' => $lastVijo,
+        ], 200);
+    }
 }

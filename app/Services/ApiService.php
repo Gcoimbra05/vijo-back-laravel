@@ -39,22 +39,23 @@ class ApiService
             'webhook_url' => $webhookUrl,
             'payload' => $payload
         ]);
-        
+
         try {
-            WebhookCall::create()
-                ->url($webhookUrl)
-                ->doNotSign()
-                ->payload($payload)
-                ->dispatchSync();
-                
+            $response = Http::withoutVerifying()->post($webhookUrl, $payload);
+
             Log::info('Webhook notification sent successfully', [
                 "{$resourceType}_id" => $resourceId,
-                'event_type' => $eventType
+                'event_type' => $eventType,
+                'status' => $response->status(),
+                'response_body' => $response->body(),
+                'response_headers' => $response->headers(),
             ]);
-            
+
             return response()->json([
                 'success' => true,
-                'message' => 'Webhook notification sent successfully'
+                'message' => 'Webhook notification sent successfully',
+                'response_status' => $response->status(),
+                'response_body' => $response->json(),
             ]);
         } catch (\Exception $e) {
             Log::error('Webhook notification failed', [
@@ -65,7 +66,7 @@ class ApiService
                 'error_file' => $e->getFile(),
                 'error_line' => $e->getLine()
             ]);
-            
+
             return response()->json([
                 'success' => false,
                 'message' => 'Webhook notification failed',

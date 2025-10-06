@@ -10,13 +10,19 @@ use App\Models\EmloInsightsParamAggregate;
 
 use App\Exceptions\CatalogNotFoundException;
 use App\Exceptions\CredScore\CredScoreNotFoundException;
+use App\Exceptions\Emlo\EmloNotFoundException;
 use App\Services\CredScore\CredScoreService;
+use App\Services\Emlo\EmloDatabaseLoader;
+use App\Services\Rules\RuleEvaluationService;
+use App\Services\Emlo\EmloHelperService;
+use App\Services\Emlo\EmloInsights\EmloInsightsService;
 
 class EmotionService {
 
-    public function __construct(protected CredScoreService $credScoreService){}
+    public function __construct(
+        protected CredScoreService $credScoreService){}
     
-    public function getFormattedEmotions($requestId, $userId)
+    public function getCatalogSpecificEmotions($requestId, $userId)
     {
         $catalogId = $this->getCatalogIdForRequest($requestId);
         $credScoreId = $this->getCredScoreIdForCatalog($catalogId, $requestId);
@@ -100,5 +106,4 @@ class EmotionService {
 
         return $metricEmotions;
     }
-
 }

@@ -123,13 +123,13 @@ class EmloResponseService
                 throw new Exception("failed to extract numeric value from EMLO parameter");
             }
 
-            $returnValue = $param->needs_normalization ? EmloHelperService::applyNormalizationFormula($paramValue['value']) : $paramValue['value'];
+            $returnValue = $param->needs_normalization ? EmloHelperService::applyNormalizationFormula($paramValue['value'], $paramName) : $paramValue['value'];
             return $returnValue;
 
         } else if ($param->type == 'segment') {
             Log::debug('paramName is: ' . $paramName);
             if ($paramName == 'self_honesty') {
-                $avg = $this->emloSegmentService->calculateAverageOfSingleResponse('finalRiskLevel', $response->raw_response);
+                $avg = $this->emloSegmentService->calculateAverageOfSingleResponse('risk1', $response->raw_response);
                 if ($avg == 1) {
                     return 100;
                 }
@@ -138,7 +138,7 @@ class EmloResponseService
             }
 
             $avg = $this->emloSegmentService->calculateAverageOfSingleResponse($paramName, $response->raw_response);
-            $returnValue = $param->needs_normalization ? EmloHelperService::applyNormalizationFormula($avg) : $avg;
+            $returnValue = $param->needs_normalization ? EmloHelperService::applyNormalizationFormula($avg, $paramName) : $avg;
             return $returnValue;
         }
     }
@@ -183,14 +183,14 @@ class EmloResponseService
         $segmentParams = $paramsCollection->where('type', 'segment');
         foreach ($segmentParams as $segmentParam) {
             if ($segmentParam->param_name == 'self_honesty') {
-                $avg = $this->emloSegmentService->calculateAverageOfSingleResponse('finalRiskLevel', $rawResponse);
+                $avg = $this->emloSegmentService->calculateAverageOfSingleResponse('risk1', $rawResponse);
                 if ($avg == 1) {
                     return 100;
                 }
                 $returnValue = 100 - $avg;
             } else {
                 $avg = $this->emloSegmentService->calculateAverageOfSingleResponse($segmentParam->param_name, $rawResponse);
-                $returnValue = $segmentParam->needs_normalization ? EmloHelperService::applyNormalizationFormula($avg) : $avg;
+                $returnValue = $segmentParam->needs_normalization ? EmloHelperService::applyNormalizationFormula($avg, $segmentParam->param_name) : $avg;
 
             }
 

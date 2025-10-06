@@ -70,7 +70,7 @@
                 </tr>
                 <tr>
                     <th>Request Date</th>
-                    <td>{{ $videoRequest->created_at ? $videoRequest->created_at->format('F j, Y H:i') : '-' }}</td>
+                    <td>{{ $videoRequest->created_at ? $videoRequest->created_at->format('F j, Y g:iA') : '-' }}</td>
                 </tr>
             </table>
             <p style="margin-top: 20px;">

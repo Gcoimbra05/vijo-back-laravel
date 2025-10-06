@@ -17,6 +17,7 @@ use Illuminate\Support\Facades\Log;
 use App\Services\Emlo\EmloInsights\InsightsV2Service;
 use App\Services\Emlo\EmloInsights\ProgressOverTimeService;
 use App\Services\Emlo\EmloInsights\SecondaryMetricsService;
+use App\Services\Emlo\EmloHelperService;
 
 class PostRequestAggregation {
 
@@ -32,10 +33,16 @@ class PostRequestAggregation {
     public function aggregationPipeline($requestId, $userId)
     {
         try {
-            $paramsWSpec = EmloResponseParamSpecs::select('param_name', 'id')->get();
+            $paramsWSpec = EmloResponseParamSpecs::select('param_name', 'id', 'needs_normalization')->get();
             foreach ($paramsWSpec as $paramWSpec) {
 
                     $result = $this->emloResponseService->getAllValuesOfParam($paramWSpec->param_name, $userId, []);
+                    foreach ($result as $value) {
+                        if ($paramWSpec->needs_normalization == 1) {
+                            Log::debug("satisfied condition");
+                            $value->value = (int) EmloHelperService::applyNormalizationFormula($value->value, $paramWSpec->param_name);
+                        }
+                    }
                     
                     $last_7_days = $this->averagesService->aggregateData($result, 'last_7_days');
                     $last_30_days = $this->averagesService->aggregateData($result, 'last_30_days');

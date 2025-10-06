@@ -18,6 +18,7 @@ use App\Models\CredScoreValue;
 use App\Models\CredScoreInsightsAggregate;
 
 use App\Services\Emlo\EmloDatabaseLoader;
+use App\Services\Emlo\EmloHelperService;
 use App\Services\Emlo\EmloInsights\AveragesService;
 use App\Services\Emlo\EmloInsights\EmloInsightsService;
 use App\Services\Emlo\EmloInsights\ProgressOverTimeService;
@@ -33,6 +34,7 @@ class CredScoreService {
         protected EmloResponseService $emloResponseService,
         protected AveragesService  $averagesService,
         protected ProgressOverTimeService $progressOverTimeService,
+        protected EmloHelperService $emloHelperService
     ){}
 
     public function getAllLatestCredScoreData(Request $request)
@@ -42,21 +44,10 @@ class CredScoreService {
             return response()->json(['error' => 'user not found'], 404);
         }
 
-        $emptyResponse = [
-                'status' => 'success',
-                'message' => 'Insights data empty',
-                'data' => [
-                    'vijos' => [
-                        'lastMeasured' => '',
-                        'profile' => [],
-                    ]
-                ]
-        ];
-
         $allCredScores = [];
         $catalogsInUse = EmloDatabaseLoader::getMetricCatalogsInUse();
 
-        $credScoreValues = CredScoreValue::select('cred_score_values.cred_score', 'cred_score_values.measured_score', 'cred_score_values.percieved_score','video_requests.catalog_id', 'cred_score_values.created_at')
+        $credScoreValues = CredScoreValue::select('cred_score_values.cred_score', 'cred_score_values.measured_score', 'cred_score_values.perceived_score','video_requests.catalog_id', 'cred_score_values.created_at')
             ->join('video_requests', 'cred_score_values.request_id', '=', 'video_requests.id')
             ->where('video_requests.user_id', $userId)
             ->get();
@@ -87,7 +78,6 @@ class CredScoreService {
             ->get();
         if (!$aggregates) {
             Log::info('No EMLO insights aggregate found for user: ' . $userId);
-            //return response()->json($emptyResponse);
         }
 
         $latestAggregates = $aggregates->groupBy('catalog_id')
@@ -112,6 +102,8 @@ class CredScoreService {
             $latestRecord = $latestValues->where('catalog_id', $catalogInUse->id)->first();
             if ($latestRecord) {
                 $latestValue = $latestRecord?->cred_score ?? 0;
+                $lastMeasuredDetailed = $latestRecord?->created_at
+                    ->format('M j, Y g:iA') ?? '';
                 if ($latestValue != 0) {
                     $standardDeviation = RulesEngineService::standardDeviation($latestValues);
                     $statusMessage = $this->ruleCheckCredScore($standardDeviation);
@@ -130,7 +122,8 @@ class CredScoreService {
 
                 $credScoreData = $this->createCredScoresData(
                             $catalogInUse, 
-                            $aggregatesOfCatalog, 
+                            $aggregatesOfCatalog,
+                            $lastMeasuredDetailed, 
                             $latestValue, 
                             $statusMessage,
                             $weeklyData,
@@ -146,6 +139,8 @@ class CredScoreService {
                 $allCredScores[] =  $credScoreData = $this->createCredScoresData(
                             $catalogInUse);
             }
+
+            $allCredScores = $this->emloHelperService->orderInsightsFinalArray($allCredScores);
         }
         
         return response()->json([
@@ -164,6 +159,7 @@ class CredScoreService {
     private function createCredScoresData(
         $catalogInUse = null, 
         $aggregate = null, 
+        $lastMeasured = null,
         $latest_value = null, 
         $statusMessage = null,
         $weeklyData = null,
@@ -179,8 +175,10 @@ class CredScoreService {
             "id" => $catalogInUse->id ?? 0,
             "emoji"=> $catalogInUse->emoji ?? "",
             "name"=> $catalogInUse->title ?? "",
+            "video_type_id" => $catalogInUse->video_type_id ?? 0,
             "current" => $latest_value ?? 0,
             "average" => (int) ($aggregate->total_average ?? 0),
+            "lastMeasured" => $lastMeasured ?? "",
             "range" => $statusMessage ?? '',
             "dayChartData" =>  $weeklyData ?? [],
             "timeChartData" => $timeOfDayAverages ?? [],
@@ -206,7 +204,7 @@ class CredScoreService {
         $returnData = [
             'credScore' => $credScore->cred_score,
             'measuredScore' => $credScore->measured_score,
-            'percievedScore' => $credScore->percieved_score,
+            'perceivedScore' => $credScore->perceived_score,
         ];
 
         return $returnData;
@@ -231,7 +229,7 @@ class CredScoreService {
 
         $this->storeCredScore($credScoreId, $requestId, $userId);
 
-        $credScoreValues = CredScoreValue::select('cred_score_values.cred_score', 'cred_score_values.measured_score', 'cred_score_values.percieved_score','video_requests.catalog_id', 'cred_score_values.created_at')
+        $credScoreValues = CredScoreValue::select('cred_score_values.cred_score', 'cred_score_values.measured_score', 'cred_score_values.perceived_score','video_requests.catalog_id', 'cred_score_values.created_at')
             ->join('video_requests', 'cred_score_values.request_id', '=', 'video_requests.id')
             ->where('video_requests.user_id', $userId)
             ->where('video_requests.catalog_id', $catalogId->catalog_id)
@@ -285,11 +283,16 @@ class CredScoreService {
                 throw new CredScoreNotFoundException ("KPI metrics not found for cred score KPI {$kpi->id} of cred score {$credScoreId->id} of request {$requestId}");
             }
 
-            $kpiMetrics = $allKpiMetrics->whereNotNull('significance');
-            if (!$kpiMetrics) {
-                throw new CredScoreNotFoundException ("KPI metrics with non null significance not found for cred score KPI {$kpi->id} of cred score {$credScoreId->id} of request {$requestId}");
-            }
-            $kpiScore = $this->calculateKpiScore($kpiMetrics, $requestId, $userId);
+            $videoMetric = $allKpiMetrics->where('range', 10)?->first();
+            $selfHonestyMetric = $allKpiMetrics->where('emlo_param_spec_id', 15)?->first();
+
+            $collection = new \Illuminate\Database\Eloquent\Collection();
+            $collection->push($videoMetric);
+            $collection->push($selfHonestyMetric);
+
+            Log::debug("collection is:" . json_encode($collection));
+
+            $kpiScore = $this->calculateKpiScore($collection, $requestId, $userId);
             $kpiScores [] = $kpiScore;
         }
 
@@ -317,9 +320,9 @@ class CredScoreService {
             throw new CredScoreNotFoundException ("selfHonestyMetric KPI metric not found for cred score KPI {$kpi->id} of cred score {$credScoreId->id} of request {$requestId}");
         }
         
-        $secondaryScores = $this->getpercievedAndMeasuredScores($requestId, $userId,$metricQuestionMetric,  $selfHonestyMetric);
+        $secondaryScores = $this->getperceivedAndMeasuredScores($requestId, $userId,$metricQuestionMetric,  $selfHonestyMetric);
         $allScores = [
-            'percievedScore' => $secondaryScores['percievedScore'] ?? 0,
+            'perceivedScore' => $secondaryScores['perceivedScore'] ?? 0,
             'measuredScore' => $secondaryScores['measuredScore'] ?? 0,
             'credScore' => $credScoreValue ?? 0
         ];
@@ -331,7 +334,7 @@ class CredScoreService {
                 'request_id' => $requestId,
                 'cred_score' => $allScores['credScore'],
                 'measured_score' => $allScores['measuredScore'],
-                'percieved_score' => $allScores['percievedScore']
+                'perceived_score' => $allScores['perceivedScore']
             ]
         );       
     }
@@ -342,7 +345,7 @@ class CredScoreService {
   
             $sumOfSignificances = 0;
             foreach($kpiMetrics as $kpiMetric) {
-                $sumOfSignificances += $kpiMetric->significance;
+                $sumOfSignificances += $kpiMetric?->significance;
             }
             
             foreach($kpiMetrics as $kpiMetric) {
@@ -390,11 +393,11 @@ class CredScoreService {
             Log::error("Division by zero in calculateMetricScore: sumOfSignificances={$sumOfSignificances}, range={$kpiMetric->range}");
             return 0;
         }
-        $metricScore = (($value - 1)/($kpiMetric->range) * (100-1) + 1) * ($kpiMetric->significance)/$sumOfSignificances;
+        $metricScore = (($value - 1)/($kpiMetric->range - 1) * (100-1) + 1) * ($kpiMetric->significance)/$sumOfSignificances;
         return $metricScore;
     }
 
-    private function getpercievedAndMeasuredScores($requestId, $userId, $metricQuestionMetric, $selfHonestyMetric)
+    private function getperceivedAndMeasuredScores($requestId, $userId, $metricQuestionMetric, $selfHonestyMetric)
     {
         $metricQuestionScore = 0;
         $selfHonestyScore = 0;
@@ -405,7 +408,7 @@ class CredScoreService {
         $selfHonestyScore = $this->getKpiMetricValue($selfHonestyMetric, $requestId, $userId);
         
         $result = [
-            'percievedScore' => $metricQuestionScore, 
+            'perceivedScore' => $metricQuestionScore, 
             'measuredScore' => $selfHonestyScore
         ];
 

@@ -131,44 +131,59 @@ class CatalogController extends Controller
         ]);
     }
 
-    public function getSuggestedCatalogs($userId = null)
+    public function getSuggestedCatalogs($userId = null, $limit = 3)
     {
-        // Get catalog IDs the user has already recorded today
-        $today = now()->toDateString();
-        $recordedCatalogIds = VideoRequest::where('user_id', $userId)
-            ->whereDate('created_at', $today)
-            ->pluck('catalog_id')
-            ->toArray();
-
-        // Try to recommend 3 catalogs in the same category that haven't been recorded today
-        $suggestedCatalogs = Catalog::where('is_deleted', 0)
+        // Find all active catalogs in the category
+        $categoryId = $this->catalog->category_id ?? 0;
+        $allCatalogs = Catalog::where('is_deleted', 0)
             ->where('status', 1)
-            ->where('category_id', $this->catalog->category_id ?? 0)
-            ->whereNotIn('id', $recordedCatalogIds)
-            ->where('id', '<>', $this->catalog->id ?? 0)
-            ->limit(3)
+            ->where('category_id', $categoryId)
             ->get(['id', 'title', 'description', 'emoji', 'video_type_id']);
 
-        // If not enough, recommend from another category
-        if ($suggestedCatalogs->count() < 3) {
-            $otherCategoryId = Catalog::where('is_deleted', 0)
-            ->where('status', 1)
-            ->whereNotIn('id', $recordedCatalogIds)
-            ->where('category_id', '<>', $this->catalog->category_id ?? 0)
-            ->value('category_id');
+        // Count how many times each catalog was recorded by the user
+        $catalogCounts = VideoRequest::where('user_id', $userId)
+            ->whereIn('catalog_id', $allCatalogs->pluck('id'))
+            ->selectRaw('catalog_id, COUNT(*) as count')
+            ->groupBy('catalog_id')
+            ->pluck('count', 'catalog_id');
 
-            if ($otherCategoryId) {
-            $needed = 3 - $suggestedCatalogs->count();
-            $otherCatalogs = Catalog::where('is_deleted', 0)
-                ->where('status', 1)
-                ->where('category_id', $otherCategoryId)
-                ->whereNotIn('id', $recordedCatalogIds)
-                ->limit($needed)
-                ->get(['id', 'title', 'description', 'emoji', 'video_type_id']);
-            $suggestedCatalogs = $suggestedCatalogs->concat($otherCatalogs);
-            }
+        // Find the lowest number of recordings
+        $minCount = $catalogCounts->count() ? $catalogCounts->min() : 0;
+
+        // Filter catalogs that the user recorded the least number of times
+        $leastRecordedCatalogs = $allCatalogs->filter(function($catalog) use ($catalogCounts, $minCount) {
+            return ($catalogCounts[$catalog->id] ?? 0) == $minCount;
+        });
+
+        // Avoid recommending the same catalog that is currently being displayed
+        $leastRecordedCatalogs = $leastRecordedCatalogs->filter(function($catalog) {
+            return $catalog->id !== ($this->catalog->id ?? 0);
+        });
+
+        // If there are not at least 3, complete with the next least recorded catalogs
+        if ($leastRecordedCatalogs->count() < 3) {
+            $nextMinCount = $minCount + 1;
+            $nextCatalogs = $allCatalogs->filter(function($catalog) use ($catalogCounts, $nextMinCount) {
+            return ($catalogCounts[$catalog->id] ?? 0) == $nextMinCount;
+            })->filter(function($catalog) {
+            return $catalog->id !== ($this->catalog->id ?? 0);
+            });
+            $leastRecordedCatalogs = $leastRecordedCatalogs->concat($nextCatalogs)->take($limit);
+        } else {
+            $leastRecordedCatalogs = $leastRecordedCatalogs->take($limit);
         }
 
-        return $suggestedCatalogs->values();
+        // If there are still not 3, fetch from another category
+        if ($leastRecordedCatalogs->count() < $limit) {
+            $needed = $limit - $leastRecordedCatalogs->count();
+            $otherCatalogs = Catalog::where('is_deleted', 0)
+            ->where('status', 1)
+            ->where('category_id', '<>', $categoryId)
+            ->limit($needed)
+            ->get(['id', 'title', 'description', 'emoji', 'video_type_id']);
+            $leastRecordedCatalogs = $leastRecordedCatalogs->concat($otherCatalogs);
+        }
+
+        return $leastRecordedCatalogs->values();
     }
 }

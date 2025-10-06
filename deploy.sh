@@ -5,11 +5,12 @@ echo "🚀 Iniciando processo de deploy Laravel..."
 APP_DIR="/var/www/html/vijo_laravel"
 PHP_VERSION="8.1"
 USER="www-data"
+SERVER_USER="ubuntu"
 
 cd $APP_DIR || exit
 
 echo "🔄 Atualizando código..."
-git pull origin main || { echo "❌ Falha ao executar git pull"; exit 1; }
+git pull origin develop || { echo "❌ Falha ao executar git pull"; exit 1; }
 
 echo "🔧 Ajustando permissões..."
 sudo chown -R $USER:$USER $APP_DIR
@@ -21,11 +22,6 @@ php artisan cache:clear
 php artisan config:clear
 php artisan route:clear
 php artisan view:clear
-
-echo "⚙️ Regenerando caches Laravel..."
-php artisan config:cache
-php artisan route:cache
-php artisan view:cache
 
 echo "🧬 Rodando migrations..."
 php artisan migrate --force
@@ -39,7 +35,7 @@ sudo supervisorctl update
 sudo supervisorctl restart all
 
 # Ajustar o dono dos arquivos para o usuário correto (ex: www-data para Apache/Nginx)
-sudo chown -R $USER:www-data /var/www/html/vijo_laravel
+sudo chown -R $SERVER_USER:www-data /var/www/html/vijo_laravel
 
 # Dar permissão de escrita para o grupo (www-data) onde necessário
 sudo chmod -R ug+rwX /var/www/html/vijo_laravel
@@ -49,5 +45,13 @@ sudo chmod -R 775 /var/www/html/vijo_laravel/vendor
 
 # echo "♻️ Reiniciando PHP-FPM (para limpar OpCache)..."
 # sudo systemctl restart php$PHP_VERSION-fpm
+
+echo "⚙️ Regenerando caches Laravel..."
+sudo -u $SERVER_USER php artisan config:cache
+sudo -u $SERVER_USER php artisan route:cache
+sudo -u $SERVER_USER php artisan view:cache
+
+#sudo -u $SERVER_USER composer install --no-dev --optimize-autoloader
+sudo -u $SERVER_USER composer dump-autoload -o
 
 echo "✅ Deploy finalizado com sucesso!"

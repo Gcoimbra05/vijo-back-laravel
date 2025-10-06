@@ -265,7 +265,21 @@ class InsightsV2Service {
             ->whereHas('videos')
             ->count();
 
+        $startOfWeek = Carbon::now()->startOfWeek();
+        $endOfWeek = Carbon::now()->endOfWeek();
+        $weekRecordings = VideoRequest::where('user_id', $userId)
+            ->whereHas('videos')
+            ->whereBetween('created_at', [$startOfWeek, $endOfWeek])
+            ->count();
+
         $avgRecordings = $totalCheckIns > 0 ? round($totalRecordings / $totalCheckIns, 1) : 0;
+
+        // Total videos recorded today
+        $today = Carbon::today();
+        $totalOfToday = VideoRequest::where('user_id', $userId)
+            ->whereHas('videos')
+            ->whereDate('created_at', $today)
+            ->count();
 
         return [
             'avgRecordings' => $avgRecordings,
@@ -273,6 +287,8 @@ class InsightsV2Service {
             'longestStreak' => $longestStreak,
             'totalCheckIns' => $totalCheckIns,
             'thisMonth' => $thisMonth,
+            'totalOfThisWeek' => $weekRecordings,
+            'totalOfToday' => $totalOfToday,
         ];
     }
 }

@@ -38,8 +38,6 @@ class ContactGroup extends Model implements AuditableContract
         return $this->belongsTo(User::class);
     }
 
-    // Métodos utilitários similares ao CodeIgniter
-
     /**
      * Get all contacts associated with this group.
      *

@@ -29,7 +29,6 @@ class EmloResponseParamSpecs extends Model implements AuditableContract
      */
     public static function findByParamName($paramName)
     {
-        
         return self::select('description', 'min', 'max')
             ->where('param_name', $paramName)
             ->get()
