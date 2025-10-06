@@ -14,10 +14,10 @@ class Catalog extends Model implements AuditableContract
     protected $table = 'catalogs';
 
     protected $fillable = [
-        'title',
-        'description',
+        'title', 
+        'description', 
         'tags',
-        'min_record_time',
+        'min_record_time', 
         'max_record_time',
         'emoji',
         'is_deleted',
@@ -26,7 +26,7 @@ class Catalog extends Model implements AuditableContract
         'category_id',
         'is_promotional',
         'is_premium',
-        'video_type_id',
+        'video_type_id', 
         'is_multipart',
         'admin_order'
     ];
@@ -36,10 +36,6 @@ class Catalog extends Model implements AuditableContract
         return $this->hasMany(VideoRequest::class);
     }
 
-    public function category()
-    {
-        return $this->belongsTo(Category::class, 'category_id');
-    }
 
     public function parentCatalog()
     {
@@ -51,8 +47,18 @@ class Catalog extends Model implements AuditableContract
         return $this->hasMany(Catalog::class, 'parent_catalog_id');
     }
 
-    public function videoType()
+     public function videoType()
     {
-        return $this->belongsTo(VideoType::class, 'video_type_id');
+        return $this->belongsTo(VideoType::class);
     }
+
+    public function category()
+    {
+        return $this->belongsTo(Category::class);
+    }
+
+    public function tags()
+    {
+        return $this->belongsToMany(\App\Models\Tag::class, 'catalog_tag', 'catalog_id', 'tag_id');
+}
 }

@@ -10,7 +10,7 @@
     <title>@yield('title', 'Admin Panel - vijo')</title>
 
     <!-- Favicon -->
-    <link rel="shortcut icon" href="{{ asset('assets/img/favicon/favicon.ico') }}" type="image/x-icon">
+    <link rel="shortcut icon" href="{{ asset('assets/images/group.svg') }}" type="image/x-icon">
 
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
