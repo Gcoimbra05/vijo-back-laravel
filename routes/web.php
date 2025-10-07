@@ -19,6 +19,7 @@ use App\Http\Controllers\VideoController;
 use App\Http\Controllers\VideoRequestController;
 use App\Http\Controllers\VideoTypeController;
 use App\Http\Controllers\TagController;
+use App\Http\Controllers\EmailTemplateController;
 
 Route::get('/', function () {
     return view('welcome');
@@ -77,6 +78,19 @@ Route::prefix('admin')->group(function () {
         Route::get('users/{userId}/contacts', [UserController::class, 'contactsByUser'])->name('users.contacts');
 
         Route::post('/logout', [AdminLoginController::class, 'logout'])->name('logout');
+
+        // email templates
+        Route::prefix('emailtemplate')->group(function () {
+            Route::get('/', [EmailTemplateController::class, 'index'])->name('emailtemplate.index');
+            Route::get('/create', [EmailTemplateController::class, 'create'])->name('emailtemplate.create');
+            Route::post('/', [EmailTemplateController::class, 'store'])->name('emailtemplate.store');
+            Route::get('/edit/{id}', [EmailTemplateController::class, 'edit'])->name('emailtemplate.edit');
+            Route::put('/{id}', [EmailTemplateController::class, 'update'])->name('emailtemplate.update');
+            Route::get('/delete/{id}', [EmailTemplateController::class, 'destroy'])->name('emailtemplate.delete');
+
+            Route::get('/activate/{id}', [EmailTemplateController::class, 'activate'])->name('emailtemplate.activate');
+            Route::get('/deactivate/{id}', [EmailTemplateController::class, 'deactivate'])->name('emailtemplate.deactivate');
+        });
 
 
         // catalogs routes

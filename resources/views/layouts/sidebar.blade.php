@@ -29,7 +29,7 @@
         </li>
 
         <!-- Customers -->
-        <li class="menu-item <?php if (in_array($nav_bar, array('businesses', 'users'))) { ?>open<?php } ?>">
+        <li class="menu-item <?php if (in_array($nav_bar, array('businesses', 'users', 'emailtemplate'))) { ?>open<?php } ?>">
             <a href="javascript:void(0);" class="menu-link menu-toggle">
                 <i class="menu-icon tf-icons bx bx-collection"></i>
                 <div data-i18n="Customers">Customers</div>
@@ -38,6 +38,12 @@
                 <li class="menu-item <?php if ($nav_bar == 'users') { ?>active<?php } ?>">
                     <a href="{{ url('admin/users') }}" class="menu-link">
                         <div data-i18n="Members">Members</div>
+                    </a>
+                </li>
+
+                <li class="menu-item <?php if ($nav_bar == 'emailtemplate') { ?>active<?php } ?>">
+                    <a href="{{ url('admin/emailtemplate') }}" class="menu-link">
+                        <div data-i18n="EmailTemplate">Email Templates</div>
                     </a>
                 </li>
             </ul>
