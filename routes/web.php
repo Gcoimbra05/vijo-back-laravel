@@ -12,6 +12,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\MediaStorageController;
 use App\Http\Controllers\MembershipPlanController;
+use App\Http\Controllers\PlatformTextController;
 use App\Http\Controllers\ReferralCodeController;
 use App\Http\Controllers\SubscriptionController;
 use App\Http\Controllers\UserController;
@@ -104,6 +105,9 @@ Route::prefix('admin')->group(function () {
         Route::get('journal_category/activate/{id}', [CategoryController::class, 'activate'])->name('journalCategories.activate');
         Route::get('journal_category/delete/{id}', [CategoryController::class, 'destroy'])->name('journalCategories.destroy');
 
+        // Platform Texts
+        Route::resource('platform_texts', PlatformTextController::class);
+    
         Route::prefix('catalog')->group(function () {
             Route::get('/', [CatalogController::class, 'index'])->name('catalog.index');
             Route::get('/add', [CatalogController::class, 'add'])->name('catalog.add');

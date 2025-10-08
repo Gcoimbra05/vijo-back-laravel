@@ -25,6 +25,7 @@ use Illuminate\Support\Facades\Route;
 
 use App\Http\Controllers\EmloResponseController;
 use App\Http\Controllers\EmloResponseParamSpecsController;
+use App\Http\Controllers\PlatformTextController;
 use App\Http\Controllers\QuickGoalController;
 use App\Http\Controllers\UserFeedbackController;
 use App\Services\CredScore\CredScoreService;
@@ -70,7 +71,8 @@ Route::prefix('v2')->middleware(ForceJsonResponse::class)->group(function () {
         Route::post('update-guided-tours', [UserController::class, 'updateGuidedTour']);
         Route::get('subscription-plans', [UserController::class, 'getSubscriptionPlans']);
 
-        Route::apiResource('membership-plans', MembershipPlanController::class);
+        Route::get('membership-plans', [MembershipPlanController::class, 'index']);
+        Route::get('membership-plans/{membership_plan}', [MembershipPlanController::class, 'show']);
         Route::apiResource('subscriptions', SubscriptionController::class);
         Route::apiResource('videos', VideoController::class);
         Route::apiResource('video-requests', VideoRequestController::class);
@@ -144,6 +146,10 @@ Route::prefix('v2')->middleware(ForceJsonResponse::class)->group(function () {
         Route::get('quick-goals/{quick_goal}', [QuickGoalController::class, 'show']);
         Route::delete('quick-goals/{quick_goal}', [QuickGoalController::class, 'destroy']);
     });
+
+    // Platform Texts
+    Route::get('platform-texts', [PlatformTextController::class, 'index']);
+    Route::get('platform-texts/{id}', [PlatformTextController::class, 'show']);
 
     // Stripe Webhook
     Route::post('stripe/webhook', [StripeWebhookController::class, 'handle']);

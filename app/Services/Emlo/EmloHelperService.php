@@ -244,6 +244,8 @@ class EmloHelperService {
             case 'risk1':
                 if ($value > 100) {
                     return 100;
+                } else if ($value <= 0) {
+                    return 1; 
                 } else {
                     return $value;
                 }

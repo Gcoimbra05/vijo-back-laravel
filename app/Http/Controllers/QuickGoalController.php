@@ -33,15 +33,29 @@ class QuickGoalController extends Controller
         }
         $period_start = $today;
         $period_end = $request->end_date ? Carbon::createFromFormat('Y-m-d', $request->end_date)->toDateString() : now()->addDays($days)->toDateString();
-        $goal = QuickGoal::create([
-            'user_id' => Auth::id(),
-            'amount_of_videos' => $request->amount_of_videos,
-            'period_type' => $request->period_type,
-            'period_start' => $period_start,
-            'period_end' => $period_end,
-            'recorded' => 0,
-            'status' => 'active',
-        ]);
+
+        $goal = QuickGoal::where('user_id', Auth::id())
+            ->first();
+        if (!$goal) {
+            $goal = QuickGoal::create([
+                'user_id' => Auth::id(),
+                'amount_of_videos' => $request->amount_of_videos,
+                'period_type' => $request->period_type,
+                'period_start' => $period_start,
+                'period_end' => $period_end,
+                'recorded' => 0,
+                'status' => 'active',
+            ]);
+        } else {
+            $goal->update([
+                'amount_of_videos' => $request->amount_of_videos,
+                'period_type' => $request->period_type,
+                'period_start' => $period_start,
+                'period_end' => $period_end,
+                'recorded' => 0,
+                'status' => 'active',
+            ]);
+        }
 
         $goal->period_end = Carbon::parse($goal->period_end)->format('M d, Y');
 
@@ -121,6 +135,10 @@ class QuickGoalController extends Controller
             ->whereDate('period_end', '>=', now()->toDateString())
             ->latest('period_end')
             ->first();
+
+        if ($activeGoal && $activeGoal->recorded > 0 && !Carbon::parse($activeGoal->updated_at)->isToday()) {
+            $activeGoal->update(['recorded' => 0]);
+        }
 
         if ($activeGoal) {
             return [
