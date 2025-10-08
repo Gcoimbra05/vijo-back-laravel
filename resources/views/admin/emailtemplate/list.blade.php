@@ -67,7 +67,7 @@
                                             </a>
                                         @endif
 
-                                        <a class="dropdown-item" href="{{ route('emailtemplate.edit', $emailtemplate->id) }}">
+                                        <a class="dropdown-item" href="{{ route('emailtemplate.show', $emailtemplate->id) }}">
                                             <i class="bx bx-edit-alt me-1"></i> Edit
                                         </a>
 

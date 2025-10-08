@@ -8,13 +8,6 @@ use Illuminate\Routing\Controller;
 
 class EmailTemplateController extends Controller
 {
-    protected $emailTemplate;
-
-    public function __construct(?EmailTemplate $emailTemplate = null)
-    {
-        $this->emailTemplate = $emailTemplate;
-    }
-
     /**
      * LISTAR – Exibe todos os modelos de e-mail
      */
@@ -86,7 +79,7 @@ class EmailTemplateController extends Controller
     /**
      * EDIT – Exibe o formulário de edição
      */
-    public function edit($id)
+    public function show($id)
     {
         $emailTemplate = EmailTemplate::findOrFail($id);
 

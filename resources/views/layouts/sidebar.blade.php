@@ -37,7 +37,7 @@
             <ul class="menu-sub">
                 <li class="menu-item <?php if ($nav_bar == 'users') { ?>active<?php } ?>">
                     <a href="{{ url('admin/users') }}" class="menu-link">
-                        <div data-i18n="Members">Members</div>
+                        <div data-i18n="Members">Users</div>
                     </a>
                 </li>
 

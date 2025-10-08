@@ -84,7 +84,7 @@ Route::prefix('admin')->group(function () {
             Route::get('/', [EmailTemplateController::class, 'index'])->name('emailtemplate.index');
             Route::get('/create', [EmailTemplateController::class, 'create'])->name('emailtemplate.create');
             Route::post('/', [EmailTemplateController::class, 'store'])->name('emailtemplate.store');
-            Route::get('/edit/{id}', [EmailTemplateController::class, 'edit'])->name('emailtemplate.edit');
+            Route::get('/show/{id}', [EmailTemplateController::class, 'show'])->name('emailtemplate.show');
             Route::put('/{id}', [EmailTemplateController::class, 'update'])->name('emailtemplate.update');
             Route::get('/delete/{id}', [EmailTemplateController::class, 'destroy'])->name('emailtemplate.delete');
 
