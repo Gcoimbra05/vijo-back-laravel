@@ -4,7 +4,7 @@
     </tr>
     <tr>
         <td style="padding-top: 16px; font-size: 28px; font-weight: 500; line-height: 120%; letter-spacing: 0%;">
-            Your Vijo account verification code.
+            Your Vijo ™ account verification code.
         </td>
     </tr>
     <tr>

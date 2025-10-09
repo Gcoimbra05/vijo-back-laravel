@@ -801,9 +801,16 @@ class UserController extends Controller
         );
         $redirectLink = $envUrl . '/reset-password?token=' . $token . '&email=' . urlencode($user->email);
 
-        Mail::send('emails.reset_link', ['user' => $user, 'redirect_link' => $redirectLink], function ($message) use ($user) {
-            $message->to($user->email);
-            $message->subject('Password Reset - Vijo');
+        Mail::send('emails.template_new', [
+            'title' => "Password Reset - Vijo",
+            'contentView' => 'emails.reset_password',
+            'contentData' => [
+                'user' => $user,
+                'redirect_link' => $redirectLink
+            ]
+        ], function ($message) use ($user) {
+            $message->to($user->email)
+                ->subject("Password Reset - Vijo");
         });
 
         return response()->json([
@@ -901,7 +908,7 @@ class UserController extends Controller
             $appUrl = config('app.url');
             $envUrl = str_replace('.com', '.me', $appUrl);
             try {
-                Mail::send('emails.template', [
+                Mail::send('emails.template_new', [
                     'title' => 'Your Vijo account verification code',
                     'contentView' => 'emails.verification_code',
                     'contentData' => [

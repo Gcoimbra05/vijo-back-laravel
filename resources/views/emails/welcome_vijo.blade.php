@@ -4,14 +4,14 @@
     </tr>
     <tr>
         <td style="padding-top: 16px; font-size: 28px; font-weight: 500; line-height: 120%; letter-spacing: 0%;">
-            <strong>You're in!</strong> Welcome to the world of Vijo.
+            <strong>You're in!</strong> Welcome to the world of Vijo ™.
         </td>
     </tr>
     <tr>
         <td style="padding-top: 16px; font-size: 16px; font-weight: 500; line-height: 140%; letter-spacing: 0%;">
             Hey {{ $recipientName ?? '[First Name]' }}!
             <br><br>
-            You're now part of an exclusive group helping shape the future of Vijo. We're thrilled to have you join us for Week 1!
+            You're now part of an exclusive group helping shape the future of Vijo ™. We're thrilled to have you join us for Week 1!
         </td>
     </tr>
     <tr>

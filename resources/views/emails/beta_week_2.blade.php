@@ -32,7 +32,7 @@
     </tr>
     <tr>
         <td style="padding-top: 16px; font-size: 16px; font-weight: 500; line-height: 140%;">
-            Thank you for shaping the future of Vijo. We're just getting started 🚀
+            Thank you for shaping the future of Vijo ™. We're just getting started 🚀
         </td>
     </tr>
     <tr>
