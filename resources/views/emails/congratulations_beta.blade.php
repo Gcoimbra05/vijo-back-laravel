@@ -24,14 +24,14 @@
     <tr>
         <td style="padding-top: 16px; font-size: 16px; font-weight: 500; line-height: 140%;">
             <strong>What's Next?</strong><br><br>
-            ✅ Keep using Vijo with your upgraded access.<br><br>
+            ✅ Keep using Vijo ™ with your upgraded access.<br><br>
             ✅ Experience new Beta features before anyone else.<br><br>
             ✅ Give us your honest feedback to help us keep improving.
         </td>
     </tr>
     <tr>
         <td style="padding-top: 16px; font-size: 16px; font-weight: 500; line-height: 140%;">
-            Your support is literally building the future of Vijo. 🚀
+            Your support is literally building the future of Vijo ™. 🚀
         </td>
     </tr>
     <tr>

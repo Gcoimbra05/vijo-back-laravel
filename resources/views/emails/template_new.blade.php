@@ -29,7 +29,7 @@
                                         <table cellpadding="0" cellspacing="0" border="0" style="background-color: #5b67f0; padding: 20px 40px; border-radius: 10px; width: 100%;">
                                             <tr>
                                                 <td align="center">
-                                                    <span style="color: #ffffff; font-size: 32px; margin: 0; font-weight: 700; display: block;">Vijo</span>
+                                                    <span style="color: #ffffff; font-size: 32px; margin: 0; font-weight: 700; display: block;">Vijo ™</span>
                                                     <p style="color: #ffffff; margin: 5px 0 0 0; font-size: 14px;">Your Video Journal</p>
                                                 </td>
                                             </tr>
@@ -59,7 +59,7 @@
                                             Need help? Contact <a href="mailto:Admin@Vijo.com" style="color: #5b67f0; text-decoration: none;">Admin@Vijo.com</a>
                                         </p>
                                         <p style="color: #a0aec0; font-size: 12px; margin: 0;">
-                                            © 2025 Vijo. Build better habits, one Vijo at a time.
+                                            © 2025 Vijo ™. Build better habits, one Vijo at a time.
                                         </p>
                                     </td>
                                 </tr>

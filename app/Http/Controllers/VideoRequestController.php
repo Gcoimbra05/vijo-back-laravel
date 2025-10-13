@@ -1627,7 +1627,7 @@ class VideoRequestController extends Controller
             if (!empty($refEmail)) {
                 try {
                     $sendName = Auth::user()->first_name ?? 'Vijo User';
-                     Mail::send('emails.template', [
+                     Mail::send('emails.template_new', [
                         'title' => '👀 ' . $sendName . ' has shared a Vijo with you',
                         'contentView' => 'emails.share_video_request',
                         'contentData' => [
@@ -2011,11 +2011,11 @@ class VideoRequestController extends Controller
         ]);
     }
 
-    private static function calculateParamAverage($paramValues) 
+    private static function calculateParamAverage($paramValues)
     {
         // Handle both Collection and array inputs
         $collection = is_array($paramValues) ? collect($paramValues) : $paramValues;
-        
+
         // Filter out items with null values and extract valid numeric values
         $validValues = $collection
             ->filter(function ($item) {

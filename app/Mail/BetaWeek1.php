@@ -21,7 +21,7 @@ class BetaWeek1 extends Mailable
 
     public function build()
     {
-        return $this->view('emails.template')
+        return $this->view('emails.template_new')
             ->with([
                 'title' => "Beta Week 1: Let's Make Magic Happen!",
                 'contentView' => 'emails.beta_week_1',

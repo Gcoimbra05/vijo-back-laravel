@@ -3,7 +3,7 @@
         <td align="center">
             <span style="font-size: 72px; margin-bottom: 20px; display: block;">🎉</span>
             <span style="color: #2d3748; font-size: 28px; margin: 0 0 15px 0; font-weight: 600; display: block;">
-                Welcome to Vijo!
+                Welcome to Vijo ™!
             </span>
             <p style="color: #718096; font-size: 16px; line-height: 1.6; margin: 0 0 30px 0;">
                 Start your journey of authentic self-expression through video journaling.
