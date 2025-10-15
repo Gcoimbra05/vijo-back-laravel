@@ -855,6 +855,7 @@ class VideoRequestController extends Controller
 
             return [
                 'catalog_id'      => (string)$catalog->id,
+                'category_id'     => $catalog->category ? $catalog->category->id : '',
                 'category_name'   => $catalog->category ? $catalog->category->name : '',
                 'title'           => $catalog->title,
                 'description'     => $catalog->description,
@@ -2011,11 +2012,11 @@ class VideoRequestController extends Controller
         ]);
     }
 
-    private static function calculateParamAverage($paramValues)
+    private static function calculateParamAverage($paramValues) 
     {
         // Handle both Collection and array inputs
         $collection = is_array($paramValues) ? collect($paramValues) : $paramValues;
-
+        
         // Filter out items with null values and extract valid numeric values
         $validValues = $collection
             ->filter(function ($item) {

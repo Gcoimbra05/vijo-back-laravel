@@ -4,6 +4,7 @@ namespace App\Services\VideoRequestProcessing\Steps;
 
 use App\Http\Controllers\CsvController;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class ProcessCsvStep extends VideoProcessingStep
 {
@@ -30,12 +31,7 @@ class ProcessCsvStep extends VideoProcessingStep
         $responseData = json_decode($csvUploadResponse->getContent(), true);
         $csvS3Url = $responseData['data']['s3_url'];
         
-        $context['apiService']->sendWebhookNotification(
-            'csv complete', 
-            $context['videoRequest']->id, 
-            'video_request', 
-            ['url' => $csvS3Url]
-        );
+        Log::info('CSV processing complete for video request: ' . $context['videoRequest']->id . 'result at: ' . $csvS3Url);
 
         return [
             'success' => true,

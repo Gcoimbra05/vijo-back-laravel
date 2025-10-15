@@ -30,12 +30,7 @@ class ProcessInsightsAggregationStep extends VideoProcessingStep {
             $userId->user_id
         );
 
-        $context['apiService']->sendWebhookNotification(
-            'Post request aggregation complete', 
-            $context['videoRequest']->id, 
-            'video_request', 
-            ['response' => 'post request aggregation complete']
-        );
+        Log::info('Post request aggregation complete for video request: ' . $context['videoRequest']->id);
 
         return ['success' => true];
     }     

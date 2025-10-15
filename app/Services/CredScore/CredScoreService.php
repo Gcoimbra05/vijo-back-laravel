@@ -105,7 +105,7 @@ class CredScoreService {
                 $lastMeasuredDetailed = $latestRecord?->created_at
                     ->format('M j, Y g:iA') ?? '';
                 if ($latestValue != 0) {
-                    $standardDeviation = RulesEngineService::standardDeviation($latestValues);
+                    $standardDeviation = RulesEngineService::standardDeviation($latestValues->pluck('value'));
                     $statusMessage = $this->ruleCheckCredScore($standardDeviation);
                 }
 

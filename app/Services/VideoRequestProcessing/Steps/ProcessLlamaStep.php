@@ -3,6 +3,7 @@
 namespace App\Services\VideoRequestProcessing\Steps;
 
 use App\Models\LlmResponse;
+use Illuminate\Support\Facades\Log;
 
 class ProcessLlamaStep extends VideoProcessingStep
 {
@@ -10,13 +11,7 @@ class ProcessLlamaStep extends VideoProcessingStep
     {
         if (!($context['videoRequest']->llm_template_id)){
 
-            $context['apiService']->sendWebhookNotification(
-                'AI processing skipped', 
-                $context['videoRequest']->id, 
-                'video_request', 
-                ['response' => 'Skipped AI processing']
-            );
-
+            Log::info('Llama processing skipped for video request: ' . $context['videoRequest']->id);
             return ['success' => true];
         }
 
@@ -31,12 +26,7 @@ class ProcessLlamaStep extends VideoProcessingStep
 
         $this->storeLlmResponse($context['videoRequest']->id, $llamaResult['response']);
 
-        $context['apiService']->sendWebhookNotification(
-            'AI processing complete', 
-            $context['videoRequest']->id, 
-            'video_request', 
-            ['response' => $llamaResult['response']]
-        );
+        Log::info('Llama processing complete for video request: ' . $context['videoRequest']->id);
 
         return ['success' => true];
     }

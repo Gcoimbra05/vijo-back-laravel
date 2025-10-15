@@ -1310,8 +1310,2562 @@ use Illuminate\Routing\Controller;
  *         )
  *     )
  * )
-*/
-
+ *
+ * @OA\Get(
+ *     path="/v2/video-requests/{video_request}",
+ *     summary="Retrieve a specific video request by ID",
+ *     tags={"Video Requests"},
+ *     security={{"sanctum":{}}},
+ *     @OA\Parameter(
+ *         name="video_request",
+ *         in="path",
+ *         required=true,
+ *         description="ID of the video request",
+ *         @OA\Schema(type="integer", example=1)
+ *     ),
+ *     @OA\Response(
+ *         response=200,
+ *         description="Video request retrieved successfully.",
+ *         @OA\JsonContent(
+ *             @OA\Property(property="success", type="boolean", example=true),
+ *             @OA\Property(property="message", type="string", example="Video request retrieved successfully."),
+ *             @OA\Property(property="data", type="object")
+ *         )
+ *     ),
+ *     @OA\Response(
+ *         response=404,
+ *         description="Video request not found.",
+ *         @OA\JsonContent(
+ *             @OA\Property(property="success", type="boolean", example=false),
+ *             @OA\Property(property="message", type="string", example="Video request not found."),
+ *             @OA\Property(property="data", type="object", nullable=true)
+ *         )
+ *     )
+ * )
+ *
+ * @OA\Post(
+ *     path="/v2/video-requests",
+ *     summary="Create a new video request",
+ *     tags={"Video Requests"},
+ *     security={{"sanctum":{}}},
+ *     @OA\RequestBody(
+ *         required=true,
+ *         @OA\MediaType(
+ *             mediaType="multipart/form-data",
+ *             @OA\Schema(
+ *                 required={"catalog_id"},
+ *                 @OA\Property(property="catalog_id", type="integer", example=1, description="ID of the catalog"),
+ *                 @OA\Property(property="file", type="string", format="binary", description="Video file (optional)"),
+ *                 @OA\Property(property="video_duration", type="integer", example=120, description="Duration of the video in seconds (optional)")
+ *             )
+ *         )
+ *     ),
+ *     @OA\Response(
+ *         response=201,
+ *         description="Video request created successfully.",
+ *         @OA\JsonContent(
+ *             @OA\Property(property="success", type="boolean", example=true),
+ *             @OA\Property(property="message", type="string", example="Video request created successfully."),
+ *             @OA\Property(property="data", type="object")
+ *         )
+ *     ),
+ *     @OA\Response(
+ *         response=422,
+ *         description="Validation error.",
+ *         @OA\JsonContent(
+ *             @OA\Property(property="success", type="boolean", example=false),
+ *             @OA\Property(property="message", type="string", example="Validation error."),
+ *             @OA\Property(property="data", type="object", nullable=true)
+ *         )
+ *     )
+ * )
+ *
+ * @OA\Get(
+ *     path="/v2/video-galleries",
+ *     summary="Get all video galleries for the authenticated user",
+ *     tags={"Video Requests"},
+ *     security={{"sanctum":{}}},
+ *     @OA\Response(
+ *         response=200,
+ *         description="List of video galleries retrieved successfully.",
+ *         @OA\JsonContent(
+ *             @OA\Property(property="status", type="boolean", example=true),
+ *             @OA\Property(property="message", type="string", example=""),
+ *             @OA\Property(property="results", type="array",
+ *                 @OA\Items(
+ *                     @OA\Property(property="id", type="integer", example=1),
+ *                     @OA\Property(property="user_id", type="integer", example=1),
+ *                     @OA\Property(property="journal_title", type="string", example="My Journal"),
+ *                     @OA\Property(property="ref_user_id", type="integer", example=2),
+ *                     @OA\Property(property="journal_type", type="string", example="request"),
+ *                     @OA\Property(property="recommendation_id", type="string", example=""),
+ *                     @OA\Property(property="category_name", type="string", example="Wellness"),
+ *                     @OA\Property(property="is_private", type="integer", example=0),
+ *                     @OA\Property(property="rrc_video1", type="string", example="video.mp4"),
+ *                     @OA\Property(property="rrc_video1_thumb", type="string", example="thumb.jpg"),
+ *                     @OA\Property(property="video", type="string", example="https://example.com/video.mp4"),
+ *                     @OA\Property(property="video_thumb", type="string", example="https://example.com/thumb.jpg"),
+ *                     @OA\Property(property="recordedBy", type="string", example="self"),
+ *                     @OA\Property(property="parent_catalog_id", type="integer", example=0),
+ *                     @OA\Property(property="cp_id", type="integer", example=0),
+ *                     @OA\Property(property="created_at", type="string", example="Oct 10, 2025 14:30"),
+ *                     @OA\Property(property="date", type="string", example="Oct 10, 2025 2:30PM"),
+ *                     @OA\Property(property="mediaId", type="integer", example=10),
+ *                     @OA\Property(property="catalogEmoji", type="string", example="😊"),
+ *                     @OA\Property(property="user_name", type="string", example="John Smith"),
+ *                     @OA\Property(property="tags", type="array", @OA\Items(
+ *                         @OA\Property(property="id", type="integer", example=1),
+ *                         @OA\Property(property="name", type="string", example="Motivation")
+ *                     ))
+ *                 )
+ *             )
+ *         )
+ *     )
+ * )
+ * 
+ * @OA\Get(
+ *     path="/v2/video-detail/{id}",
+ *     summary="Get detailed information about a specific video request (journal)",
+ *     tags={"Video Requests"},
+ *     security={{"sanctum":{}}},
+ *     @OA\Parameter(
+ *         name="id",
+ *         in="path",
+ *         required=true,
+ *         description="ID of the video request (journal)",
+ *         @OA\Schema(type="integer", example=1)
+ *     ),
+ *     @OA\Response(
+ *         response=200,
+ *         description="Journal details retrieved successfully.",
+ *         @OA\JsonContent(
+ *             @OA\Property(property="status", type="boolean", example=true),
+ *             @OA\Property(property="message", type="string", example=""),
+ *             @OA\Property(property="results", type="object",
+ *                 @OA\Property(property="journal_data", type="array",
+ *                     @OA\Items(
+ *                         @OA\Property(property="id", type="integer", example=1),
+ *                         @OA\Property(property="catalog_id", type="integer", example=1),
+ *                         @OA\Property(property="catalog_name", type="string", example="Daily Reflection"),
+ *                         @OA\Property(property="catalog_emoji", type="string", example="😊"),
+ *                         @OA\Property(property="category_name", type="string", example="Wellness"),
+ *                         @OA\Property(property="contacts", type="array", @OA\Items(
+ *                             @OA\Property(property="contact_id", type="integer", example=1),
+ *                             @OA\Property(property="first_name", type="string", example="John"),
+ *                             @OA\Property(property="last_name", type="string", example="Smith"),
+ *                             @OA\Property(property="email", type="string", example="john@example.com"),
+ *                             @OA\Property(property="mobile", type="string", example="5551234567")
+ *                         )),
+ *                         @OA\Property(property="groups", type="array", @OA\Items(
+ *                             @OA\Property(property="group_id", type="integer", example=1),
+ *                             @OA\Property(property="group_name", type="string", example="Friends")
+ *                         )),
+ *                         @OA\Property(property="created_at", type="string", example="Oct 10, 2025 2:30PM"),
+ *                         @OA\Property(property="cred_score", type="integer", example=75),
+ *                         @OA\Property(property="perceived_score", type="integer", example=80),
+ *                         @OA\Property(property="actual_score", type="integer", example=78),
+ *                         @OA\Property(property="emotional_insights", type="array", @OA\Items(type="object")),
+ *                         @OA\Property(property="final_video_transcript", type="string", example="Today was a really productive day at work..."),
+ *                         @OA\Property(property="gptSummary", type="string", example="Summary generated by GPT"),
+ *                         @OA\Property(property="is_emotional_category", type="boolean", example=true),
+ *                         @OA\Property(property="is_private", type="integer", example=0),
+ *                         @OA\Property(property="journal_tags", type="string", example="motivation,work"),
+ *                         @OA\Property(property="journal_title", type="string", example="My Journal"),
+ *                         @OA\Property(property="journal_type", type="string", example="daily"),
+ *                         @OA\Property(property="recommendation_id", type="string", example=""),
+ *                         @OA\Property(property="recordedBy", type="string", example="self"),
+ *                         @OA\Property(property="ref_user_id", type="integer", example=2),
+ *                         @OA\Property(property="rrc_video1", type="string", example="video.mp4"),
+ *                         @OA\Property(property="rrc_video1_thumb", type="string", example="thumb.jpg"),
+ *                         @OA\Property(property="suggested_catalogs", type="array", @OA\Items(type="object")),
+ *                         @OA\Property(property="summaryReport", type="object",
+ *                             @OA\Property(property="key_points", type="array", @OA\Items(type="string")),
+ *                             @OA\Property(property="mood_analysis", type="string"),
+ *                             @OA\Property(property="time_references", type="object")
+ *                         ),
+ *                         @OA\Property(property="transcription", type="array", @OA\Items(
+ *                             @OA\Property(property="id", type="integer", example=1),
+ *                             @OA\Property(property="answer", type="string", example="Breakthrough at work"),
+ *                             @OA\Property(property="thumb", type="string", example="https://placehold.co/300x200/0066cc/ffffff?text=Work+Day"),
+ *                             @OA\Property(property="emoji", type="string", example="U+1F4AA"),
+ *                             @OA\Property(property="emotion_score", type="number", format="float", example=0.85),
+ *                             @OA\Property(property="text", type="string", example="Breakthrough at work"),
+ *                             @OA\Property(property="emotion", type="string", example="proud")
+ *                         )),
+ *                         @OA\Property(property="user_id", type="integer", example=1),
+ *                         @OA\Property(property="user_tags", type="array", @OA\Items(
+ *                             @OA\Property(property="id", type="integer", example=1),
+ *                             @OA\Property(property="name", type="string", example="Motivation")
+ *                         )),
+ *                         @OA\Property(property="video", type="string", example="https://example.com/video.mp4"),
+ *                         @OA\Property(property="video_thumb", type="string", example="https://example.com/thumb.jpg"),
+ *                         @OA\Property(property="video_type_id", type="integer", example=1)
+ *                     )
+ *                 )
+ *             )
+ *         )
+ *     ),
+ *     @OA\Response(
+ *         response=400,
+ *         description="Id parameter is required.",
+ *         @OA\JsonContent(
+ *             @OA\Property(property="status", type="boolean", example=false),
+ *             @OA\Property(property="message", type="string", example="Id parameter is required"),
+ *             @OA\Property(property="results", type="object", nullable=true)
+ *         )
+ *     ),
+ *     @OA\Response(
+ *         response=404,
+ *         description="Journal not found or access denied.",
+ *         @OA\JsonContent(
+ *             @OA\Property(property="status", type="boolean", example=false),
+ *             @OA\Property(property="message", type="string", example="Journal not found or access denied."),
+ *             @OA\Property(property="results", type="object", nullable=true)
+ *         )
+ *     )
+ * )
+ *
+ * @OA\Post(
+ *     path="/v2/skip-vijo",
+ *     summary="Mark a catalog as skipped for the authenticated user",
+ *     tags={"Catalogs"},
+ *     security={{"sanctum":{}}},
+ *     @OA\RequestBody(
+ *         required=true,
+ *         @OA\JsonContent(
+ *             required={"catalog_id"},
+ *             @OA\Property(property="catalog_id", type="integer", example=1, description="ID of the catalog to skip")
+ *         )
+ *     ),
+ *     @OA\Response(
+ *         response=201,
+ *         description="Vijo skipped and saved successfully.",
+ *         @OA\JsonContent(
+ *             @OA\Property(property="status", type="boolean", example=true),
+ *             @OA\Property(property="message", type="string", example="Vijo skipped and saved successfully."),
+ *             @OA\Property(property="results", type="object",
+ *                 @OA\Property(property="id", type="integer", example=1),
+ *                 @OA\Property(property="user_id", type="integer", example=1),
+ *                 @OA\Property(property="catalog_id", type="integer", example=1),
+ *                 @OA\Property(property="skipped_at", type="string", format="date", example="2025-10-10")
+ *             )
+ *         )
+ *     ),
+ *     @OA\Response(
+ *         response=401,
+ *         description="User not authenticated.",
+ *         @OA\JsonContent(
+ *             @OA\Property(property="status", type="boolean", example=false),
+ *             @OA\Property(property="message", type="string", example="User not authenticated.")
+ *         )
+ *     ),
+ *     @OA\Response(
+ *         response=422,
+ *         description="Validation error.",
+ *         @OA\JsonContent(
+ *             @OA\Property(property="status", type="boolean", example=false),
+ *             @OA\Property(property="message", type="string", example="Validation error."),
+ *             @OA\Property(property="errors", type="object")
+ *         )
+ *     )
+ * )
+ *
+ * @OA\Post(
+ *     path="/v2/validate-profile",
+ *     summary="Validate user profile change and send verification code",
+ *     description="Validates the user's current password and sends a verification code to the new email or phone number before allowing profile updates. This is a security measure to verify ownership of the new contact information.",
+ *     tags={"Profile and Security"},
+ *     security={{"sanctum":{}}},
+ *     @OA\RequestBody(
+ *         required=true,
+ *         @OA\MediaType(
+ *             mediaType="application/json",
+ *             @OA\Schema(
+ *                 required={"type", "password"},
+ *                 @OA\Property(
+ *                     property="type",
+ *                     type="string",
+ *                     enum={"email", "phone"},
+ *                     description="Type of profile information to validate and update",
+ *                     example="email"
+ *                 ),
+ *                 @OA\Property(
+ *                     property="password",
+ *                     type="string",
+ *                     format="password",
+ *                     description="User's current password for verification",
+ *                     example="currentPassword123"
+ *                 ),
+ *                 @OA\Property(
+ *                     property="new_email",
+ *                     type="string",
+ *                     format="email",
+ *                     description="New email address (required when type=email)",
+ *                     example="newemail@example.com"
+ *                 ),
+ *                 @OA\Property(
+ *                     property="country_code",
+ *                     type="string",
+ *                     description="Country code for phone number (required when type=phone)",
+ *                     example="+1"
+ *                 ),
+ *                 @OA\Property(
+ *                     property="mobile",
+ *                     type="string",
+ *                     description="New mobile phone number (required when type=phone)",
+ *                     example="5551234567"
+ *                 )
+ *             )
+ *         )
+ *     ),
+ *     @OA\Response(
+ *         response=200,
+ *         description="Verification code sent successfully",
+ *         @OA\JsonContent(
+ *             @OA\Property(
+ *                 property="status",
+ *                 type="boolean",
+ *                 example=true,
+ *                 description="Indicates if the request was successful"
+ *             ),
+ *             @OA\Property(
+ *                 property="message",
+ *                 type="string",
+ *                 example="Verification code has been successfully sent to your mobile number.",
+ *                 description="Success message indicating where the code was sent"
+ *             ),
+ *             @OA\Property(
+ *                 property="results",
+ *                 type="object",
+ *                 @OA\Property(
+ *                     property="otp_id",
+ *                     type="integer",
+ *                     example=123,
+ *                     description="ID of the verification record, needed for subsequent validation"
+ *                 )
+ *             )
+ *         )
+ *     ),
+ *     @OA\Response(
+ *         response=400,
+ *         description="Invalid password provided",
+ *         @OA\JsonContent(
+ *             @OA\Property(
+ *                 property="status",
+ *                 type="boolean",
+ *                 example=false
+ *             ),
+ *             @OA\Property(
+ *                 property="message",
+ *                 type="string",
+ *                 example="Incorrect password."
+ *             )
+ *         )
+ *     ),
+ *     @OA\Response(
+ *         response=401,
+ *         description="User not authenticated",
+ *         @OA\JsonContent(
+ *             @OA\Property(
+ *                 property="status",
+ *                 type="boolean",
+ *                 example=false
+ *             ),
+ *             @OA\Property(
+ *                 property="message",
+ *                 type="string",
+ *                 example="User not authenticated."
+ *             )
+ *         )
+ *     ),
+ *     @OA\Response(
+ *         response=422,
+ *         description="Validation errors",
+ *         @OA\JsonContent(
+ *             @OA\Property(
+ *                 property="message",
+ *                 type="string",
+ *                 example="The given data was invalid."
+ *             ),
+ *             @OA\Property(
+ *                 property="errors",
+ *                 type="object",
+ *                 @OA\Property(
+ *                     property="type",
+ *                     type="array",
+ *                     @OA\Items(
+ *                         type="string",
+ *                         example="The type field is required."
+ *                     )
+ *                 ),
+ *                 @OA\Property(
+ *                     property="password",
+ *                     type="array",
+ *                     @OA\Items(
+ *                         type="string",
+ *                         example="The password field is required."
+ *                     )
+ *                 ),
+ *                 @OA\Property(
+ *                     property="new_email",
+ *                     type="array",
+ *                     @OA\Items(
+ *                         type="string",
+ *                         example="The new email field is required when type is email."
+ *                     )
+ *                 ),
+ *                 @OA\Property(
+ *                     property="country_code",
+ *                     type="array",
+ *                     @OA\Items(
+ *                         type="string",
+ *                         example="The country code field is required when type is phone."
+ *                     )
+ *                 ),
+ *                 @OA\Property(
+ *                     property="mobile",
+ *                     type="array",
+ *                     @OA\Items(
+ *                         type="string",
+ *                         example="The mobile field is required when type is phone."
+ *                     )
+ *                 )
+ *             )
+ *         )
+ *     ),
+ *     @OA\Response(
+ *         response=500,
+ *         description="Internal server error (e.g., email sending failure)",
+ *         @OA\JsonContent(
+ *             @OA\Property(
+ *                 property="message",
+ *                 type="string",
+ *                 example="Internal server error"
+ *             )
+ *         )
+ *     )
+ * )
+ *
+ * @OA\Post(
+ *     path="/v2/update-profile",
+ *     summary="Update user profile information after verification",
+ *     description="Updates the user's email or phone number after validating the verification code sent during the validate-profile step. This completes the secure profile update process.",
+ *     tags={"Profile and Security"},
+ *     security={{"sanctum":{}}},
+ *     @OA\RequestBody(
+ *         required=true,
+ *         @OA\MediaType(
+ *             mediaType="application/json",
+ *             @OA\Schema(
+ *                 required={"type", "password", "confirmation_code", "otp_id"},
+ *                 @OA\Property(
+ *                     property="type",
+ *                     type="string",
+ *                     enum={"email", "phone"},
+ *                     description="Type of profile information being updated",
+ *                     example="email"
+ *                 ),
+ *                 @OA\Property(
+ *                     property="password",
+ *                     type="string",
+ *                     format="password",
+ *                     description="User's current password for verification",
+ *                     example="currentPassword123"
+ *                 ),
+ *                 @OA\Property(
+ *                     property="confirmation_code",
+ *                     type="string",
+ *                     description="6-digit verification code received via email or SMS",
+ *                     example="123456"
+ *                 ),
+ *                 @OA\Property(
+ *                     property="otp_id",
+ *                     type="integer",
+ *                     description="ID of the OTP verification record from validate-profile response",
+ *                     example=123
+ *                 ),
+ *                 @OA\Property(
+ *                     property="new_email",
+ *                     type="string",
+ *                     format="email",
+ *                     description="New email address (required when type=email)",
+ *                     example="newemail@example.com"
+ *                 ),
+ *                 @OA\Property(
+ *                     property="country_code",
+ *                     type="string",
+ *                     description="Country code for new phone number (required when type=phone)",
+ *                     example="+1"
+ *                 ),
+ *                 @OA\Property(
+ *                     property="mobile",
+ *                     type="string",
+ *                     description="New mobile phone number (required when type=phone)",
+ *                     example="5551234567"
+ *                 )
+ *             )
+ *         )
+ *     ),
+ *     @OA\Response(
+ *         response=200,
+ *         description="Profile updated successfully",
+ *         @OA\JsonContent(
+ *             @OA\Property(
+ *                 property="status",
+ *                 type="boolean",
+ *                 example=true,
+ *                 description="Indicates if the profile update was successful"
+ *             ),
+ *             @OA\Property(
+ *                 property="message",
+ *                 type="string",
+ *                 example="Profile updated successfully.",
+ *                 description="Success confirmation message"
+ *             ),
+ *             @OA\Property(
+ *                 property="results",
+ *                 type="object",
+ *                 description="Updated user data",
+ *                 @OA\Property(property="id", type="integer", example=1),
+ *                 @OA\Property(property="first_name", type="string", example="John"),
+ *                 @OA\Property(property="last_name", type="string", example="Smith"),
+ *                 @OA\Property(property="email", type="string", example="newemail@example.com"),
+ *                 @OA\Property(property="country_code", type="string", example="+1"),
+ *                 @OA\Property(property="mobile", type="string", example="5551234567"),
+ *                 @OA\Property(property="created_at", type="string", format="date-time"),
+ *                 @OA\Property(property="updated_at", type="string", format="date-time")
+ *             )
+ *         )
+ *     ),
+ *     @OA\Response(
+ *         response=400,
+ *         description="Invalid verification code, expired, already used, or incorrect password",
+ *         @OA\JsonContent(
+ *             @OA\Property(
+ *                 property="status",
+ *                 type="boolean",
+ *                 example=false
+ *             ),
+ *             @OA\Property(
+ *                 property="message",
+ *                 type="string",
+ *                 oneOf={
+ *                     @OA\Schema(type="string", example="The provided code is invalid, expired, or has already been used."),
+ *                     @OA\Schema(type="string", example="Incorrect password.")
+ *                 },
+ *                 description="Error message indicating the specific issue"
+ *             )
+ *         )
+ *     ),
+ *     @OA\Response(
+ *         response=401,
+ *         description="User not authenticated",
+ *         @OA\JsonContent(
+ *             @OA\Property(
+ *                 property="status",
+ *                 type="boolean",
+ *                 example=false
+ *             ),
+ *             @OA\Property(
+ *                 property="message",
+ *                 type="string",
+ *                 example="User not authenticated."
+ *             )
+ *         )
+ *     ),
+ *     @OA\Response(
+ *         response=422,
+ *         description="Validation errors",
+ *         @OA\JsonContent(
+ *             @OA\Property(
+ *                 property="message",
+ *                 type="string",
+ *                 example="The given data was invalid."
+ *             ),
+ *             @OA\Property(
+ *                 property="errors",
+ *                 type="object",
+ *                 @OA\Property(
+ *                     property="type",
+ *                     type="array",
+ *                     @OA\Items(
+ *                         type="string",
+ *                         example="The type field is required."
+ *                     )
+ *                 ),
+ *                 @OA\Property(
+ *                     property="password",
+ *                     type="array",
+ *                     @OA\Items(
+ *                         type="string",
+ *                         example="The password field is required."
+ *                     )
+ *                 ),
+ *                 @OA\Property(
+ *                     property="confirmation_code",
+ *                     type="array",
+ *                     @OA\Items(
+ *                         type="string",
+ *                         example="The confirmation code field is required."
+ *                     )
+ *                 ),
+ *                 @OA\Property(
+ *                     property="otp_id",
+ *                     type="array",
+ *                     @OA\Items(
+ *                         type="string",
+ *                         example="The otp id field is required."
+ *                     )
+ *                 ),
+ *                 @OA\Property(
+ *                     property="new_email",
+ *                     type="array",
+ *                     @OA\Items(
+ *                         type="string",
+ *                         example="The new email field is required when type is email."
+ *                     )
+ *                 ),
+ *                 @OA\Property(
+ *                     property="country_code",
+ *                     type="array",
+ *                     @OA\Items(
+ *                         type="string",
+ *                         example="The country code field is required when type is phone."
+ *                     )
+ *                 ),
+ *                 @OA\Property(
+ *                     property="mobile",
+ *                     type="array",
+ *                     @OA\Items(
+ *                         type="string",
+ *                         example="The mobile field is required when type is phone."
+ *                     )
+ *                 )
+ *             )
+ *         )
+ *     )
+ * )
+ * 
+ * * @OA\Post(
+ *     path="/v2/save-new-password",
+ *     summary="Change user password with current password verification",
+ *     description="Allows an authenticated user to change their password by providing their current password and a new password. The new password must be at least 8 characters long and confirmed.",
+ *     tags={"Profile and Security"},
+ *     security={{"sanctum":{}}},
+ *     @OA\RequestBody(
+ *         required=true,
+ *         @OA\MediaType(
+ *             mediaType="application/json",
+ *             @OA\Schema(
+ *                 required={"current_password", "new_password", "new_password_confirmation"},
+ *                 @OA\Property(
+ *                     property="current_password",
+ *                     type="string",
+ *                     format="password",
+ *                     description="User's current password for verification",
+ *                     example="currentPassword123"
+ *                 ),
+ *                 @OA\Property(
+ *                     property="new_password",
+ *                     type="string",
+ *                     format="password",
+ *                     minLength=8,
+ *                     description="New password (minimum 8 characters)",
+ *                     example="newSecurePassword456"
+ *                 ),
+ *                 @OA\Property(
+ *                     property="new_password_confirmation",
+ *                     type="string",
+ *                     format="password",
+ *                     description="Confirmation of the new password (must match new_password)",
+ *                     example="newSecurePassword456"
+ *                 )
+ *             )
+ *         )
+ *     ),
+ *     @OA\Response(
+ *         response=200,
+ *         description="Password changed successfully",
+ *         @OA\JsonContent(
+ *             @OA\Property(
+ *                 property="status",
+ *                 type="boolean",
+ *                 example=true,
+ *                 description="Indicates if the password change was successful"
+ *             ),
+ *             @OA\Property(
+ *                 property="message",
+ *                 type="string",
+ *                 example="Password changed successfully.",
+ *                 description="Success confirmation message"
+ *             )
+ *         )
+ *     ),
+ *     @OA\Response(
+ *         response=400,
+ *         description="Current password is incorrect",
+ *         @OA\JsonContent(
+ *             @OA\Property(
+ *                 property="status",
+ *                 type="boolean",
+ *                 example=false
+ *             ),
+ *             @OA\Property(
+ *                 property="message",
+ *                 type="string",
+ *                 example="Current password is incorrect."
+ *             )
+ *         )
+ *     ),
+ *     @OA\Response(
+ *         response=401,
+ *         description="User not authenticated",
+ *         @OA\JsonContent(
+ *             @OA\Property(
+ *                 property="status",
+ *                 type="boolean",
+ *                 example=false
+ *             ),
+ *             @OA\Property(
+ *                 property="message",
+ *                 type="string",
+ *                 example="User not authenticated."
+ *             )
+ *         )
+ *     ),
+ *     @OA\Response(
+ *         response=422,
+ *         description="Validation errors",
+ *         @OA\JsonContent(
+ *             @OA\Property(
+ *                 property="message",
+ *                 type="string",
+ *                 example="The given data was invalid."
+ *             ),
+ *             @OA\Property(
+ *                 property="errors",
+ *                 type="object",
+ *                 @OA\Property(
+ *                     property="current_password",
+ *                     type="array",
+ *                     @OA\Items(
+ *                         type="string",
+ *                         example="The current password field is required."
+ *                     )
+ *                 ),
+ *                 @OA\Property(
+ *                     property="new_password",
+ *                     type="array",
+ *                     @OA\Items(
+ *                         type="string",
+ *                         oneOf={
+ *                             @OA\Schema(type="string", example="The new password field is required."),
+ *                             @OA\Schema(type="string", example="The new password must be at least 8 characters."),
+ *                             @OA\Schema(type="string", example="The new password confirmation does not match.")
+ *                         }
+ *                     )
+ *                 ),
+ *                 @OA\Property(
+ *                     property="new_password_confirmation",
+ *                     type="array",
+ *                     @OA\Items(
+ *                         type="string",
+ *                         example="The new password confirmation field is required."
+ *                     )
+ *                 )
+ *             )
+ *         )
+ *     )
+ * )
+ * 
+ * @OA\Post(
+ *     path="/v2/update-2fa",
+ *     summary="Enable or disable two-factor authentication for user",
+ *     description="Allows an authenticated user to enable or disable two-factor authentication (2FA) for their account. This is a security feature that adds an extra layer of protection.",
+ *     tags={"Profile and Security"},
+ *     security={{"sanctum":{}}},
+ *     @OA\RequestBody(
+ *         required=true,
+ *         @OA\MediaType(
+ *             mediaType="application/json",
+ *             @OA\Schema(
+ *                 required={"enabled"},
+ *                 @OA\Property(
+ *                     property="enabled",
+ *                     type="boolean",
+ *                     description="Enable (true) or disable (false) two-factor authentication",
+ *                     example=true
+ *                 )
+ *             )
+ *         )
+ *     ),
+ *     @OA\Response(
+ *         response=200,
+ *         description="2FA setting updated successfully",
+ *         @OA\JsonContent(
+ *             @OA\Property(
+ *                 property="status",
+ *                 type="boolean",
+ *                 example=true,
+ *                 description="Indicates if the 2FA update was successful"
+ *             ),
+ *             @OA\Property(
+ *                 property="message",
+ *                 type="string",
+ *                 example="2FA updated.",
+ *                 description="Success confirmation message"
+ *             ),
+ *             @OA\Property(
+ *                 property="results",
+ *                 type="object",
+ *                 @OA\Property(
+ *                     property="enabled",
+ *                     type="boolean",
+ *                     example=true,
+ *                     description="Current 2FA status after update"
+ *                 )
+ *             )
+ *         )
+ *     ),
+ *     @OA\Response(
+ *         response=401,
+ *         description="User not found or not authenticated",
+ *         @OA\JsonContent(
+ *             @OA\Property(
+ *                 property="status",
+ *                 type="boolean",
+ *                 example=false
+ *             ),
+ *             @OA\Property(
+ *                 property="message",
+ *                 type="string",
+ *                 example="User not found"
+ *             )
+ *         )
+ *     ),
+ *     @OA\Response(
+ *         response=422,
+ *         description="Validation errors",
+ *         @OA\JsonContent(
+ *             @OA\Property(
+ *                 property="message",
+ *                 type="string",
+ *                 example="The given data was invalid."
+ *             ),
+ *             @OA\Property(
+ *                 property="errors",
+ *                 type="object",
+ *                 @OA\Property(
+ *                     property="enabled",
+ *                     type="array",
+ *                     @OA\Items(
+ *                         type="string",
+ *                         oneOf={
+ *                             @OA\Schema(type="string", example="The enabled field is required."),
+ *                             @OA\Schema(type="string", example="The enabled field must be true or false.")
+ *                         }
+ *                     )
+ *                 )
+ *             )
+ *         )
+ *     )
+ * )
+ * 
+ * @OA\Post(
+ *     path="/v2/share-video-contacts",
+ *     summary="Share video journal with contacts and groups",
+ *     description="Shares an existing video journal with selected contacts and/or contact groups. Creates new VideoRequest records with type 'share' and sends notifications via email and SMS to the recipients.",
+ *     tags={"Video Sharing"},
+ *     security={{"sanctum":{}}},
+ *     @OA\RequestBody(
+ *         required=true,
+ *         @OA\MediaType(
+ *             mediaType="application/json",
+ *             @OA\Schema(
+ *                 required={"request_id"},
+ *                 @OA\Property(
+ *                     property="contact_ids",
+ *                     type="array",
+ *                     nullable=true,
+ *                     description="Array of contact IDs to share with",
+ *                     @OA\Items(type="integer", example=1)
+ *                 ),
+ *                 @OA\Property(
+ *                     property="group_ids",
+ *                     type="array",
+ *                     nullable=true,
+ *                     description="Array of contact group IDs to share with",
+ *                     @OA\Items(type="integer", example=1)
+ *                 ),
+ *                 @OA\Property(
+ *                     property="request_id",
+ *                     type="integer",
+ *                     minimum=1,
+ *                     description="ID of the original video request to share",
+ *                     example=123
+ *                 )
+ *             )
+ *         )
+ *     ),
+ *     @OA\Response(
+ *         response=200,
+ *         description="Video shared successfully with contacts",
+ *         @OA\JsonContent(
+ *             @OA\Property(
+ *                 property="status",
+ *                 type="boolean",
+ *                 example=true,
+ *                 description="Indicates if the sharing was successful"
+ *             ),
+ *             @OA\Property(
+ *                 property="message",
+ *                 type="string",
+ *                 example="Video shared successfully with your contacts.",
+ *                 description="Success confirmation message"
+ *             )
+ *         )
+ *     ),
+ *     @OA\Response(
+ *         response=404,
+ *         description="Original video request not found",
+ *         @OA\JsonContent(
+ *             @OA\Property(
+ *                 property="status",
+ *                 type="boolean",
+ *                 example=false
+ *             ),
+ *             @OA\Property(
+ *                 property="message",
+ *                 type="string",
+ *                 example="Original video request not found."
+ *             )
+ *         )
+ *     ),
+ *     @OA\Response(
+ *         response=422,
+ *         description="Validation errors",
+ *         @OA\JsonContent(
+ *             @OA\Property(
+ *                 property="message",
+ *                 type="string",
+ *                 example="The given data was invalid."
+ *             ),
+ *             @OA\Property(
+ *                 property="errors",
+ *                 type="object",
+ *                 @OA\Property(
+ *                     property="request_id",
+ *                     type="array",
+ *                     @OA\Items(
+ *                         type="string",
+ *                         oneOf={
+ *                             @OA\Schema(type="string", example="The request id field is required."),
+ *                             @OA\Schema(type="string", example="The selected request id is invalid."),
+ *                             @OA\Schema(type="string", example="The request id must be at least 1.")
+ *                         }
+ *                     )
+ *                 ),
+ *                 @OA\Property(
+ *                     property="contact_ids",
+ *                     type="array",
+ *                     @OA\Items(
+ *                         type="string",
+ *                         oneOf={
+ *                             @OA\Schema(type="string", example="The contact_ids must be an array."),
+ *                             @OA\Schema(type="string", example="The selected contact_ids.0 is invalid.")
+ *                         }
+ *                     )
+ *                 ),
+ *                 @OA\Property(
+ *                     property="group_ids",
+ *                     type="array",
+ *                     @OA\Items(
+ *                         type="string",
+ *                         oneOf={
+ *                             @OA\Schema(type="string", example="The group_ids must be an array."),
+ *                             @OA\Schema(type="string", example="The selected group_ids.0 is invalid.")
+ *                         }
+ *                     )
+ *                 )
+ *             )
+ *         )
+ *     ),
+ *     @OA\Response(
+ *         response=401,
+ *         description="User not authenticated",
+ *         @OA\JsonContent(
+ *             @OA\Property(
+ *                 property="message",
+ *                 type="string",
+ *                 example="Unauthenticated."
+ *             )
+ *         )
+ *     )
+ * )
+ * 
+  * @OA\Get(
+ *     path="/v2/contacts",
+ *     summary="Get contacts and groups for the authenticated user",
+ *     description="Retrieves a paginated list of contacts and/or contact groups for the authenticated user. Supports filtering by type (contacts, groups, or all) and search functionality.",
+ *     tags={"Contacts"},
+ *     security={{"sanctum":{}}},
+ *     @OA\Parameter(
+ *         name="type",
+ *         in="query",
+ *         description="Filter by type: 'contacts', 'groups', or 'all'",
+ *         required=false,
+ *         @OA\Schema(type="string", enum={"contacts", "groups", "all"}, default="all")
+ *     ),
+ *     @OA\Parameter(
+ *         name="search",
+ *         in="query",
+ *         description="Search term to filter contacts/groups by name, email, or mobile",
+ *         required=false,
+ *         @OA\Schema(type="string", example="john")
+ *     ),
+ *     @OA\Parameter(
+ *         name="limit",
+ *         in="query",
+ *         description="Number of items per page",
+ *         required=false,
+ *         @OA\Schema(type="integer", default=15, example=10)
+ *     ),
+ *     @OA\Parameter(
+ *         name="page",
+ *         in="query",
+ *         description="Page number",
+ *         required=false,
+ *         @OA\Schema(type="integer", default=1, example=1)
+ *     ),
+ *     @OA\Response(
+ *         response=200,
+ *         description="Contacts and groups retrieved successfully",
+ *         @OA\JsonContent(
+ *             @OA\Property(property="success", type="boolean", example=true),
+ *             @OA\Property(property="message", type="string", example="Contacts and groups retrieved successfully."),
+ *             @OA\Property(
+ *                 property="data",
+ *                 type="array",
+ *                 @OA\Items(
+ *                     oneOf={
+ *                         @OA\Schema(
+ *                             type="object",
+ *                             description="Contact object",
+ *                             @OA\Property(property="id", type="integer", example=1),
+ *                             @OA\Property(property="user_id", type="integer", example=1),
+ *                             @OA\Property(property="first_name", type="string", example="John"),
+ *                             @OA\Property(property="last_name", type="string", example="Smith"),
+ *                             @OA\Property(property="email", type="string", example="john@example.com"),
+ *                             @OA\Property(property="country_code", type="string", example="+1"),
+ *                             @OA\Property(property="mobile", type="string", example="5551234567"),
+ *                             @OA\Property(property="created_at", type="string", format="date-time"),
+ *                             @OA\Property(property="updated_at", type="string", format="date-time")
+ *                         ),
+ *                         @OA\Schema(
+ *                             type="object",
+ *                             description="Group object",
+ *                             @OA\Property(property="id", type="integer", example=1),
+ *                             @OA\Property(property="name", type="string", example="Friends")
+ *                         )
+ *                     }
+ *                 )
+ *             )
+ *         )
+ *     ),
+ *     @OA\Response(
+ *         response=401,
+ *         description="User not authenticated",
+ *         @OA\JsonContent(
+ *             @OA\Property(property="message", type="string", example="Unauthenticated.")
+ *         )
+ *     )
+ * )
+ *
+ * @OA\Get(
+ *     path="/v2/contacts/{id}",
+ *     summary="Get a specific contact by ID",
+ *     description="Retrieves detailed information about a specific contact, including associated groups. Only returns contacts that belong to the authenticated user.",
+ *     tags={"Contacts"},
+ *     security={{"sanctum":{}}},
+ *     @OA\Parameter(
+ *         name="id",
+ *         in="path",
+ *         required=true,
+ *         description="Contact ID",
+ *         @OA\Schema(type="integer", example=1)
+ *     ),
+ *     @OA\Response(
+ *         response=200,
+ *         description="Contact retrieved successfully",
+ *         @OA\JsonContent(
+ *             @OA\Property(property="success", type="boolean", example=true),
+ *             @OA\Property(property="message", type="string", example="Contact retrieved successfully."),
+ *             @OA\Property(
+ *                 property="data",
+ *                 type="object",
+ *                 @OA\Property(property="id", type="integer", example=1),
+ *                 @OA\Property(property="user_id", type="integer", example=1),
+ *                 @OA\Property(property="first_name", type="string", example="John"),
+ *                 @OA\Property(property="last_name", type="string", example="Smith"),
+ *                 @OA\Property(property="email", type="string", example="john@example.com"),
+ *                 @OA\Property(property="country_code", type="string", example="+1"),
+ *                 @OA\Property(property="mobile", type="string", example="5551234567"),
+ *                 @OA\Property(property="created_at", type="string", format="date-time"),
+ *                 @OA\Property(property="updated_at", type="string", format="date-time"),
+ *                 @OA\Property(
+ *                     property="groups",
+ *                     type="array",
+ *                     description="Groups this contact belongs to",
+ *                     @OA\Items(
+ *                         @OA\Property(property="id", type="integer", example=1),
+ *                         @OA\Property(property="name", type="string", example="Friends")
+ *                     )
+ *                 )
+ *             )
+ *         )
+ *     ),
+ *     @OA\Response(
+ *         response=404,
+ *         description="Contact not found or does not belong to user",
+ *         @OA\JsonContent(
+ *             @OA\Property(property="success", type="boolean", example=false),
+ *             @OA\Property(property="message", type="string", example="Contact not found or does not belong to the user."),
+ *             @OA\Property(property="data", type="null")
+ *         )
+ *     ),
+ *     @OA\Response(
+ *         response=401,
+ *         description="User not authenticated",
+ *         @OA\JsonContent(
+ *             @OA\Property(property="message", type="string", example="Unauthenticated.")
+ *         )
+ *     )
+ * )
+ *
+ * @OA\Post(
+ *     path="/v2/contacts",
+ *     summary="Create a new contact",
+ *     description="Creates a new contact for the authenticated user. Optionally assigns the contact to one or more groups. Prevents duplicate contacts with the same phone number.",
+ *     tags={"Contacts"},
+ *     security={{"sanctum":{}}},
+ *     @OA\RequestBody(
+ *         required=true,
+ *         @OA\MediaType(
+ *             mediaType="application/json",
+ *             @OA\Schema(
+ *                 required={"first_name", "last_name", "mobile"},
+ *                 @OA\Property(property="first_name", type="string", maxLength=255, example="John", description="Contact's first name"),
+ *                 @OA\Property(property="last_name", type="string", maxLength=255, example="Smith", description="Contact's last name"),
+ *                 @OA\Property(property="mobile", type="string", maxLength=15, example="5551234567", description="Contact's mobile phone number"),
+ *                 @OA\Property(property="country_code", type="string", maxLength=10, example="+1", description="Country code (defaults to '1' if not provided)", nullable=true),
+ *                 @OA\Property(property="email", type="string", format="email", maxLength=255, example="john@example.com", description="Contact's email address", nullable=true),
+ *                 @OA\Property(
+ *                     property="groups",
+ *                     type="array",
+ *                     description="Array of group IDs to assign this contact to",
+ *                     @OA\Items(type="integer", example=1),
+ *                     nullable=true
+ *                 )
+ *             )
+ *         )
+ *     ),
+ *     @OA\Response(
+ *         response=201,
+ *         description="Contact created successfully",
+ *         @OA\JsonContent(
+ *             @OA\Property(property="success", type="boolean", example=true),
+ *             @OA\Property(property="message", type="string", example="Contact created successfully."),
+ *             @OA\Property(
+ *                 property="data",
+ *                 type="object",
+ *                 @OA\Property(property="id", type="integer", example=1),
+ *                 @OA\Property(property="user_id", type="integer", example=1),
+ *                 @OA\Property(property="first_name", type="string", example="John"),
+ *                 @OA\Property(property="last_name", type="string", example="Smith"),
+ *                 @OA\Property(property="email", type="string", example="john@example.com"),
+ *                 @OA\Property(property="country_code", type="string", example="+1"),
+ *                 @OA\Property(property="mobile", type="string", example="5551234567"),
+ *                 @OA\Property(property="created_at", type="string", format="date-time"),
+ *                 @OA\Property(property="updated_at", type="string", format="date-time")
+ *             )
+ *         )
+ *     ),
+ *     @OA\Response(
+ *         response=400,
+ *         description="Contact with this phone number already exists or invalid group ID",
+ *         @OA\JsonContent(
+ *             @OA\Property(property="success", type="boolean", example=false),
+ *             @OA\Property(
+ *                 property="message",
+ *                 type="string",
+ *                 oneOf={
+ *                     @OA\Schema(type="string", example="A contact with this phone number already exists."),
+ *                     @OA\Schema(type="string", example="Group ID 5 does not belong to the user.")
+ *                 }
+ *             ),
+ *             @OA\Property(property="data", type="null")
+ *         )
+ *     ),
+ *     @OA\Response(
+ *         response=422,
+ *         description="Validation errors",
+ *         @OA\JsonContent(
+ *             @OA\Property(property="message", type="string", example="The given data was invalid."),
+ *             @OA\Property(
+ *                 property="errors",
+ *                 type="object",
+ *                 @OA\Property(
+ *                     property="first_name",
+ *                     type="array",
+ *                     @OA\Items(type="string", example="The first name field is required.")
+ *                 ),
+ *                 @OA\Property(
+ *                     property="last_name",
+ *                     type="array",
+ *                     @OA\Items(type="string", example="The last name field is required.")
+ *                 ),
+ *                 @OA\Property(
+ *                     property="mobile",
+ *                     type="array",
+ *                     @OA\Items(type="string", example="The mobile field is required.")
+ *                 ),
+ *                 @OA\Property(
+ *                     property="email",
+ *                     type="array",
+ *                     @OA\Items(type="string", example="The email must be a valid email address.")
+ *                 )
+ *             )
+ *         )
+ *     ),
+ *     @OA\Response(
+ *         response=401,
+ *         description="User not authenticated",
+ *         @OA\JsonContent(
+ *             @OA\Property(property="message", type="string", example="Unauthenticated.")
+ *         )
+ *     )
+ * )
+ *
+ * @OA\Put(
+ *     path="/v2/contacts/{id}",
+ *     summary="Update an existing contact",
+ *     description="Updates an existing contact's information and group associations. Only allows updating contacts that belong to the authenticated user.",
+ *     tags={"Contacts"},
+ *     security={{"sanctum":{}}},
+ *     @OA\Parameter(
+ *         name="id",
+ *         in="path",
+ *         required=true,
+ *         description="Contact ID to update",
+ *         @OA\Schema(type="integer", example=1)
+ *     ),
+ *     @OA\RequestBody(
+ *         required=true,
+ *         @OA\MediaType(
+ *             mediaType="application/json",
+ *             @OA\Schema(
+ *                 required={"first_name", "last_name", "mobile"},
+ *                 @OA\Property(property="first_name", type="string", maxLength=255, example="John", description="Contact's first name"),
+ *                 @OA\Property(property="last_name", type="string", maxLength=255, example="Smith", description="Contact's last name"),
+ *                 @OA\Property(property="mobile", type="string", maxLength=15, example="5551234567", description="Contact's mobile phone number"),
+ *                 @OA\Property(property="country_code", type="string", maxLength=10, example="+1", description="Country code", nullable=true),
+ *                 @OA\Property(property="email", type="string", format="email", maxLength=255, example="john@example.com", description="Contact's email address", nullable=true),
+ *                 @OA\Property(
+ *                     property="groups",
+ *                     type="array",
+ *                     description="Array of group IDs to assign this contact to (replaces existing groups)",
+ *                     @OA\Items(type="integer", example=1),
+ *                     nullable=true
+ *                 )
+ *             )
+ *         )
+ *     ),
+ *     @OA\Response(
+ *         response=200,
+ *         description="Contact updated successfully",
+ *         @OA\JsonContent(
+ *             @OA\Property(property="success", type="boolean", example=true),
+ *             @OA\Property(property="message", type="string", example="Contact updated successfully."),
+ *             @OA\Property(
+ *                 property="data",
+ *                 type="object",
+ *                 @OA\Property(property="id", type="integer", example=1),
+ *                 @OA\Property(property="user_id", type="integer", example=1),
+ *                 @OA\Property(property="first_name", type="string", example="John"),
+ *                 @OA\Property(property="last_name", type="string", example="Smith"),
+ *                 @OA\Property(property="email", type="string", example="john@example.com"),
+ *                 @OA\Property(property="country_code", type="string", example="+1"),
+ *                 @OA\Property(property="mobile", type="string", example="5551234567"),
+ *                 @OA\Property(property="created_at", type="string", format="date-time"),
+ *                 @OA\Property(property="updated_at", type="string", format="date-time")
+ *             )
+ *         )
+ *     ),
+ *     @OA\Response(
+ *         response=400,
+ *         description="Invalid group ID provided",
+ *         @OA\JsonContent(
+ *             @OA\Property(property="success", type="boolean", example=false),
+ *             @OA\Property(property="message", type="string", example="Group ID 5 does not belong to the user."),
+ *             @OA\Property(property="data", type="null")
+ *         )
+ *     ),
+ *     @OA\Response(
+ *         response=404,
+ *         description="Contact not found or does not belong to user",
+ *         @OA\JsonContent(
+ *             @OA\Property(property="success", type="boolean", example=false),
+ *             @OA\Property(property="message", type="string", example="Contact not found or does not belong to the user."),
+ *             @OA\Property(property="data", type="null")
+ *         )
+ *     ),
+ *     @OA\Response(
+ *         response=422,
+ *         description="Validation errors",
+ *         @OA\JsonContent(
+ *             @OA\Property(property="message", type="string", example="The given data was invalid."),
+ *             @OA\Property(
+ *                 property="errors",
+ *                 type="object",
+ *                 @OA\Property(
+ *                     property="first_name",
+ *                     type="array",
+ *                     @OA\Items(type="string", example="The first name field is required.")
+ *                 ),
+ *                 @OA\Property(
+ *                     property="email",
+ *                     type="array",
+ *                     @OA\Items(type="string", example="The email must be a valid email address.")
+ *                 )
+ *             )
+ *         )
+ *     ),
+ *     @OA\Response(
+ *         response=401,
+ *         description="User not authenticated",
+ *         @OA\JsonContent(
+ *             @OA\Property(property="message", type="string", example="Unauthenticated.")
+ *         )
+ *     )
+ * )
+ *
+ * @OA\Delete(
+ *     path="/v2/contacts/{id}",
+ *     summary="Delete a contact",
+ *     description="Permanently deletes a contact and removes it from all associated groups. Only allows deleting contacts that belong to the authenticated user.",
+ *     tags={"Contacts"},
+ *     security={{"sanctum":{}}},
+ *     @OA\Parameter(
+ *         name="id",
+ *         in="path",
+ *         required=true,
+ *         description="Contact ID to delete",
+ *         @OA\Schema(type="integer", example=1)
+ *     ),
+ *     @OA\Response(
+ *         response=200,
+ *         description="Contact deleted successfully",
+ *         @OA\JsonContent(
+ *             @OA\Property(property="success", type="boolean", example=true),
+ *             @OA\Property(property="message", type="string", example="Contact deleted successfully."),
+ *             @OA\Property(
+ *                 property="data",
+ *                 type="object",
+ *                 @OA\Property(property="id", type="integer", example=1, description="ID of the deleted contact")
+ *             )
+ *         )
+ *     ),
+ *     @OA\Response(
+ *         response=404,
+ *         description="Contact not found or does not belong to user",
+ *         @OA\JsonContent(
+ *             @OA\Property(property="success", type="boolean", example=false),
+ *             @OA\Property(property="message", type="string", example="Contact not found or does not belong to the user."),
+ *             @OA\Property(property="data", type="null")
+ *         )
+ *     ),
+ *     @OA\Response(
+ *         response=500,
+ *         description="Failed to delete contact",
+ *         @OA\JsonContent(
+ *             @OA\Property(property="success", type="boolean", example=false),
+ *             @OA\Property(property="message", type="string", example="Failed to delete contact."),
+ *             @OA\Property(property="data", type="null")
+ *         )
+ *     ),
+ *     @OA\Response(
+ *         response=401,
+ *         description="User not authenticated",
+ *         @OA\JsonContent(
+ *             @OA\Property(property="message", type="string", example="Unauthenticated.")
+ *         )
+ *     )
+ * )
+ *
+ * @OA\Post(
+ *     path="/v2/contacts/multiple",
+ *     summary="Create multiple contacts in batch",
+ *     description="Creates multiple contacts in a single request for the authenticated user. Automatically detects and skips duplicate contacts based on phone number. Provides feedback on successful creations and duplicates.",
+ *     tags={"Contacts"},
+ *     security={{"sanctum":{}}},
+ *     @OA\RequestBody(
+ *         required=true,
+ *         @OA\MediaType(
+ *             mediaType="application/json",
+ *             @OA\Schema(
+ *                 type="array",
+ *                 @OA\Items(
+ *                     type="object",
+ *                     required={"first_name", "last_name", "mobile"},
+ *                     @OA\Property(property="first_name", type="string", maxLength=255, example="John", description="Contact's first name"),
+ *                     @OA\Property(property="last_name", type="string", maxLength=255, example="Smith", description="Contact's last name"),
+ *                     @OA\Property(property="mobile", type="string", maxLength=15, example="5551234567", description="Contact's mobile phone number"),
+ *                     @OA\Property(property="country_code", type="string", maxLength=10, example="+1", description="Country code (defaults to '1' if not provided)", nullable=true),
+ *                     @OA\Property(property="email", type="string", format="email", maxLength=255, example="john@example.com", description="Contact's email address", nullable=true)
+ *                 )
+ *             ),
+ *             example={
+ *                 {
+ *                     "first_name": "John",
+ *                     "last_name": "Smith",
+ *                     "mobile": "5551234567",
+ *                     "country_code": "+1",
+ *                     "email": "john@example.com"
+ *                 },
+ *                 {
+ *                     "first_name": "Jane",
+ *                     "last_name": "Doe",
+ *                     "mobile": "5559876543",
+ *                     "email": "jane@example.com"
+ *                 }
+ *             }
+ *         )
+ *     ),
+ *     @OA\Response(
+ *         response=201,
+ *         description="Contacts created successfully (may include duplicate information)",
+ *         @OA\JsonContent(
+ *             @OA\Property(property="success", type="boolean", example=true),
+ *             @OA\Property(
+ *                 property="message",
+ *                 type="string",
+ *                 oneOf={
+ *                     @OA\Schema(type="string", example="Contacts created successfully."),
+ *                     @OA\Schema(type="string", example="Contacts created successfully. Some contacts already existed and were not added again.")
+ *                 },
+ *                 description="Success message indicating creation status"
+ *             ),
+ *             @OA\Property(
+ *                 property="data",
+ *                 type="object",
+ *                 @OA\Property(
+ *                     property="created",
+ *                     type="array",
+ *                     description="Array of successfully created contact data",
+ *                     @OA\Items(
+ *                         type="object",
+ *                         @OA\Property(property="first_name", type="string", example="John"),
+ *                         @OA\Property(property="last_name", type="string", example="Smith"),
+ *                         @OA\Property(property="mobile", type="string", example="5551234567"),
+ *                         @OA\Property(property="country_code", type="string", example="+1"),
+ *                         @OA\Property(property="email", type="string", example="john@example.com"),
+ *                         @OA\Property(property="user_id", type="integer", example=1)
+ *                     )
+ *                 )
+ *             )
+ *         )
+ *     ),
+ *     @OA\Response(
+ *         response=400,
+ *         description="Missing required fields in one or more contacts",
+ *         @OA\JsonContent(
+ *             @OA\Property(property="success", type="boolean", example=false),
+ *             @OA\Property(
+ *                 property="message",
+ *                 type="string",
+ *                 oneOf={
+ *                     @OA\Schema(type="string", example="The first_name field is required."),
+ *                     @OA\Schema(type="string", example="The last_name field is required."),
+ *                     @OA\Schema(type="string", example="The mobile field is required.")
+ *                 }
+ *             ),
+ *             @OA\Property(property="data", type="null")
+ *         )
+ *     ),
+ *     @OA\Response(
+ *         response=401,
+ *         description="User not authenticated",
+ *         @OA\JsonContent(
+ *             @OA\Property(property="message", type="string", example="Unauthenticated.")
+ *         )
+ *     )
+ * )
+ * 
+ * @OA\Post(
+ *     path="/v2/save-video-request",
+ *     summary="Save and update video request with journal information",
+ *     description="Updates an existing video request with journal title, tags, and privacy settings. Processes tags by category and handles tag creation if needed. This endpoint is used to finalize a video journal after recording.",
+ *     tags={"Video Requests"},
+ *     security={{"sanctum":{}}},
+ *     @OA\RequestBody(
+ *         required=true,
+ *         @OA\MediaType(
+ *             mediaType="application/json",
+ *             @OA\Schema(
+ *                 required={"request_id"},
+ *                 @OA\Property(
+ *                     property="request_id",
+ *                     type="integer",
+ *                     description="ID of the video request to update",
+ *                     example=123
+ *                 ),
+ *                 @OA\Property(
+ *                     property="journal_name",
+ *                     type="string",
+ *                     description="Title/name for the journal entry",
+ *                     example="My Daily Reflection",
+ *                     nullable=true
+ *                 ),
+ *                 @OA\Property(
+ *                     property="journal_tags",
+ *                     type="array",
+ *                     description="Array of tag IDs or tag names to associate with the journal",
+ *                     @OA\Items(
+ *                         oneOf={
+ *                             @OA\Schema(type="integer", example=1, description="Existing tag ID"),
+ *                             @OA\Schema(type="string", example="motivation", description="New tag name to be created")
+ *                         }
+ *                     ),
+ *                     nullable=true
+ *                 ),
+ *                 @OA\Property(
+ *                     property="make_journal_private",
+ *                     type="integer",
+ *                     enum={0, 1},
+ *                     description="Privacy setting: 0 for public, 1 for private",
+ *                     example=0,
+ *                     nullable=true
+ *                 )
+ *             )
+ *         )
+ *     ),
+ *     @OA\Response(
+ *         response=200,
+ *         description="Video request saved successfully",
+ *         @OA\JsonContent(
+ *             @OA\Property(
+ *                 property="status",
+ *                 type="boolean",
+ *                 example=true,
+ *                 description="Indicates if the save operation was successful"
+ *             ),
+ *             @OA\Property(
+ *                 property="message",
+ *                 type="string",
+ *                 example="",
+ *                 description="Success message (typically empty)"
+ *             ),
+ *             @OA\Property(
+ *                 property="results",
+ *                 type="object",
+ *                 @OA\Property(
+ *                     property="request_id",
+ *                     type="string",
+ *                     example="123",
+ *                     description="ID of the updated video request (returned as string)"
+ *                 )
+ *             )
+ *         )
+ *     ),
+ *     @OA\Response(
+ *         response=404,
+ *         description="Video request not found",
+ *         @OA\JsonContent(
+ *             @OA\Property(
+ *                 property="status",
+ *                 type="boolean",
+ *                 example=false
+ *             ),
+ *             @OA\Property(
+ *                 property="message",
+ *                 type="string",
+ *                 example="Video request not found."
+ *             )
+ *         )
+ *     ),
+ *     @OA\Response(
+ *         response=422,
+ *         description="Validation errors",
+ *         @OA\JsonContent(
+ *             @OA\Property(
+ *                 property="message",
+ *                 type="string",
+ *                 example="The given data was invalid."
+ *             ),
+ *             @OA\Property(
+ *                 property="errors",
+ *                 type="object",
+ *                 @OA\Property(
+ *                     property="request_id",
+ *                     type="array",
+ *                     @OA\Items(
+ *                         type="string",
+ *                         example="The request id field is required."
+ *                     )
+ *                 )
+ *             )
+ *         )
+ *     ),
+ *     @OA\Response(
+ *         response=401,
+ *         description="User not authenticated",
+ *         @OA\JsonContent(
+ *             @OA\Property(
+ *                 property="message",
+ *                 type="string",
+ *                 example="Unauthenticated."
+ *             )
+ *         )
+ *     )
+ * )
+ * 
+  * @OA\Get(
+ *     path="/v2/insights-v2",
+ *     summary="Get emotional insights data for the authenticated user",
+ *     description="Retrieves comprehensive emotional insights and analytics for the authenticated user based on their video journal submissions. Returns emotional parameters with current values, averages, time-based data, and progress tracking over various time periods.",
+ *     tags={"Emotional Insights"},
+ *     security={{"sanctum":{}}},
+ *     @OA\Response(
+ *         response=200,
+ *         description="Insights data retrieved successfully",
+ *         @OA\JsonContent(
+ *             @OA\Property(
+ *                 property="status",
+ *                 type="string",
+ *                 example="success",
+ *                 description="Response status"
+ *             ),
+ *             @OA\Property(
+ *                 property="message",
+ *                 type="string",
+ *                 example="Insights data retrieved successfully",
+ *                 description="Success message"
+ *             ),
+ *             @OA\Property(
+ *                 property="data",
+ *                 type="object",
+ *                 @OA\Property(
+ *                     property="emotions",
+ *                     type="object",
+ *                     @OA\Property(
+ *                         property="lastMeasured",
+ *                         type="string",
+ *                         example="Oct 15, 2025",
+ *                         description="Date when emotions were last measured"
+ *                     ),
+ *                     @OA\Property(
+ *                         property="profile",
+ *                         type="array",
+ *                         description="Array of emotional insights data",
+ *                         @OA\Items(
+ *                             type="object",
+ *                             @OA\Property(property="id", type="string", example="happiness", description="Emotion parameter ID"),
+ *                             @OA\Property(property="emoji", type="string", example="😊", description="Emoji representation"),
+ *                             @OA\Property(property="name", type="string", example="Happiness", description="Display name of emotion"),
+ *                             @OA\Property(property="current", type="integer", example=75, description="Current emotion score"),
+ *                             @OA\Property(property="average", type="integer", example=68, description="Average emotion score over time"),
+ *                             @OA\Property(property="lastMeasured", type="string", example="Oct 15, 2025 2:30PM", description="Detailed timestamp of last measurement"),
+ *                             @OA\Property(property="range", type="string", example="Above Normal", description="Performance range classification"),
+ *                             @OA\Property(
+ *                                 property="dayChartData",
+ *                                 type="array",
+ *                                 description="Weekly data for chart visualization",
+ *                                 @OA\Items(
+ *                                     type="object",
+ *                                     @OA\Property(property="day", type="string", example="Mon"),
+ *                                     @OA\Property(property="value", type="integer", example=72)
+ *                                 )
+ *                             ),
+ *                             @OA\Property(
+ *                                 property="timeChartData",
+ *                                 type="object",
+ *                                 description="Time of day averages",
+ *                                 @OA\Property(property="morning", type="integer", example=70),
+ *                                 @OA\Property(property="afternoon", type="integer", example=75),
+ *                                 @OA\Property(property="evening", type="integer", example=68)
+ *                             ),
+ *                             @OA\Property(
+ *                                 property="timelineData",
+ *                                 type="object",
+ *                                 description="Historical timeline data",
+ *                                 @OA\Property(
+ *                                     property="30days",
+ *                                     type="array",
+ *                                     description="Last 30 days data",
+ *                                     @OA\Items(
+ *                                         type="object",
+ *                                         @OA\Property(property="date", type="string", example="2025-10-01"),
+ *                                         @OA\Property(property="value", type="integer", example=72)
+ *                                     )
+ *                                 ),
+ *                                 @OA\Property(
+ *                                     property="3months",
+ *                                     type="array",
+ *                                     description="Last 3 months data",
+ *                                     @OA\Items(
+ *                                         type="object",
+ *                                         @OA\Property(property="month", type="string", example="August 2025"),
+ *                                         @OA\Property(property="value", type="integer", example=70)
+ *                                     )
+ *                                 ),
+ *                                 @OA\Property(
+ *                                     property="6months",
+ *                                     type="array",
+ *                                     description="Last 6 months data",
+ *                                     @OA\Items(
+ *                                         type="object",
+ *                                         @OA\Property(property="month", type="string", example="May 2025"),
+ *                                         @OA\Property(property="value", type="integer", example=65)
+ *                                     )
+ *                                 ),
+ *                                 @OA\Property(
+ *                                     property="all",
+ *                                     type="array",
+ *                                     description="All available data since start",
+ *                                     @OA\Items(
+ *                                         type="object",
+ *                                         @OA\Property(property="month", type="string", example="January 2025"),
+ *                                         @OA\Property(property="value", type="integer", example=60)
+ *                                     )
+ *                                 )
+ *                             )
+ *                         )
+ *                     )
+ *                 )
+ *             )
+ *         )
+ *     ),
+ *     @OA\Response(
+ *         response=404,
+ *         description="User not found or no insights data available",
+ *         @OA\JsonContent(
+ *             @OA\Property(property="error", type="string", example="user not found")
+ *         )
+ *     ),
+ *     @OA\Response(
+ *         response=401,
+ *         description="User not authenticated",
+ *         @OA\JsonContent(
+ *             @OA\Property(property="message", type="string", example="Unauthenticated.")
+ *         )
+ *     )
+ * )
+ *
+ * @OA\Get(
+ *     path="/v2/insights-v2/secondaryMetrics",
+ *     summary="Get secondary/advanced emotional metrics for the authenticated user",
+ *     description="Retrieves advanced emotional insights and secondary metrics for the authenticated user. Provides detailed analysis including self-honesty, stress recovery, cognitive balance, and anger metrics with enhanced status information and descriptions.",
+ *     tags={"Emotional Insights"},
+ *     security={{"sanctum":{}}},
+ *     @OA\Response(
+ *         response=200,
+ *         description="Secondary metrics data retrieved successfully",
+ *         @OA\JsonContent(
+ *             @OA\Property(
+ *                 property="status",
+ *                 type="string",
+ *                 example="success",
+ *                 description="Response status"
+ *             ),
+ *             @OA\Property(
+ *                 property="message",
+ *                 type="string",
+ *                 example="Insights data retrieved successfully",
+ *                 description="Success message"
+ *             ),
+ *             @OA\Property(
+ *                 property="data",
+ *                 type="object",
+ *                 @OA\Property(
+ *                     property="advanced",
+ *                     type="object",
+ *                     @OA\Property(
+ *                         property="lastMeasured",
+ *                         type="string",
+ *                         example="Oct 15, 2025",
+ *                         description="Date when metrics were last measured"
+ *                     ),
+ *                     @OA\Property(
+ *                         property="profile",
+ *                         type="array",
+ *                         description="Array of advanced metric insights",
+ *                         @OA\Items(
+ *                             type="object",
+ *                             @OA\Property(property="id", type="string", example="self_honesty", description="Metric parameter ID"),
+ *                             @OA\Property(property="emoji", type="string", example="🔍", description="Emoji representation"),
+ *                             @OA\Property(property="name", type="string", example="Self Honesty", description="Display name of metric"),
+ *                             @OA\Property(property="current", type="integer", example=82, description="Current metric score"),
+ *                             @OA\Property(property="average", type="integer", example=78, description="Average metric score over time"),
+ *                             @OA\Property(property="lastMeasured", type="string", example="Oct 15, 2025 2:30PM", description="Detailed timestamp of last measurement"),
+ *                             @OA\Property(property="range", type="string", example="Above Normal", description="Performance range classification"),
+ *                             @OA\Property(property="description", type="string", example="Measures your ability to be honest with yourself about your emotions and thoughts.", description="Detailed description of the metric"),
+ *                             @OA\Property(property="status", type="string", example="Above Normal", description="Current status classification"),
+ *                             @OA\Property(property="statusMessage", type="string", example="You're showing good self-awareness and emotional honesty.", description="Interpretive message about current status"),
+ *                             @OA\Property(
+ *                                 property="statusType",
+ *                                 type="string",
+ *                                 enum={"Poor", "Good", "Great"},
+ *                                 example="Good",
+ *                                 description="Simplified status type for UI display"
+ *                             ),
+ *                             @OA\Property(
+ *                                 property="dayChartData",
+ *                                 type="array",
+ *                                 description="Weekly data for chart visualization",
+ *                                 @OA\Items(
+ *                                     type="object",
+ *                                     @OA\Property(property="day", type="string", example="Mon"),
+ *                                     @OA\Property(property="value", type="integer", example=80)
+ *                                 )
+ *                             ),
+ *                             @OA\Property(
+ *                                 property="timeChartData",
+ *                                 type="object",
+ *                                 description="Time of day averages",
+ *                                 @OA\Property(property="morning", type="integer", example=79),
+ *                                 @OA\Property(property="afternoon", type="integer", example=82),
+ *                                 @OA\Property(property="evening", type="integer", example=76)
+ *                             ),
+ *                             @OA\Property(
+ *                                 property="timelineData",
+ *                                 type="object",
+ *                                 description="Historical timeline data with same structure as emotions endpoint",
+ *                                 @OA\Property(property="30days", type="array", @OA\Items(type="object")),
+ *                                 @OA\Property(property="3months", type="array", @OA\Items(type="object")),
+ *                                 @OA\Property(property="6months", type="array", @OA\Items(type="object")),
+ *                                 @OA\Property(property="all", type="array", @OA\Items(type="object"))
+ *                             )
+ *                         )
+ *                     )
+ *                 )
+ *             )
+ *         )
+ *     ),
+ *     @OA\Response(
+ *         response=404,
+ *         description="User not found or no metrics data available",
+ *         @OA\JsonContent(
+ *             @OA\Property(property="error", type="string", example="user not found")
+ *         )
+ *     ),
+ *     @OA\Response(
+ *         response=401,
+ *         description="User not authenticated",
+ *         @OA\JsonContent(
+ *             @OA\Property(property="message", type="string", example="Unauthenticated.")
+ *         )
+ *     )
+ * )
+ * 
+  * @OA\Get(
+ *     path="/v2/insights-v2/vijos",
+ *     summary="Get credibility score insights for the authenticated user",
+ *     description="Retrieves comprehensive credibility score data and analytics for the authenticated user across different video journal categories (Vijos). Returns current scores, averages, time-based data, and progress tracking over various periods with detailed metrics aggregation.",
+ *     tags={"Credibility Score Insights"},
+ *     security={{"sanctum":{}}},
+ *     @OA\Response(
+ *         response=200,
+ *         description="Credibility score insights retrieved successfully",
+ *         @OA\JsonContent(
+ *             @OA\Property(
+ *                 property="status",
+ *                 type="string",
+ *                 example="success",
+ *                 description="Response status"
+ *             ),
+ *             @OA\Property(
+ *                 property="message",
+ *                 type="string",
+ *                 example="Insights data retrieved successfully",
+ *                 description="Success message"
+ *             ),
+ *             @OA\Property(
+ *                 property="data",
+ *                 type="object",
+ *                 @OA\Property(
+ *                     property="vijos",
+ *                     type="object",
+ *                     @OA\Property(
+ *                         property="lastMeasured",
+ *                         type="string",
+ *                         example="Oct 15, 2025",
+ *                         description="Date when credibility scores were last measured"
+ *                     ),
+ *                     @OA\Property(
+ *                         property="profile",
+ *                         type="array",
+ *                         description="Array of credibility score insights for different catalog types",
+ *                         @OA\Items(
+ *                             type="object",
+ *                             @OA\Property(property="id", type="integer", example=1, description="Catalog ID"),
+ *                             @OA\Property(property="emoji", type="string", example="💼", description="Catalog emoji representation"),
+ *                             @OA\Property(property="name", type="string", example="Work Performance", description="Catalog/Vijo type name"),
+ *                             @OA\Property(property="video_type_id", type="integer", example=1, description="Associated video type ID"),
+ *                             @OA\Property(property="current", type="integer", example=78, description="Current credibility score (0-100)"),
+ *                             @OA\Property(property="average", type="integer", example=72, description="Average credibility score over time"),
+ *                             @OA\Property(property="lastMeasured", type="string", example="Oct 15, 2025 3:45PM", description="Detailed timestamp of last measurement"),
+ *                             @OA\Property(
+ *                                 property="range",
+ *                                 type="string",
+ *                                 enum={"Below Normal", "Normal", "Above Normal"},
+ *                                 example="Above Normal",
+ *                                 description="Performance range classification based on standard deviation"
+ *                             ),
+ *                             @OA\Property(
+ *                                 property="dayChartData",
+ *                                 type="array",
+ *                                 description="Weekly credibility score data for chart visualization",
+ *                                 @OA\Items(
+ *                                     type="object",
+ *                                     @OA\Property(property="day", type="string", example="Mon", description="Day of the week"),
+ *                                     @OA\Property(property="value", type="integer", example=75, description="Credibility score for that day")
+ *                                 )
+ *                             ),
+ *                             @OA\Property(
+ *                                 property="timeChartData",
+ *                                 type="object",
+ *                                 description="Credibility score averages by time of day",
+ *                                 @OA\Property(property="morning", type="integer", example=76, description="Morning average score"),
+ *                                 @OA\Property(property="afternoon", type="integer", example=78, description="Afternoon average score"),
+ *                                 @OA\Property(property="evening", type="integer", example=74, description="Evening average score")
+ *                             ),
+ *                             @OA\Property(
+ *                                 property="timelineData",
+ *                                 type="object",
+ *                                 description="Historical credibility score timeline data",
+ *                                 @OA\Property(
+ *                                     property="30days",
+ *                                     type="array",
+ *                                     description="Last 30 days credibility score progression",
+ *                                     @OA\Items(
+ *                                         type="object",
+ *                                         @OA\Property(property="date", type="string", format="date", example="2025-10-01"),
+ *                                         @OA\Property(property="value", type="integer", example=74, description="Credibility score")
+ *                                     )
+ *                                 ),
+ *                                 @OA\Property(
+ *                                     property="3months",
+ *                                     type="array",
+ *                                     description="Last 3 months aggregated data",
+ *                                     @OA\Items(
+ *                                         type="object",
+ *                                         @OA\Property(property="month", type="string", example="August 2025"),
+ *                                         @OA\Property(property="value", type="integer", example=72, description="Monthly average credibility score")
+ *                                     )
+ *                                 ),
+ *                                 @OA\Property(
+ *                                     property="6months",
+ *                                     type="array",
+ *                                     description="Last 6 months aggregated data",
+ *                                     @OA\Items(
+ *                                         type="object",
+ *                                         @OA\Property(property="month", type="string", example="May 2025"),
+ *                                         @OA\Property(property="value", type="integer", example=68, description="Monthly average credibility score")
+ *                                     )
+ *                                 ),
+ *                                 @OA\Property(
+ *                                     property="all",
+ *                                     type="array",
+ *                                     description="All historical data since user started",
+ *                                     @OA\Items(
+ *                                         type="object",
+ *                                         @OA\Property(property="month", type="string", example="January 2025"),
+ *                                         @OA\Property(property="value", type="integer", example=65, description="Monthly average credibility score")
+ *                                     )
+ *                                 )
+ *                             )
+ *                         )
+ *                     )
+ *                 )
+ *             )
+ *         )
+ *     ),
+ *     @OA\Response(
+ *         response=404,
+ *         description="User not found or no credibility score data available",
+ *         @OA\JsonContent(
+ *             @OA\Property(property="error", type="string", example="user not found")
+ *         )
+ *     ),
+ *     @OA\Response(
+ *         response=401,
+ *         description="User not authenticated",
+ *         @OA\JsonContent(
+ *             @OA\Property(property="message", type="string", example="Unauthenticated.")
+ *         )
+ *     )
+ * )
+ * 
+ * @OA\Post(
+ *     path="/v2/start-video-request",
+ *     summary="Start a new video request or retrieve existing request details",
+ *     description="Initiates a video recording process by either creating a new video request or retrieving details for an existing one. Returns catalog information, recording constraints, questions for KPIs, and suggested next catalogs. Supports both new recordings and responding to shared requests.",
+ *     tags={"Video Requests"},
+ *     security={{"sanctum":{}}},
+ *     @OA\RequestBody(
+ *         required=false,
+ *         @OA\MediaType(
+ *             mediaType="application/json",
+ *             @OA\Schema(
+ *                 @OA\Property(
+ *                     property="catalog_id",
+ *                     type="integer",
+ *                     description="ID of the catalog to start recording (required if request_id not provided)",
+ *                     example=1
+ *                 ),
+ *                 @OA\Property(
+ *                     property="request_id",
+ *                     type="integer",
+ *                     description="ID of existing video request to continue/respond to (optional)",
+ *                     example=123
+ *                 )
+ *             )
+ *         )
+ *     ),
+ *     @OA\Response(
+ *         response=200,
+ *         description="Video request started successfully",
+ *         @OA\JsonContent(
+ *             @OA\Property(
+ *                 property="status",
+ *                 type="boolean",
+ *                 example=true,
+ *                 description="Indicates if the request was successful"
+ *             ),
+ *             @OA\Property(
+ *                 property="message",
+ *                 type="string",
+ *                 example="",
+ *                 description="Response message (typically empty on success)"
+ *             ),
+ *             @OA\Property(
+ *                 property="results",
+ *                 type="object",
+ *                 @OA\Property(
+ *                     property="parent_catalog_id",
+ *                     type="string",
+ *                     example="0",
+ *                     description="ID of parent catalog if this is a sub-catalog"
+ *                 ),
+ *                 @OA\Property(
+ *                     property="catalog_id",
+ *                     type="string",
+ *                     example="1",
+ *                     description="ID of the catalog being used for recording"
+ *                 ),
+ *                 @OA\Property(
+ *                     property="request_id",
+ *                     type="integer",
+ *                     example=123,
+ *                     description="ID of the video request (newly created or existing)"
+ *                 ),
+ *                 @OA\Property(
+ *                     property="record_date",
+ *                     type="string",
+ *                     format="date",
+ *                     example="2025-10-15",
+ *                     description="Date when the recording should be made"
+ *                 ),
+ *                 @OA\Property(
+ *                     property="video_types",
+ *                     type="object",
+ *                     description="Video type metrics and KPI information",
+ *                     @OA\Property(property="metrics", type="integer", example=6, description="Total number of metrics for this video type"),
+ *                     @OA\Property(property="kpis", type="integer", example=2, description="Number of KPIs for this video type"),
+ *                     @OA\Property(property="kpi_metrics", type="integer", example=3, description="Number of KPI-related questions available")
+ *                 ),
+ *                 @OA\Property(
+ *                     property="video_type_id",
+ *                     type="integer",
+ *                     nullable=true,
+ *                     example=1,
+ *                     description="ID of the associated video type"
+ *                 ),
+ *                 @OA\Property(
+ *                     property="min_record_time",
+ *                     type="string",
+ *                     example="15",
+ *                     description="Minimum recording time in seconds"
+ *                 ),
+ *                 @OA\Property(
+ *                     property="record_time",
+ *                     type="string",
+ *                     example="60",
+ *                     description="Maximum recording time in seconds"
+ *                 ),
+ *                 @OA\Property(
+ *                     property="questions",
+ *                     type="array",
+ *                     description="Array of KPI-related questions for this catalog",
+ *                     @OA\Items(
+ *                         type="object",
+ *                         @OA\Property(property="id", type="integer", example=1, description="Question/metric specification ID"),
+ *                         @OA\Property(property="name", type="string", example="Stress Level", description="Name of the metric"),
+ *                         @OA\Property(property="question", type="string", example="How stressed do you feel right now?", description="Question text for user input"),
+ *                         @OA\Property(property="video_question", type="string", example="Describe your current stress level in detail.", description="Question for video recording"),
+ *                         @OA\Property(property="range", type="string", example="1-10", description="Expected range for answers")
+ *                     )
+ *                 ),
+ *                 @OA\Property(
+ *                     property="userTags",
+ *                     type="array",
+ *                     description="User's available tags for this category",
+ *                     @OA\Items(
+ *                         type="object",
+ *                         @OA\Property(property="id", type="integer", example=1),
+ *                         @OA\Property(property="name", type="string", example="Work"),
+ *                         @OA\Property(property="category_id", type="integer", example=1)
+ *                     )
+ *                 ),
+ *                 @OA\Property(
+ *                     property="next_vijo",
+ *                     type="array",
+ *                     description="Suggested catalogs for next recording session",
+ *                     @OA\Items(
+ *                         type="object",
+ *                         @OA\Property(property="catalog_id", type="string", example="2"),
+ *                         @OA\Property(property="title", type="string", example="Evening Reflection"),
+ *                         @OA\Property(property="description", type="string", example="Reflect on your day"),
+ *                         @OA\Property(property="catalogEmoji", type="string", example="🌅"),
+ *                         @OA\Property(property="category_name", type="string", example="Wellness"),
+ *                         @OA\Property(property="isPremium", type="string", example="0"),
+ *                         @OA\Property(property="video_type_id", type="string", example="1")
+ *                     )
+ *                 )
+ *             )
+ *         )
+ *     ),
+ *     @OA\Response(
+ *         response=400,
+ *         description="Missing required catalog_id",
+ *         @OA\JsonContent(
+ *             @OA\Property(
+ *                 property="status",
+ *                 type="boolean",
+ *                 example=false
+ *             ),
+ *             @OA\Property(
+ *                 property="message",
+ *                 type="string",
+ *                 example="Catalog ID is required."
+ *             )
+ *         )
+ *     ),
+ *     @OA\Response(
+ *         response=403,
+ *         description="Unauthorized access to video request",
+ *         @OA\JsonContent(
+ *             @OA\Property(
+ *                 property="status",
+ *                 type="boolean",
+ *                 example=false
+ *             ),
+ *             @OA\Property(
+ *                 property="message",
+ *                 type="string",
+ *                 example="Unauthorized access to this request."
+ *             )
+ *         )
+ *     ),
+ *     @OA\Response(
+ *         response=404,
+ *         description="Catalog not found",
+ *         @OA\JsonContent(
+ *             @OA\Property(
+ *                 property="status",
+ *                 type="boolean",
+ *                 example=false
+ *             ),
+ *             @OA\Property(
+ *                 property="message",
+ *                 type="string",
+ *                 example="Catalog not found."
+ *             )
+ *         )
+ *     ),
+ *     @OA\Response(
+ *         response=401,
+ *         description="User not authenticated",
+ *         @OA\JsonContent(
+ *             @OA\Property(
+ *                 property="message",
+ *                 type="string",
+ *                 example="Unauthenticated."
+ *             )
+ *         )
+ *     )
+ * )
+ * 
+ * @OA\Post(
+ *     path="/v2/record-video-request",
+ *     summary="Submit catalog answers and video recording data",
+ *     description="Submits answers to catalog questions, KPI metrics, and optional video thumbnail after completing a video journal recording. This endpoint processes the user's responses, stores metrics data, handles video thumbnail upload, and creates the catalog answer record.",
+ *     tags={"Video Recording"},
+ *     security={{"sanctum":{}}},
+ *     @OA\RequestBody(
+ *         required=true,
+ *         @OA\MediaType(
+ *             mediaType="multipart/form-data",
+ *             @OA\Schema(
+ *                 required={"request_id", "catalog_id"},
+ *                 @OA\Property(
+ *                     property="request_id",
+ *                     type="integer",
+ *                     description="ID of the video request being processed",
+ *                     example=123
+ *                 ),
+ *                 @OA\Property(
+ *                     property="catalog_id",
+ *                     type="integer",
+ *                     description="ID of the catalog used for recording",
+ *                     example=1
+ *                 ),
+ *                 @OA\Property(
+ *                     property="question1_score",
+ *                     type="number",
+ *                     description="Score for KPI question 1 (required if applicable)",
+ *                     example=8.5,
+ *                     nullable=true
+ *                 ),
+ *                 @OA\Property(
+ *                     property="question2_score",
+ *                     type="number",
+ *                     description="Score for KPI question 2 (required if applicable)",
+ *                     example=7.2,
+ *                     nullable=true
+ *                 ),
+ *                 @OA\Property(
+ *                     property="question3_score",
+ *                     type="number",
+ *                     description="Score for KPI question 3 (required if applicable)",
+ *                     example=9.0,
+ *                     nullable=true
+ *                 ),
+ *                 @OA\Property(
+ *                     property="cred_score",
+ *                     type="number",
+ *                     description="Overall credibility score for the recording",
+ *                     example=78.5,
+ *                     nullable=true
+ *                 ),
+ *                 @OA\Property(
+ *                     property="metric1_answer",
+ *                     type="string",
+ *                     maxLength=50,
+ *                     description="Answer text for metric 1",
+ *                     example="Confident",
+ *                     nullable=true
+ *                 ),
+ *                 @OA\Property(
+ *                     property="metric1Range",
+ *                     type="number",
+ *                     description="Range value for metric 1",
+ *                     example=8.0,
+ *                     nullable=true
+ *                 ),
+ *                 @OA\Property(
+ *                     property="metric1Significance",
+ *                     type="integer",
+ *                     description="Significance level for metric 1",
+ *                     example=3,
+ *                     nullable=true
+ *                 ),
+ *                 @OA\Property(
+ *                     property="metric2_answer",
+ *                     type="string",
+ *                     maxLength=50,
+ *                     description="Answer text for metric 2",
+ *                     example="Motivated",
+ *                     nullable=true
+ *                 ),
+ *                 @OA\Property(
+ *                     property="metric2Range",
+ *                     type="number",
+ *                     description="Range value for metric 2",
+ *                     example=7.5,
+ *                     nullable=true
+ *                 ),
+ *                 @OA\Property(
+ *                     property="metric2Significance",
+ *                     type="integer",
+ *                     description="Significance level for metric 2",
+ *                     example=4,
+ *                     nullable=true
+ *                 ),
+ *                 @OA\Property(
+ *                     property="metric3_answer",
+ *                     type="string",
+ *                     maxLength=50,
+ *                     description="Answer text for metric 3",
+ *                     example="Focused",
+ *                     nullable=true
+ *                 ),
+ *                 @OA\Property(
+ *                     property="metric3Range",
+ *                     type="number",
+ *                     description="Range value for metric 3",
+ *                     example=9.0,
+ *                     nullable=true
+ *                 ),
+ *                 @OA\Property(
+ *                     property="metric3Significance",
+ *                     type="integer",
+ *                     description="Significance level for metric 3",
+ *                     example=5,
+ *                     nullable=true
+ *                 ),
+ *                 @OA\Property(
+ *                     property="n8n_executionId",
+ *                     type="string",
+ *                     maxLength=50,
+ *                     description="N8N workflow execution ID for tracking",
+ *                     example="exec_123456789",
+ *                     nullable=true
+ *                 ),
+ *                 @OA\Property(
+ *                     property="video_thumbnail_file",
+ *                     type="string",
+ *                     format="binary",
+ *                     description="Video thumbnail image file (JPEG, PNG, etc.)",
+ *                     nullable=true
+ *                 ),
+ *                 @OA\Property(
+ *                     property="record_date",
+ *                     type="string",
+ *                     format="date-time",
+ *                     description="Recording date (defaults to current timestamp if not provided)",
+ *                     example="2025-10-15T14:30:00Z",
+ *                     nullable=true
+ *                 )
+ *             )
+ *         )
+ *     ),
+ *     @OA\Response(
+ *         response=201,
+ *         description="Catalog answer created successfully",
+ *         @OA\JsonContent(
+ *             @OA\Property(
+ *                 property="success",
+ *                 type="boolean",
+ *                 example=true,
+ *                 description="Indicates if the submission was successful"
+ *             ),
+ *             @OA\Property(
+ *                 property="message",
+ *                 type="string",
+ *                 example="Catalog answer created successfully.",
+ *                 description="Success confirmation message"
+ *             ),
+ *             @OA\Property(
+ *                 property="data",
+ *                 type="object",
+ *                 @OA\Property(
+ *                     property="request_id",
+ *                     type="integer",
+ *                     example=123,
+ *                     description="ID of the processed video request"
+ *                 ),
+ *                 @OA\Property(
+ *                     property="record_category",
+ *                     type="integer",
+ *                     example=0,
+ *                     description="Recording category classification"
+ *                 ),
+ *                 @OA\Property(
+ *                     property="record_date",
+ *                     type="string",
+ *                     format="date-time",
+ *                     example="2025-10-15T14:30:00.000000Z",
+ *                     description="Date and time when the recording was processed"
+ *                 )
+ *             )
+ *         )
+ *     ),
+ *     @OA\Response(
+ *         response=400,
+ *         description="Missing required KPI question scores",
+ *         @OA\JsonContent(
+ *             @OA\Property(
+ *                 property="status",
+ *                 type="boolean",
+ *                 example=false
+ *             ),
+ *             @OA\Property(
+ *                 property="message",
+ *                 type="string",
+ *                 example="Missing required question: question1_score"
+ *             )
+ *         )
+ *     ),
+ *     @OA\Response(
+ *         response=404,
+ *         description="Credibility score configuration not found for catalog",
+ *         @OA\JsonContent(
+ *             @OA\Property(
+ *                 property="status",
+ *                 type="boolean",
+ *                 example=false
+ *             ),
+ *             @OA\Property(
+ *                 property="message",
+ *                 type="string",
+ *                 example="Cred score not found."
+ *             )
+ *         )
+ *     ),
+ *     @OA\Response(
+ *         response=422,
+ *         description="Validation errors",
+ *         @OA\JsonContent(
+ *             @OA\Property(
+ *                 property="message",
+ *                 type="string",
+ *                 example="The given data was invalid."
+ *             ),
+ *             @OA\Property(
+ *                 property="errors",
+ *                 type="object",
+ *                 @OA\Property(
+ *                     property="request_id",
+ *                     type="array",
+ *                     @OA\Items(
+ *                         type="string",
+ *                         oneOf={
+ *                             @OA\Schema(type="string", example="The request id field is required."),
+ *                             @OA\Schema(type="string", example="The selected request id is invalid.")
+ *                         }
+ *                     )
+ *                 ),
+ *                 @OA\Property(
+ *                     property="catalog_id",
+ *                     type="array",
+ *                     @OA\Items(
+ *                         type="string",
+ *                         oneOf={
+ *                             @OA\Schema(type="string", example="The catalog id field is required."),
+ *                             @OA\Schema(type="string", example="The selected catalog id is invalid.")
+ *                         }
+ *                     )
+ *                 ),
+ *                 @OA\Property(
+ *                     property="cred_score",
+ *                     type="array",
+ *                     @OA\Items(
+ *                         type="string",
+ *                         example="The cred score must be a number."
+ *                     )
+ *                 ),
+ *                 @OA\Property(
+ *                     property="metric1_answer",
+ *                     type="array",
+ *                     @OA\Items(
+ *                         type="string",
+ *                         example="The metric1 answer may not be greater than 50 characters."
+ *                     )
+ *                 ),
+ *                 @OA\Property(
+ *                     property="video_thumbnail_file",
+ *                     type="array",
+ *                     @OA\Items(
+ *                         type="string",
+ *                         example="The video thumbnail file must be a file."
+ *                     )
+ *                 )
+ *             )
+ *         )
+ *     ),
+ *     @OA\Response(
+ *         response=500,
+ *         description="Internal server error during processing",
+ *         @OA\JsonContent(
+ *             @OA\Property(
+ *                 property="status",
+ *                 type="boolean",
+ *                 example=false
+ *             ),
+ *             @OA\Property(
+ *                 property="message",
+ *                 type="string",
+ *                 example="Internal server error."
+ *             )
+ *         )
+ *     ),
+ *     @OA\Response(
+ *         response=401,
+ *         description="User not authenticated",
+ *         @OA\JsonContent(
+ *             @OA\Property(
+ *                 property="message",
+ *                 type="string",
+ *                 example="Unauthenticated."
+ *             )
+ *         )
+ *     )
+ * )
+ * 
+ * @OA\Get(
+ *     path="/v2/catalogs-by-category/{categoryId}",
+ *     summary="Get catalogs by category ID",
+ *     description="Retrieves all active catalogs (non-deleted) that belong to a specific category. Returns a list of catalogs with their basic information including title, description, recording time limits, and other metadata.",
+ *     tags={"Catalogs"},
+ *     security={{"sanctum":{}}},
+ *     @OA\Parameter(
+ *         name="categoryId",
+ *         in="path",
+ *         required=true,
+ *         description="ID of the category to filter catalogs by",
+ *         @OA\Schema(type="integer", example=1)
+ *     ),
+ *     @OA\Response(
+ *         response=200,
+ *         description="Catalogs by category retrieved successfully (array may be empty if none found)",
+ *         @OA\JsonContent(
+ *             @OA\Property(property="success", type="boolean", example=true),
+ *             @OA\Property(property="message", type="string", example="Catalogs by category retrieved successfully."),
+ *             @OA\Property(
+ *                 property="data",
+ *                 type="array",
+ *                 description="Array of catalogs in the specified category (empty if none found)",
+ *                 @OA\Items(
+ *                     type="object",
+ *                     @OA\Property(property="id", type="integer", example=1, description="Catalog ID"),
+ *                     @OA\Property(property="title", type="string", example="Daily Reflection", description="Catalog title"),
+ *                     @OA\Property(property="description", type="string", example="A daily reflection on your thoughts and feelings", description="Catalog description", nullable=true),
+ *                     @OA\Property(property="tags", type="string", example="reflection,mindfulness,daily", description="Comma-separated tags", nullable=true),
+ *                     @OA\Property(property="min_record_time", type="integer", example=30, description="Minimum recording time in seconds"),
+ *                     @OA\Property(property="max_record_time", type="integer", example=300, description="Maximum recording time in seconds"),
+ *                     @OA\Property(property="emoji", type="string", example="🤔", description="Emoji representation of the catalog", nullable=true),
+ *                     @OA\Property(property="status", type="integer", enum={0, 1, 2, 3}, example=1, description="Catalog status: 0=inactive, 1=active, 2=draft, 3=archived"),
+ *                     @OA\Property(property="parent_catalog_id", type="integer", example=null, description="Parent catalog ID if this is a sub-catalog", nullable=true),
+ *                     @OA\Property(property="category_id", type="integer", example=1, description="Category ID this catalog belongs to"),
+ *                     @OA\Property(property="is_promotional", type="boolean", example=false, description="Whether this is a promotional catalog"),
+ *                     @OA\Property(property="is_premium", type="boolean", example=false, description="Whether this requires premium subscription"),
+ *                     @OA\Property(property="is_deleted", type="integer", example=0, description="Soft delete flag (0=active, 1=deleted)"),
+ *                     @OA\Property(property="created_at", type="string", format="date-time", example="2025-10-15T10:00:00.000000Z"),
+ *                     @OA\Property(property="updated_at", type="string", format="date-time", example="2025-10-15T10:00:00.000000Z")
+ *                 )
+ *             )
+ *         )
+ *     ),
+ *     @OA\Response(
+ *         response=401,
+ *         description="User not authenticated",
+ *         @OA\JsonContent(
+ *             @OA\Property(property="message", type="string", example="Unauthenticated.")
+ *         )
+ *     )
+ * )
+ */
 class SwaggerAnnotations extends Controller
 {
 }

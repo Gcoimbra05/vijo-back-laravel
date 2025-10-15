@@ -1,6 +1,7 @@
 <?php
 
 namespace App\Services\VideoRequestProcessing\Steps;
+use Illuminate\Support\Facades\Log;
 
 abstract class VideoProcessingStep
 {
@@ -37,11 +38,6 @@ abstract class VideoProcessingStep
             'error' => $result['error']
         ]);
         
-        $context['apiService']->sendWebhookNotification(
-            'error', 
-            $context['videoRequest']->id, 
-            'video_request', 
-            ['message' => $result['error']]
-        );
+        Log::info('Error during processing of video request: ' . $context['videoRequest']->id . $result['error']);
     }
 }

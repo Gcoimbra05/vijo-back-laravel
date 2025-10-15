@@ -43,12 +43,7 @@ class ProcessTranscriptionStep extends VideoProcessingStep
 
         $this->storeTranscripts($context['videoRequest']->id, $transcriptionResult, $formattedTranscript);
 
-        $context['apiService']->sendWebhookNotification(
-            'transcription complete', 
-            $context['videoRequest']->id, 
-            'video_request', 
-            ["transcript" => $formattedTranscript]
-        );
+        Log::info('AWS Transcription complete for video request: ' . $context['videoRequest']->id . "content: " . json_encode($transcriptionResult));
 
         return [
             'success' => true,

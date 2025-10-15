@@ -45,14 +45,19 @@ class ProcessEmotionsStep extends VideoProcessingStep
         $emotions = $context['apiService']->sendPost($emloServerUrl, $emloPayload);
         $emotionData = $emotions->getData();
 
-        if ($emotionData->success !== true) {
-            return ['success' => false, 'error' => 'EMLO server processing failed w/ error: ' . $emotionData->error];
+        if (empty($emotionData->response) || $emotionData->response->success !== true) {
+            return [
+                'success' => false,
+                'error' => 'EMLO server processing failed w/ error: ' .
+                    ($emotionData->response->error ?? 'Unknown error'),
+            ];
         }
 
-        $context['apiService']->sendWebhookNotification('emotional analysis complete', $context['videoRequest']->id, 'video_request');
+
+        Log::info('EMLO analysis complete for video request: ' . $context['videoRequest']->id);
         
         $rawResponse = json_encode($emotionData->response);
-        Log::debug("The raw EMLO response is: " . $rawResponse);
+        //Log::debug("The raw EMLO response is: " . $rawResponse);
 
         $emloResponseController = app(\App\Http\Controllers\EmloResponseController::class);
         $newRequest = new Request([

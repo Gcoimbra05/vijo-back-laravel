@@ -174,11 +174,20 @@ class VideoController extends Controller
     public function uploadAndStore(Request $request)
     {
         Log::info('uploadAndStore');
-        $request->validate([
+        $validator = Validator::make($request->all(), [
             'request_id' => 'required|exists:video_requests,id',
             'file' => 'required|file|mimes:mp4,mov,ogg,qt,webm,mkv|max:512000',
             'video_duration' => 'nullable|integer',
         ]);
+
+        if ($validator->fails()) {
+            Log::info('Validation failed in uploadAndStore', [
+                'errors' => $validator->errors()->all(),
+                'input' => $request->all()
+            ]);
+            // Optionally, you can return or throw here, or just log and continue as needed for your job
+            return;
+        }
 
         $mediaController = app(MediaStorageController::class);
         $uploadResponse = $mediaController->uploadVideo($request);
@@ -187,11 +196,11 @@ class VideoController extends Controller
         $uploadData = $uploadResponse->getData(true);
 
         if (empty($uploadData['success']) || !$uploadData['success']) {
-            return response()->json([
-                'success' => false,
+            Log::info('Upload failed in uploadAndStore', [
                 'message' => $uploadData['message'] ?? 'Upload failed.',
                 'errors'  => $uploadData['errors'] ?? null,
-            ], 422);
+            ]);
+            return;
         }
         Log::info('Video upload successful', [
             'videoRequestId' => $videoRequestId,
@@ -228,11 +237,5 @@ class VideoController extends Controller
 
         $videoRequestController = app(VideoRequestController::class);
         $videoRequestController->initProcess($request, $videoRequestId);
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Video uploaded and saved successfully.',
-            'data'    => $video,
-        ], 201);
     }
 }
