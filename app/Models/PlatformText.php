@@ -16,5 +16,6 @@ class PlatformText extends Model
         'description',
         'link',
         'location',
+        'status',
     ];
 }

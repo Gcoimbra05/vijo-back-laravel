@@ -11,7 +11,42 @@ class PlatformTextController extends Controller
     // List all platform texts
     public function index()
     {
-        return response()->json(PlatformText::all());
+        $platformtexts = PlatformText::orderBy('id', 'desc')->get();
+
+        if (request()->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Platform Texts retrieved successfully.',
+                'data' => $platformTexts,
+            ]);
+        }
+
+        $breadcrumbs = [
+            ['label' => 'Platform Texts', 'url' => null],
+        ];
+
+        $nav_bar = 'platformtext';
+        $pageTitle = 'Platform Texts';
+
+        return view('admin.platformtext.list', compact('platformtexts', 'pageTitle', 'nav_bar', 'breadcrumbs'));
+    }
+
+     public function create()
+    {
+        $pageTitle = "Add Platform Text";
+        $nav_bar = "platformtext";
+        $breadcrumbs = [
+            ['label' => 'Platform Texts', 'url' => route('platformtext.index')],
+            ['label' => 'Add Platform Text', 'url' => null],
+        ];
+
+        return view('admin.platformtext.form', [
+            'action' => 'create',
+            'pageTitle' => $pageTitle,
+            'nav_bar' => $nav_bar,
+            'breadcrumbs' => $breadcrumbs,
+            'platformText' => null,
+        ]);
     }
 
     // Show a single platform text by id
@@ -35,9 +70,11 @@ class PlatformTextController extends Controller
             'description' => 'nullable|string',
             'link' => 'nullable|string',
             'location' => 'nullable|string',
+            'status' => 'nullable|boolean',
         ]);
         $text = PlatformText::create($validated);
-        return response()->json($text, 201);
+        return redirect()->route('platformtext.index')
+            ->with('success', 'Platform text created successfully.');
     }
 
     // Update an existing platform text
@@ -68,6 +105,27 @@ class PlatformTextController extends Controller
             return response()->json(['message' => 'Text not found'], 404);
         }
         $text->delete();
-        return response()->json(['message' => 'Text deleted successfully']);
+        return redirect()->route('platformtext.index')
+            ->with('success', 'Platform text created successfully.');
+    }
+
+    public function activate($id)
+    {
+        $template = platformtext::findOrFail($id);
+        $template->status = 1; // ativo
+        $template->save();
+
+        return redirect()->route('emailtemplate.index')
+                        ->with('success', 'Email Template activated successfully.');
+    }
+
+    public function deactivate($id)
+    {
+        $template = platformtext::findOrFail($id);
+        $template->status = 0; // desativado
+        $template->save();
+
+        return redirect()->route('emailtemplate.index')
+                        ->with('success', 'Email Template deactivated successfully.');
     }
 }

@@ -93,6 +93,19 @@ Route::prefix('admin')->group(function () {
             Route::get('/deactivate/{id}', [EmailTemplateController::class, 'deactivate'])->name('emailtemplate.deactivate');
         });
 
+        // Platform Texts
+        Route::prefix('platformtext')->group(function () {
+            Route::get('/', [PlatformTextController::class, 'index'])->name('platformtext.index');
+            Route::get('/create', [PlatformTextController::class, 'create'])->name('platformtext.create');
+            Route::post('/', [PlatformTextController::class, 'store'])->name('platformtext.store');
+            Route::get('/show/{id}', [PlatformTextController::class, 'show'])->name('platformtext.show');
+            Route::put('/{id}', [PlatformTextController::class, 'update'])->name('platformtext.update');
+            Route::get('/delete/{id}', [PlatformTextController::class, 'destroy'])->name('platformtext.delete');
+
+            Route::get('/activate/{id}', [PlatformTextController::class, 'activate'])->name('platformtext.activate');
+            Route::get('/deactivate/{id}', [PlatformTextController::class, 'deactivate'])->name('platformtext.deactivate');
+        });
+
 
         // catalogs routes
         Route::resource('catalogs', CatalogController::class); // ->except(['index']);
