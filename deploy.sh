@@ -1,6 +1,7 @@
 #!/bin/bash
 
-echo "🚀 Iniciando processo de deploy Laravel..."
+
+echo "🚀 Starting Laravel deploy process..."
 
 APP_DIR="/var/www/html/vijo_laravel"
 PHP_VERSION="8.1"
@@ -9,44 +10,55 @@ SERVER_USER="ubuntu"
 
 cd $APP_DIR || exit
 
-echo "🔄 Atualizando código..."
-git pull origin develop || { echo "❌ Falha ao executar git pull"; exit 1; }
+REFRESH=false
+for arg in "$@"; do
+    if [ "$arg" == "--refresh" ] || [ "$arg" == "-r" ]; then
+        REFRESH=true
+    fi
+done
 
-echo "🔧 Ajustando permissões..."
+if [ "$REFRESH" = false ]; then
+	echo "🔄 Updating code..."
+	git pull origin develop || { echo "❌ Failed to execute git pull"; exit 1; }
+else
+	echo "⚡ Refresh mode: skipping git pull."
+fi
+
+echo "🔧 Adjusting permissions..."
 sudo chown -R $USER:$USER $APP_DIR
 sudo chown -R $USER:$USER $APP_DIR/storage $APP_DIR/bootstrap/cache
 sudo chmod -R 775 $APP_DIR/storage $APP_DIR/bootstrap/cache
 
-echo "🗑️ Limpando caches Laravel..."
+echo "🗑️ Clearing Laravel caches..."
 php artisan cache:clear
 php artisan config:clear
 php artisan route:clear
 php artisan view:clear
 
-echo "🧬 Rodando migrations..."
+echo "🧬 Running migrations..."
 php artisan migrate --force
 
-echo "🔁 Reiniciando queue workers..."
+echo "🔁 Restarting queue workers..."
 php artisan queue:restart
 
-echo "🔄 Reiniciando supervisor (se necessário)..."
+echo "🔄 Restarting supervisor (if needed)..."
 sudo supervisorctl reread
 sudo supervisorctl update
 sudo supervisorctl restart all
 
-# Ajustar o dono dos arquivos para o usuário correto (ex: www-data para Apache/Nginx)
+# Set correct file owner (e.g., www-data for Apache/Nginx)
 sudo chown -R $SERVER_USER:www-data /var/www/html/vijo_laravel
 
-# Dar permissão de escrita para o grupo (www-data) onde necessário
+# Grant write permission to group (www-data) where needed
 sudo chmod -R ug+rwX /var/www/html/vijo_laravel
 
-# Garantir que o vendor tenha permissão adequada
+# Ensure vendor folder has proper permissions
 sudo chmod -R 775 /var/www/html/vijo_laravel/vendor
 
-# echo "♻️ Reiniciando PHP-FPM (para limpar OpCache)..."
+# echo "♻️ Restarting PHP-FPM (to clear OpCache)..."
 # sudo systemctl restart php$PHP_VERSION-fpm
 
-echo "⚙️ Regenerando caches Laravel..."
+echo "⚙️ Regenerating Laravel caches..."
 sudo -u $SERVER_USER php artisan config:cache
 sudo -u $SERVER_USER php artisan route:cache
 sudo -u $SERVER_USER php artisan view:cache
@@ -54,4 +66,4 @@ sudo -u $SERVER_USER php artisan view:cache
 #sudo -u $SERVER_USER composer install --no-dev --optimize-autoloader
 sudo -u $SERVER_USER composer dump-autoload -o
 
-echo "✅ Deploy finalizado com sucesso!"
+echo "✅ Deploy finished successfully!"

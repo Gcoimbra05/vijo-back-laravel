@@ -7,9 +7,6 @@ use Illuminate\Support\Facades\Log;
 
 use App\Services\VideoRequestProcessing\Steps\ProcessEmotionsStep;
 use App\Services\VideoRequestProcessing\Steps\ProcessTranscriptionStep;
-use App\Services\VideoRequestProcessing\Steps\ProcessCsvStep;
-use App\Services\VideoRequestProcessing\Steps\ProcessLlamaStep;
-
 use App\Services\VideoRequestProcessing\Steps\ProcessInsightsAggregationStep;
 
 class VideoProcessingPipeline
@@ -17,11 +14,7 @@ class VideoProcessingPipeline
     protected $steps = [
         ProcessEmotionsStep::class,
         ProcessTranscriptionStep::class,
-        ProcessCsvStep::class,
-        ProcessLlamaStep::class,
         ProcessInsightsAggregationStep::class,
-        
-
     ];
 
     public function process($context)

@@ -27,6 +27,7 @@ use App\Http\Controllers\EmloResponseController;
 use App\Http\Controllers\EmloResponseParamSpecsController;
 use App\Http\Controllers\PlatformTextController;
 use App\Http\Controllers\QuickGoalController;
+use App\Http\Controllers\SkipVijoController;
 use App\Http\Controllers\UserFeedbackController;
 use App\Services\CredScore\CredScoreService;
 use App\Services\Emlo\EmloInsights\EmloInsightsService;
@@ -73,9 +74,14 @@ Route::prefix('v2')->middleware(ForceJsonResponse::class)->group(function () {
 
         Route::get('membership-plans', [MembershipPlanController::class, 'index']);
         Route::get('membership-plans/{membership_plan}', [MembershipPlanController::class, 'show']);
-        Route::apiResource('subscriptions', SubscriptionController::class);
-        Route::apiResource('videos', VideoController::class);
-        Route::apiResource('video-requests', VideoRequestController::class);
+        /* Route::apiResource('subscriptions', SubscriptionController::class);
+        Route::apiResource('videos', VideoController::class); */
+        Route::post('video-requests', [VideoRequestController::class, 'store']);
+        Route::put('video-requests/{video_request}', [VideoRequestController::class, 'update']);
+        Route::get('video-requests/{video_request}', [VideoRequestController::class, 'show']);
+
+        Route::post('skip-vijo', [SkipVijoController::class, 'store']);
+
         Route::get('video-galleries', [VideoRequestController::class, 'getVideoGalleries']);
         Route::get('video-detail/{id}', [VideoRequestController::class, 'getVideoDetail']);
         Route::get('video-results/{id}', [VideoRequestController::class, 'getVideoResults']);

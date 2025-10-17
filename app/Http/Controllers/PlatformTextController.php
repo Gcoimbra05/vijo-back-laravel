@@ -17,7 +17,7 @@ class PlatformTextController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Platform Texts retrieved successfully.',
-                'data' => $platformTexts,
+                'data' => $platformtexts,
             ]);
         }
 
@@ -72,7 +72,8 @@ class PlatformTextController extends Controller
             'location' => 'nullable|string',
             'status' => 'nullable|boolean',
         ]);
-        $text = PlatformText::create($validated);
+        PlatformText::create($validated);
+
         return redirect()->route('platformtext.index')
             ->with('success', 'Platform text created successfully.');
     }

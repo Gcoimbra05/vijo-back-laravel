@@ -7,10 +7,9 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\File\File;
-use Illuminate\Support\Facades\File as FacadeFile;
 use Intervention\Image\Facades\Image;
-
 use Aws\S3\S3Client;
+use Illuminate\Support\Facades\Validator;
 
 class MediaStorageController extends Controller
 {
@@ -19,10 +18,24 @@ class MediaStorageController extends Controller
      */
     public function uploadVideo(Request $request, $userId = null)
     {
-        $request->validate([
+        Log::info('Starting uploadVideo process');
+
+        $validator = Validator::make($request->all(), [
             'file' => 'required|file|mimes:mp4,mov,ogg,qt,webm,mkv|max:512000', // up to 500MB
             'video_duration' => 'nullable|integer',
         ]);
+
+        if ($validator->fails()) {
+            Log::info('Validation failed in uploadVideo', [
+                'errors' => $validator->errors()->all(),
+                'input' => $request->all()
+            ]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed',
+                'errors' => $validator->errors()->all(),
+            ], 422);
+        }
 
         // Prepare variables
         $file = $request->file('file');
@@ -35,8 +48,17 @@ class MediaStorageController extends Controller
 
         $thumbnailName = Str::of($fileName)->basename('.' . $fileExtension) . '.jpg';
         $thumbnailPath = storage_path($tempFolderPath . DIRECTORY_SEPARATOR . $thumbnailName);
+        
+        // Remove existing thumbnail if it exists to prevent FFmpeg prompt
+        if (file_exists($thumbnailPath)) {
+            @unlink($thumbnailPath);
+            Log::info('Removed existing thumbnail: ' . $thumbnailPath);
+        }
+        
         // Generate thumbnail
-        shell_exec("ffmpeg -y -i " . escapeshellarg($localVideoPath) . " -frames:v 1 -update 1 " . escapeshellarg($thumbnailPath));
+        $thumbnailCommand = "ffmpeg -y -i " . escapeshellarg($localVideoPath) . " -frames:v 1 -update 1 " . escapeshellarg($thumbnailPath) . " 2>&1";
+        $thumbnailResult = shell_exec($thumbnailCommand);
+        Log::info('Thumbnail generation result: ' . $thumbnailResult);
 
         $originalSize = filesize($localVideoPath);
 
@@ -45,15 +67,24 @@ class MediaStorageController extends Controller
             $outputFile = $localVideoPath;
         } else {
             $outputFile = str_replace("." . $fileExtension, ".mp4", $localVideoPath);
-            $ffmpegCommand = "ffmpeg -i " . escapeshellarg($localVideoPath) . " -c:v libx264 -profile:v baseline -level 3.0 -pix_fmt yuv420p -vf 'scale=trunc(iw/2)*2:trunc(ih/2)*2' -r 30 -b:v 1000k -c:a aac -b:a 128k -movflags +faststart " . escapeshellarg($outputFile);
-            shell_exec($ffmpegCommand);
+            
+            // Remove existing output file if it exists to prevent FFmpeg prompt
+            if (file_exists($outputFile)) {
+                @unlink($outputFile);
+                Log::info('Removed existing output file: ' . $outputFile);
+            }
+            
+            $ffmpegCommand = "ffmpeg -y -i " . escapeshellarg($localVideoPath) . " -c:v libx264 -profile:v baseline -level 3.0 -pix_fmt yuv420p -vf 'scale=trunc(iw/2)*2:trunc(ih/2)*2' -r 30 -b:v 1000k -c:a aac -b:a 128k -movflags +faststart " . escapeshellarg($outputFile) . " 2>&1";
+            $conversionResult = shell_exec($ffmpegCommand);
+            Log::info('Video conversion result: ' . $conversionResult);
         }
 
         // Get video duration BEFORE uploading/cleanup (while file still exists)
         $duration = $request->input('video_duration');
         if (empty($duration)) {
-            $ffprobe = "ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 " . escapeshellarg($outputFile);
+            $ffprobe = "ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 " . escapeshellarg($outputFile) . " 2>&1";
             $durationOutput = shell_exec($ffprobe);
+            Log::info('FFprobe duration result: ' . $durationOutput);
             if ($durationOutput) {
                 $duration = (int) floatval($durationOutput);
             }

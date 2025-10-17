@@ -24,6 +24,20 @@ class ProcessVideoRequest implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     /**
+     * The number of seconds the job can run before timing out.
+     *
+     * @var int
+     */
+    public $timeout = 600; // 10 minutes
+
+    /**
+     * The number of times the job may be attempted.
+     *
+     * @var int
+     */
+    public $tries = 2;
+
+    /**
      * The video request instance.
      *
      * @var \App\Models\VideoRequest
@@ -47,8 +61,6 @@ class ProcessVideoRequest implements ShouldQueue
      * @param  ApiService  $apiService
      * @param  EmloHelperService  $emloHelperService
      * @param  TranscriptionService  $transcriptionService
-     * @param  EmloCsvService  $emloCsvService
-     * @param  LlamaService $llamaService
      * @param PostRequestAggregation $postRequestAggregation
      * @return void
      */
@@ -56,8 +68,6 @@ class ProcessVideoRequest implements ShouldQueue
         ApiService $apiService,
         EmloHelperService $emloHelperService,
         TranscriptionService $transcriptionService,
-        EmloCsvService $emloCsvService,
-        LlamaService $llamaService,
         PostRequestAggregation $postRequestAggregation
 
     ) {
@@ -68,8 +78,6 @@ class ProcessVideoRequest implements ShouldQueue
             'apiService' => $apiService,
             'emloHelperService' => $emloHelperService,
             'transcriptionService' => $transcriptionService,
-            'emloCsvService' => $emloCsvService,
-            'llamaService' => $llamaService,
             'postRequestAggregation' => $postRequestAggregation
         ];
 

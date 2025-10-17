@@ -60,7 +60,7 @@ class SnapshotService {
             return $allSnapshots;
         } catch (Exception $e) {
             foreach ($paramsInUse as $paramInUse) {
-                Log::debug('Failed to get emotional-snapshot w/ exception:' . $e->getMessage() . 'at: ' . $e->getTraceAsString());
+                Log::debug('Failed to get emotional-snapshot w/ exception:' . 'for param' . $paramInUse->param_name . $e->getMessage() . 'at: ' . $e->getTraceAsString());
                 $paramSnapshot = $this->createEmotionalSnapshot($paramInUse);
                 $allSnapshots [] = $paramSnapshot;
             }

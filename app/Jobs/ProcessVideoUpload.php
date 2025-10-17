@@ -16,6 +16,20 @@ class ProcessVideoUpload implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
+    /**
+     * The number of seconds the job can run before timing out.
+     *
+     * @var int
+     */
+    public $timeout = 300; // 5 minutes
+
+    /**
+     * The number of times the job may be attempted.
+     *
+     * @var int
+     */
+    public $tries = 3;
+
     protected $videoRequestId;
     protected $filePath;
     protected $videoDuration;
@@ -38,23 +52,64 @@ class ProcessVideoUpload implements ShouldQueue
             'originalName' => $this->originalName,
         ]);
 
-        $request = new Request([
-            'request_id' => $this->videoRequestId,
-            'video_duration' => $this->videoDuration,
-            'file_path' => $this->filePath,
+        try {
+            // Verify file exists before processing
+            if (!file_exists($this->filePath)) {
+                Log::error('Video file not found: ' . $this->filePath);
+                return;
+            }
+
+            $request = new Request([
+                'request_id' => $this->videoRequestId,
+                'video_duration' => $this->videoDuration,
+                'file_path' => $this->filePath,
+            ]);
+
+            $request->files->set('file', new UploadedFile(
+                $this->filePath,
+                $this->originalName,
+                null,
+                null,
+                true
+            ));
+
+            $videoController = app(VideoController::class);
+            $videoController->uploadAndStore($request);
+
+            Log::info('Video upload processed successfully for videoRequestId: ' . $this->videoRequestId);
+        } catch (\Exception $e) {
+            Log::error('Error processing video upload: ' . $e->getMessage(), [
+                'videoRequestId' => $this->videoRequestId,
+                'filePath' => $this->filePath,
+                'exception' => $e->getTraceAsString()
+            ]);
+            throw $e; // Re-throw to mark job as failed
+        } finally {
+            // Always clean up the temporary file
+            if (file_exists($this->filePath)) {
+                @unlink($this->filePath);
+                Log::info('Cleaned up temporary file: ' . $this->filePath);
+            }
+        }
+    }
+
+    /**
+     * Handle a job failure.
+     *
+     * @param  \Throwable  $exception
+     * @return void
+     */
+    public function failed(\Throwable $exception)
+    {
+        Log::error('ProcessVideoUpload job failed', [
+            'videoRequestId' => $this->videoRequestId,
+            'filePath' => $this->filePath,
+            'error' => $exception->getMessage(),
         ]);
 
-        $request->files->set('file', new UploadedFile(
-            $this->filePath,
-            $this->originalName,
-            null,
-            null,
-            true
-        ));
-
-        $videoController = app(VideoController::class);
-        $videoController->uploadAndStore($request);
-
-        @unlink($this->filePath);
+        // Clean up file even on failure
+        if (file_exists($this->filePath)) {
+            @unlink($this->filePath);
+        }
     }
 }
