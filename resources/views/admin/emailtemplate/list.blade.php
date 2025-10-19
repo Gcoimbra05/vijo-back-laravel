@@ -9,7 +9,7 @@
 }
 </style>
 
-@section('title', 'Video Types List')
+@section('title', 'Email Template List')
 
 @section('content')
 <div class="card">

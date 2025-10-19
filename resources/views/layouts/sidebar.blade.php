@@ -99,29 +99,30 @@
         </li>
 
         <!-- Jobs -->
-        <li class="menu-item <?php if (in_array($nav_bar, array('businesses', 'users', 'emailtemplate', 'platformtext'))) { ?>open<?php } ?>">
+        <li class="menu-item <?php if (in_array($nav_bar, array('job', 'job_batches', 'failed_jobs'))) { ?>open<?php } ?>">
             <a href="javascript:void(0);" class="menu-link menu-toggle">
                 <i class="menu-icon tf-icons bx bx-briefcase"></i>
                 <div data-i18n="Jobs">Jobs</div>
             </a>
             <ul class="menu-sub">
-                <li class="menu-item <?php if ($nav_bar == 'users') { ?>active<?php } ?>">
-                    <a href="{{ url('admin/users') }}" class="menu-link">
+                <li class="menu-item <?php if ($nav_bar == 'job') { ?>active<?php } ?>">
+                    <a href="{{ url('admin/job') }}" class="menu-link">
                         <div data-i18n="Jobs">Jobs</div>
                     </a>
                 </li>
 
-                <li class="menu-item <?php if ($nav_bar == 'emailtemplate') { ?>active<?php } ?>">
-                    <a href="{{ url('admin/emailtemplate') }}" class="menu-link">
-                        <div data-i18n="Fail_jobs">Fail Jobs</div>
-                    </a>
-                </li>
-
-                <li class="menu-item <?php if ($nav_bar == 'platformtext') { ?>active<?php } ?>">
-                    <a href="{{ url('admin/platformtext') }}" class="menu-link">
+                <li class="menu-item <?php if ($nav_bar == 'job_batches') { ?>active<?php } ?>">
+                    <a href="{{ url('admin/job_batches') }}" class="menu-link">
                         <div data-i18n="Job_Batches">Job Batches</div>
                     </a>
                 </li>
+
+                <li class="menu-item <?php if ($nav_bar == 'failed_jobs') { ?>active<?php } ?>">
+                    <a href="{{ url('admin/failed_jobs') }}" class="menu-link">
+                        <div data-i18n="failed_jobs">Fail Jobs</div>
+                    </a>
+                </li>
+
             </ul>
         </li>
     </ul>
