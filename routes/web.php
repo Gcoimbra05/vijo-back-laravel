@@ -24,6 +24,7 @@ use App\Http\Controllers\EmailTemplateController;
 use App\Http\Controllers\JobController;
 use App\Http\Controllers\JobBatchesController;
 use App\Http\Controllers\FailedJobsController;
+use App\Http\Controllers\UserLoginController;
 
 Route::get('/', function () {
     return view('welcome');
@@ -80,6 +81,16 @@ Route::prefix('admin')->group(function () {
         Route::resource('users', UserController::class)->except(['index']);
         Route::get('admin/users/{user:name}/edit', [UserController::class, 'edit']);
         Route::get('users/{userId}/contacts', [UserController::class, 'contactsByUser'])->name('users.contacts');
+
+        // User Logins
+        Route::prefix('userlogin')->group(function () {
+            Route::get('/', [UserLoginController::class, 'index'])->name('userlogin.index');
+            Route::get('/create', [UserLoginController::class, 'create'])->name('userlogin.create');
+            Route::post('/', [UserLoginController::class, 'store'])->name('userlogin.store');
+            Route::get('/show/{id}', [UserLoginController::class, 'show'])->name('userlogin.show');
+            Route::put('/{id}', [UserLoginController::class, 'update'])->name('userlogin.update');
+            Route::get('/delete/{id}', [UserLoginController::class, 'destroy'])->name('userlogin.delete');
+        });
 
         Route::post('/logout', [AdminLoginController::class, 'logout'])->name('logout');
 
