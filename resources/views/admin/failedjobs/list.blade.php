@@ -34,7 +34,7 @@
                             <td>{{ $failed_job->queue }}</td>
                             <td>{{ $failed_job->payload }}</td>
                             <td>{{ $failed_job->exception }}</td>
-                            <td>{{ date('Y-m-d H:i:s', $failed_job->failed_at) }}</td>
+                            <td>{{ $failed_job->failed_at }}</td>
                         </tr>
                     @endforeach
                 @else
