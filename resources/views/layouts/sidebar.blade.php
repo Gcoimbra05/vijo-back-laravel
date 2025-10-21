@@ -126,7 +126,7 @@
 
                 <li class="menu-item <?php if ($nav_bar == 'failed_jobs') { ?>active<?php } ?>">
                     <a href="{{ url('admin/failed_jobs') }}" class="menu-link">
-                        <div data-i18n="failed_jobs">Fail Jobs</div>
+                        <div data-i18n="failed_jobs">Failed Jobs</div>
                     </a>
                 </li>
 
