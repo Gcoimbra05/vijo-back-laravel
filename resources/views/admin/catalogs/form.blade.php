@@ -169,6 +169,8 @@
                         </div>
                     @endif
 
+                    <input type="hidden" name="from" value="{{ $from ?? 'catalog' }}">
+
                     <div class="row">
                         <div class="mb-3 col-md-6">
                             <label for="title" class="form-label">Name</label>
@@ -245,36 +247,36 @@
                         </div>
                     </div>
 
-                    <div class="selects col-md-11">
+                    <div class="selects">
                         <div class="mb-3 col-md-6">
-                        <label for="video_type_id">Video Type</label>
-                        <select name="video_type_id" id="video_type_id" class="form-control wide-input @error('video_type_id') is-invalid @enderror" style="cursor: pointer; appearance: menulist"">
-                            <option value="" disabled selected>Select</option>
-                            @foreach($videoTypes as $type)
-                                <option value="{{ $type->id }}" {{ old('video_type_id', $info[0]['video_type_id'] ?? '') == $type->id ? 'selected' : '' }}>
-                                    {{ $type->name }}
-                                </option>
-                            @endforeach
-                        </select>
-                        @error('video_type_id')
-                            <span class="invalid-feedback" role="alert"><strong>{{ $message }}</strong></span>
-                        @enderror
-                    </div>
+                            <label for="video_type_id">Video Type</label>
+                            <select name="video_type_id" id="video_type_id" class="form-control wide-input @error('video_type_id') is-invalid @enderror" style="cursor: pointer; appearance: menulist"">
+                                <option value="" disabled selected>Select</option>
+                                @foreach($videoTypes as $type)
+                                    <option value="{{ $type->id }}" {{ old('video_type_id', $info[0]['video_type_id'] ?? '') == $type->id ? 'selected' : '' }}>
+                                        {{ $type->name }}
+                                    </option>
+                                @endforeach
+                            </select>
+                            @error('video_type_id')
+                                <span class="invalid-feedback" role="alert"><strong>{{ $message }}</strong></span>
+                            @enderror
+                        </div>
 
-                    <div class="mb-3 col-md-6">
-                        <label for="category_id">Category</label>
-                        <select name="category_id" id="category_id" class="form-control wide-input @error('category_id') is-invalid @enderror" style="cursor: pointer; appearance: menulist"">
-                            <option value="" disabled selected>Select</option>
-                            @foreach($categories as $category)
-                                <option value="{{ $category->id }}" {{ old('category_id', $info[0]['category_id'] ?? '') == $category->id ? 'selected' : '' }}>
-                                    {{ $category->name }}
-                                </option>
-                            @endforeach
-                        </select>
-                        @error('category_id')
-                            <span class="invalid-feedback" role="alert"><strong>{{ $message }}</strong></span>
-                        @enderror
-                    </div>
+                        <div class="mb-3 col-md-6">
+                            <label for="category_id">Category</label>
+                            <select name="category_id" id="category_id" class="form-control wide-input @error('category_id') is-invalid @enderror" style="cursor: pointer; appearance: menulist"">
+                                <option value="" disabled selected>Select</option>
+                                @foreach($categories as $category)
+                                    <option value="{{ $category->id }}" {{ old('category_id', $info[0]['category_id'] ?? '') == $category->id ? 'selected' : '' }}>
+                                        {{ $category->name }}
+                                    </option>
+                                @endforeach
+                            </select>
+                            @error('category_id')
+                                <span class="invalid-feedback" role="alert"><strong>{{ $message }}</strong></span>
+                            @enderror
+                        </div>
 
                         <div class="mb-3 col-md-6">
                             <label for="parent_catalog_id">Parent Catalog</label>
@@ -290,6 +292,8 @@
                                 <span class="invalid-feedback" role="alert"><strong>{{ $message }}</strong></span>
                             @enderror
                         </div>
+
+                        
                     </div>
 
                     <div class="selects">
@@ -353,7 +357,10 @@
                     </div>
                     <div class="mt-2">
                         <button type="submit" class="btn btn-primary me-2" id="btn_save">Save changes</button>
-                        <a href="{{ url('admin/catalogs') }}" class="btn btn-outline-secondary">Back</a>
+                        <a href="{{ $from === 'category' ? url('admin/journal_categories/' . $info[0]['id'] . '/edit') : url('admin/catalogs') }}" class="btn btn-outline-secondary">
+                            Back
+                        </a>
+
                     </div>
                 </form>
             </div>

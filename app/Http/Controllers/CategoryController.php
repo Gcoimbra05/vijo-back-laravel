@@ -78,6 +78,7 @@ class CategoryController extends Controller
         ));
 
         return redirect()->route('journalCategories.list');
+
     }
 
     public function update(Request $request, $id)
@@ -197,8 +198,10 @@ class CategoryController extends Controller
         ];
 
         $info = $category ? [$category->toArray()] : [];
+        $catalogs = $category->catalogs;
+        $from = request()->get('from', 'category');
 
-        return view('admin.categories.form', compact('pageTitle', 'nav_bar', 'action', 'info', 'breadcrumbs'));
+        return view('admin.categories.form', compact('pageTitle', 'nav_bar', 'action', 'info', 'breadcrumbs', 'catalogs', 'from'));
     }
 
     public function deactivate($id)

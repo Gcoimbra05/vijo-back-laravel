@@ -98,6 +98,7 @@ class CatalogController extends Controller
             'is_promotional' => $request->is_promotional,
             'is_premium' => $request->is_premium,
             'video_type_id' => $request->video_type_id,
+            'cred_score_id' => $request->cred_score_id ?? 1,
         ]);
 
         if ($request->wantsJson()) {
@@ -130,6 +131,7 @@ class CatalogController extends Controller
             ['label' => 'Edit Catalog', 'url' => null],
         ];
         $tags = Tag::all();
+        $from = request()->get('from', 'catalog');
 
         return view('admin.catalogs.form', [
             'action' => 'Edit',
@@ -141,7 +143,8 @@ class CatalogController extends Controller
             'videoTypes' => $videoTypes,
             'categories' => $categories,
             'catalogs' => $catalogs,
-            'tags' => $tags
+            'tags' => $tags,
+            'from' => $from,
         ]);
 
     }

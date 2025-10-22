@@ -29,7 +29,7 @@
         </li>
 
         <!-- Customers -->
-        <li class="menu-item <?php if (in_array($nav_bar, array('businesses', 'users', 'emailtemplate', 'platformtext'))) { ?>open<?php } ?>">
+        <li class="menu-item <?php if (in_array($nav_bar, array('businesses', 'users', 'emailtemplate', 'platformtext', 'userlogin'))) { ?>open<?php } ?>">
             <a href="javascript:void(0);" class="menu-link menu-toggle">
                 <i class="menu-icon tf-icons bx bx-collection"></i>
                 <div data-i18n="Customers">Customers</div>
@@ -38,6 +38,12 @@
                 <li class="menu-item <?php if ($nav_bar == 'users') { ?>active<?php } ?>">
                     <a href="{{ url('admin/users') }}" class="menu-link">
                         <div data-i18n="Members">Users</div>
+                    </a>
+                </li>
+                
+                <li class="menu-item <?php if ($nav_bar == 'userlogin') { ?>active<?php } ?>">
+                    <a href="{{ url('admin/userlogin') }}" class="menu-link">
+                        <div data-i18n="PlatformText">User Login</div>
                     </a>
                 </li>
 
@@ -52,6 +58,7 @@
                         <div data-i18n="PlatformText">Platform Text</div>
                     </a>
                 </li>
+
             </ul>
         </li>
 
@@ -95,6 +102,34 @@
                         <div data-i18n="memberships">Membership Plans</div>
                     </a>
                 </li>
+            </ul>
+        </li>
+
+        <!-- Jobs -->
+        <li class="menu-item <?php if (in_array($nav_bar, array('job', 'job_batches', 'failed_jobs'))) { ?>open<?php } ?>">
+            <a href="javascript:void(0);" class="menu-link menu-toggle">
+                <i class="menu-icon tf-icons bx bx-briefcase"></i>
+                <div data-i18n="Jobs">Jobs</div>
+            </a>
+            <ul class="menu-sub">
+                <li class="menu-item <?php if ($nav_bar == 'job') { ?>active<?php } ?>">
+                    <a href="{{ url('admin/job') }}" class="menu-link">
+                        <div data-i18n="Jobs">Jobs</div>
+                    </a>
+                </li>
+
+                <li class="menu-item <?php if ($nav_bar == 'job_batches') { ?>active<?php } ?>">
+                    <a href="{{ url('admin/job_batches') }}" class="menu-link">
+                        <div data-i18n="Job_Batches">Job Batches</div>
+                    </a>
+                </li>
+
+                <li class="menu-item <?php if ($nav_bar == 'failed_jobs') { ?>active<?php } ?>">
+                    <a href="{{ url('admin/failed_jobs') }}" class="menu-link">
+                        <div data-i18n="failed_jobs">Failed Jobs</div>
+                    </a>
+                </li>
+
             </ul>
         </li>
     </ul>

@@ -21,6 +21,10 @@ use App\Http\Controllers\VideoRequestController;
 use App\Http\Controllers\VideoTypeController;
 use App\Http\Controllers\TagController;
 use App\Http\Controllers\EmailTemplateController;
+use App\Http\Controllers\JobController;
+use App\Http\Controllers\JobBatchesController;
+use App\Http\Controllers\FailedJobsController;
+use App\Http\Controllers\UserLoginController;
 
 Route::get('/', function () {
     return view('welcome');
@@ -77,6 +81,16 @@ Route::prefix('admin')->group(function () {
         Route::resource('users', UserController::class)->except(['index']);
         Route::get('admin/users/{user:name}/edit', [UserController::class, 'edit']);
         Route::get('users/{userId}/contacts', [UserController::class, 'contactsByUser'])->name('users.contacts');
+
+        // User Logins
+        Route::prefix('userlogin')->group(function () {
+            Route::get('/', [UserLoginController::class, 'index'])->name('userlogin.index');
+            Route::get('/create', [UserLoginController::class, 'create'])->name('userlogin.create');
+            Route::post('/', [UserLoginController::class, 'store'])->name('userlogin.store');
+            Route::get('/show/{id}', [UserLoginController::class, 'show'])->name('userlogin.show');
+            Route::put('/{id}', [UserLoginController::class, 'update'])->name('userlogin.update');
+            Route::get('/delete/{id}', [UserLoginController::class, 'destroy'])->name('userlogin.delete');
+        });
 
         Route::post('/logout', [AdminLoginController::class, 'logout'])->name('logout');
 
@@ -169,6 +183,36 @@ Route::prefix('admin')->group(function () {
 
             Route::get('admin/memberships/deactivate/{id}', [MembershipPlanController::class, 'deactivate'])->name('membership.deactivate');
             Route::get('admin/memberships/activate/{id}', [MembershipPlanController::class, 'activate'])->name('membership.activate');
+        });
+
+        // Jobs
+        Route::prefix('job')->group(function () {
+            Route::get('/', [JobController::class, 'index'])->name('job.index');
+            Route::get('/create', [JobController::class, 'create'])->name('job.create');
+            Route::post('/', [JobController::class, 'store'])->name('job.store');
+            Route::get('/show/{id}', [JobController::class, 'show'])->name('job.show');
+            Route::put('/{id}', [JobController::class, 'update'])->name('job.update');
+            Route::get('/delete/{id}', [JobController::class, 'destroy'])->name('job.delete');
+        });
+
+        // Jobs Batches
+        Route::prefix('job_batches')->group(function () {
+            Route::get('/', [JobBatchesController::class, 'index'])->name('job_batches.index');
+            Route::get('/create', [JobBatchesController::class, 'create'])->name('job_batches.create');
+            Route::post('/', [JobBatchesController::class, 'store'])->name('job_batches.store');
+            Route::get('/show/{id}', [JobBatchesController::class, 'show'])->name('job_batches.show');
+            Route::put('/{id}', [JobBatchesController::class, 'update'])->name('job_batches.update');
+            Route::get('/delete/{id}', [JobBatchesController::class, 'destroy'])->name('job_batches.delete');
+        });
+
+        // Failed Jobs
+        Route::prefix('failed_jobs')->group(function () {
+            Route::get('/', [FailedJobsController::class, 'index'])->name('failed_jobs.index');
+            Route::get('/create', [FailedJobsController::class, 'create'])->name('failed_jobs.create');
+            Route::post('/', [FailedJobsController::class, 'store'])->name('failed_jobs.store');
+            Route::get('/show/{id}', [FailedJobsController::class, 'show'])->name('failed_jobs.show');
+            Route::put('/{id}', [FailedJobsController::class, 'update'])->name('failed_jobs.update');
+            Route::get('/delete/{id}', [FailedJobsController::class, 'destroy'])->name('failed_jobs.delete');
         });
 });
 

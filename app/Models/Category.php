@@ -23,4 +23,5 @@ class Category extends Model implements AuditableContract
     {
         return $this->hasMany(Catalog::class, 'category_id');
     }
+
 }
