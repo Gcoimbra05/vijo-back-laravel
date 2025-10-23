@@ -30,15 +30,32 @@ class UserFeedbackController extends Controller
             $supportEmail = config('mail.support_email', 'admin@vijo.com');
             Mail::to($supportEmail)->send(new UserFeedbackReceived($feedback));
         } catch (\Exception $e) {
-            // Log::error('Erro ao enviar email de feedback: ' . $e->getMessage());
+            Log::error('Error sending feedback email: ' . $e->getMessage());
         }
 
-        return response()->json(['status' => true, 'message' => 'Feedback submitted successfully.', 'data' => $feedback]);
+        return redirect()->route('userfeedback.index')
+            ->with('success', 'User Feedback created successfully.');
     }
 
-    public function index()
+     public function index()
     {
-        $feedbacks = UserFeedback::with('user')->latest()->paginate(20);
-        return response()->json($feedbacks);
+        $userfeedbacks = UserFeedback::orderBy('id', 'desc')->get();
+
+        if (request()->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'UserFeedbacks retrieved successfully.',
+                'data' => $UserFeedbacks,
+            ]);
+        }
+
+        $breadcrumbs = [
+            ['label' => 'UserFeedbacks', 'url' => null],
+        ];
+
+        $nav_bar = 'userfeedback';
+        $pageTitle = 'UserFeedbacks';
+
+        return view('admin.userfeedbacks.list', compact('userfeedbacks', 'pageTitle', 'nav_bar', 'breadcrumbs'));
     }
 }

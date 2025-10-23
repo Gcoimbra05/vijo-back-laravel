@@ -25,6 +25,7 @@ use App\Http\Controllers\JobController;
 use App\Http\Controllers\JobBatchesController;
 use App\Http\Controllers\FailedJobsController;
 use App\Http\Controllers\UserLoginController;
+use App\Http\Controllers\UserFeedbackController;
 
 Route::get('/', function () {
     return view('welcome');
@@ -90,6 +91,16 @@ Route::prefix('admin')->group(function () {
             Route::get('/show/{id}', [UserLoginController::class, 'show'])->name('userlogin.show');
             Route::put('/{id}', [UserLoginController::class, 'update'])->name('userlogin.update');
             Route::get('/delete/{id}', [UserLoginController::class, 'destroy'])->name('userlogin.delete');
+        });
+
+        // User Feedback
+        Route::prefix('userfeedbacks')->group(function () {
+            Route::get('/', [UserFeedbackController::class, 'index'])->name('userfeedbacks.index');
+            Route::get('/create', [UserFeedbackController::class, 'create'])->name('userfeedbacks.create');
+            Route::post('/', [UserFeedbackController::class, 'store'])->name('userfeedbacks.store');
+            Route::get('/show/{id}', [UserFeedbackController::class, 'show'])->name('userfeedbacks.show');
+            Route::put('/{id}', [UserFeedbackController::class, 'update'])->name('userfeedbacks.update');
+            Route::get('/delete/{id}', [UserFeedbackController::class, 'destroy'])->name('userfeedbacks.delete');
         });
 
         Route::post('/logout', [AdminLoginController::class, 'logout'])->name('logout');
