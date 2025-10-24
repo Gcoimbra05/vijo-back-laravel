@@ -53,7 +53,7 @@ class UserFeedbackController extends Controller
             ['label' => 'UserFeedbacks', 'url' => null],
         ];
 
-        $nav_bar = 'userfeedback';
+        $nav_bar = 'userfeedbacks';
         $pageTitle = 'User Feedbacks';
 
         return view('admin.userfeedbacks.list', compact('userfeedbacks', 'pageTitle', 'nav_bar', 'breadcrumbs'));
