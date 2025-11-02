@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\UserFeedbackReceived;
+use Illuminate\Support\Facades\Log;
 
 class UserFeedbackController extends Controller
 {
@@ -57,5 +58,67 @@ class UserFeedbackController extends Controller
         $pageTitle = 'User Feedbacks';
 
         return view('admin.userfeedbacks.list', compact('userfeedbacks', 'pageTitle', 'nav_bar', 'breadcrumbs'));
+    }
+
+    public function show($id)
+    {
+        $feedback = UserFeedback::with('replies')->findOrFail($id);
+
+        // If the feedback is unread, mark it as read when viewing via this controller method
+        if ($feedback->status == UserFeedback::STATUS_UNREAD) {
+            $feedback->status = UserFeedback::STATUS_READ;
+            $feedback->save();
+        }
+
+        return view('admin.userfeedbacks.modal', compact('feedback'));
+    }
+
+    /**
+     * Mark feedback as read.
+     * If called via AJAX/JSON, return JSON with new status and label.
+     */
+    public function read($id)
+    {
+        $feedback = UserFeedback::with('replies')->findOrFail($id);
+
+        if ($feedback->replies()->count() > 0) {
+            $feedback->status = UserFeedback::STATUS_RESPONDED;
+        } else {
+            $feedback->status = UserFeedback::STATUS_READ;
+        }
+
+        // do not persist any "manual" flag here (handled in frontend temporarily)
+        $feedback->save();
+
+        if (request()->ajax() || request()->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'status' => $feedback->status,
+                'status_label' => $feedback->status_label,
+            ]);
+        }
+
+        return redirect()->route('userfeedbacks.index')
+                        ->with('success', 'User feedback marked as read successfully.');
+    }
+
+    public function unread($id)
+    {
+        $feedback = UserFeedback::findOrFail($id);
+
+        // Marca qualquer status como UNREAD (0)
+        $feedback->status = UserFeedback::STATUS_UNREAD;
+        $feedback->save();
+
+        if (request()->ajax() || request()->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'status' => $feedback->status,
+                'status_label' => $feedback->status_label,
+            ]);
+        }
+
+        return redirect()->route('userfeedbacks.index')
+                        ->with('success', 'User feedback marked as unread successfully.');
     }
 }

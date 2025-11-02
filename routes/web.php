@@ -26,6 +26,7 @@ use App\Http\Controllers\JobBatchesController;
 use App\Http\Controllers\FailedJobsController;
 use App\Http\Controllers\UserLoginController;
 use App\Http\Controllers\UserFeedbackController;
+use App\Http\Controllers\UserFeedbackReplyController;
 
 Route::get('/', function () {
     return view('welcome');
@@ -101,6 +102,17 @@ Route::prefix('admin')->group(function () {
             Route::get('/show/{id}', [UserFeedbackController::class, 'show'])->name('userfeedbacks.show');
             Route::put('/{id}', [UserFeedbackController::class, 'update'])->name('userfeedbacks.update');
             Route::get('/delete/{id}', [UserFeedbackController::class, 'destroy'])->name('userfeedbacks.delete');
+
+            Route::get('/read/{id}', [UserFeedbackController::class, 'read'])->name('userfeedbacks.read');
+            Route::get('/unread/{id}', [UserFeedbackController::class, 'unread'])->name('userfeedbacks.unread');
+        });
+
+        // User Feedback Reply
+        Route::prefix('userfeedbackreply')->group(function () {
+            Route::get('/', [UserFeedbackReplyController::class, 'index'])->name('userfeedbackreply.index');
+            Route::get('/create', [UserFeedbackReplyController::class, 'create'])->name('userfeedbackreply.create');
+            Route::post('/', [UserFeedbackReplyController::class, 'store'])->name('userfeedbackreply.store');
+            Route::get('/show/{id}', [UserFeedbackReplyController::class, 'show'])->name('userfeedbackreply.show');
         });
 
         Route::post('/logout', [AdminLoginController::class, 'logout'])->name('logout');

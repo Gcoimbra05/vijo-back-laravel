@@ -9,10 +9,10 @@
         position: relative;
     }
 
-    .fake-input {
-        position: relative;
-        font-size: 2.25rem;
-    }
+.fake-input {
+    position: relative;
+    font-size: 2.25rem;
+}
 </style>
 
 @section('title', 'User Feedbacks')
@@ -36,6 +36,7 @@
                     <th>Subject</th>
                     <th>Message</th>
                     <th>Created at</th>
+                    <th>Status</th>
                     <th>Action</th>
                 </tr>
             </thead>
@@ -46,69 +47,50 @@
                         <tr>
                             <td>{{ optional($userfeedback->user)->id ?? '-' }}</td>
                             <td>{{ optional($userfeedback->user)->first_name ?? optional($userfeedback->user)->name ?? '-' }}</td>
-                            <td>{{ optional($userfeedback->user)->email ?? '-' }}</td>
+                            <td>{{ $userfeedback->email ?? '-' }}</td>
                             <td>{{ $userfeedback->type }}</td>
-                            <td >{{ $userfeedback->subject }}</td>
-                            <td class="text-truncate" style="max-width: 19rem;">{{ $userfeedback->message }}</td>
-                            <td>{{ $userfeedback->created_at }}</td>
-                            <td>    
-                                <div>
-                                    <span class="input-group-text bg-transparent border-0 p-0.3rem">
-                                        <i class="bx bx-show me-1" title="View Feedback Details" data-bs-toggle="modal" data-bs-target="#myModal" style="font-size: 1.35rem; cursor: pointer;"></i> 
-                                    </span>
-                                </div>
+                            <td class="text-truncate" style="max-width: 10rem;">{{ $userfeedback->subject }}</td>
+                            <td class="text-truncate" style="max-width: 12rem;">{{ $userfeedback->message }}</td>
+                            <td style="font-size:0.85rem;">{{ $userfeedback->created_at }}</td>
+                            <td id="feedbackStatus_{{ $userfeedback->id }}"
+                                data-feedback-id="{{ $userfeedback->id }}"
+                                data-status="{{ $userfeedback->status }}">
+                                {{ $userfeedback->status_label }}
+                            </td>
+                            <td>
+                                <div class="dropdown">
+                                    <button type="button" class="btn p-0 dropdown-toggle hide-arrow" data-bs-toggle="dropdown" style="overflow: visible !important">
+                                        <i class="bx bx-dots-vertical-rounded"></i>
+                                    </button>
 
-                                    <!-- Modal -->
-                                    <div class="modal fade" id="myModal" tabindex="2" aria-hidden="true">
-                                        <div class="modal-dialog modal-dialog-centered modal-md"> <!-- tamanho e centralização -->
-                                            <div class="modal-content">
-                                                <div class="modal-header">
-                                                    <div>
-                                                    <h5 class="modal-title">{{ optional($userfeedback->user)->first_name ?? optional($userfeedback->user)->name ?? '-' }} feedback</h5>
-                                                    <p class="modal-subtitle" style="font-size:0.75rem;">{{ optional($userfeedback->user)->email ?? '-' }}</p>
-                                                    </div>
-                                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Back"></button>
-                                                </div>
+                                    <div class="dropdown-menu">
 
-                                                <div class="modal-body">
-                                                    
-                                                        <div class="mb-3">
-                                                            <label for="type" class="form-label"><strong>Type:</strong></label>
-                                                            <div class="input-container" style="max-width: 200px;">
-                                                                <div id="fakeInput" class="fake-input form-control form-control-lg @error('type') is-invalid @enderror">
-                                                                    {{ $userfeedback->type }}
-                                                                </div>
-                                                            </div>
-                                                        </div>
+                                        <a class="dropdown-item" title="View Feedback Details" data-bs-toggle="modal" data-bs-target="#feedbackModal{{ $userfeedback->id }}" style="cursor:pointer">
+                                            <i class="bx bx-show me-1"></i> View
+                                        </a>
 
-                                                        <div class="mb-3">
-                                                            <label for="type" class="form-label"><strong>Subject:</strong></label>
-                                                            <div class="input-container">
-                                                                <div id="fakeInput" class="fake-input form-control form-control-lg @error('subject') is-invalid @enderror">
-                                                                    {{ $userfeedback->subject }}
-                                                                </div>
-                                                            </div>
-                                                        </div>
+                                         @if(in_array($userfeedback->status, [1,2]))
+                                            <a class="dropdown-item mark-unread" href="#" data-feedback-id="{{ $userfeedback->id }}">
+                                                <i class="bx bx-x me-1"></i> Mark as unread
+                                            </a>
+                                        @else
+                                            <a class="dropdown-item mark-read" href="#" data-feedback-id="{{ $userfeedback->id }}">
+                                                <i class="bx bx-check me-1"></i> Mark as read
+                                            </a>
+                                        @endif
 
-                                                        <div class="mb-3">
-                                                            <label for="type" class="form-label"><strong>Message:</strong></label>
-                                                            
-                                                                <textarea class="form-control wide-input @error('userfeedbackmessage') is-invalid @enderror" id="userfeedbackmessage" name="userfeedbackmessage" style="cursor:default" readonly> {{ $userfeedback->message }} </textarea>
-                                                            
-                                                        </div>
-                                                </div>
 
-                                                <div class="modal-footer">
-                                                    <p class="modal-subtitle" style="font-size:0.75rem;">Created at: {{ $userfeedback->created_at }} /</p><br>
-                                                    <p class="modal-subtitle" style="font-size:0.75rem;">Update at: {{ $userfeedback->update_at }}</p>
-                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Back</button>
-                                                </div>
-
-                                            </div>
-                                        </div>
                                     </div>
+
+                                </div>
                             </td>
                         </tr>
+
+                        @include('admin.userfeedbacks.modalfeedback', [
+                            'userfeedback' => $userfeedback,
+                            'userfeedbackreply' => $userfeedback->replies->last() ?? null,
+                            'formAction' => route('userfeedbackreply.store')
+                        ])
                     @endforeach
                 @else
                     <tr>
@@ -118,5 +100,93 @@
             </tbody>
         </table>
     </div>
+
+@endsection
+
+@section('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+
+    async function markAsUnread(feedbackId) {
+        const td = document.querySelector(`#feedbackStatus_${feedbackId}`);
+        if (!td) return;
+
+        try {
+            const resp = await fetch('{{ url("admin/userfeedbacks/unread") }}/' + feedbackId, {
+                method: 'GET',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json'
+                }
+            });
+
+            if (!resp.ok) throw new Error('Network error');
+
+            const data = await resp.json();
+
+            // Atualiza status no frontend: sempre Unread ●
+            td.dataset.status = 0;
+            td.textContent = 'Unread ●';
+        } catch (err) {
+            console.error(err);
+            alert('Failed to mark feedback as unread.');
+        }
+    }
+
+    async function markAsRead(feedbackId) {
+        const td = document.querySelector(`#feedbackStatus_${feedbackId}`);
+        if (!td) return;
+
+        try {
+            const resp = await fetch('{{ url("admin/userfeedbacks/read") }}/' + feedbackId, {
+                method: 'GET',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json'
+                }
+            });
+
+            if (!resp.ok) throw new Error('Network error');
+
+            const data = await resp.json();
+
+            // Atualiza status no frontend conforme backend
+            td.dataset.status = data.status;
+            td.textContent = data.status_label;
+        } catch (err) {
+            console.error(err);
+            alert('Failed to mark feedback as read.');
+        }
+    }
+
+    // Dropdowns
+    document.querySelectorAll('.mark-unread').forEach(a => {
+        a.addEventListener('click', e => {
+            e.preventDefault();
+            markAsUnread(a.dataset.feedbackId);
+        });
+    });
+
+    document.querySelectorAll('.mark-read').forEach(a => {
+        a.addEventListener('click', e => {
+            e.preventDefault();
+            markAsRead(a.dataset.feedbackId);
+        });
+    });
+
+    // Click direto na célula para marcar unread (Read ou Responded)
+    document.querySelectorAll('td[id^="feedbackStatus_"]').forEach(td => {
+        td.style.cursor = 'pointer';
+        td.addEventListener('click', () => {
+            const status = parseInt(td.dataset.status, 10);
+            if ([1,2].includes(status)) {
+                markAsUnread(td.dataset.feedbackId);
+            }
+        });
+    });
+
+});
+</script>
+
 
 @endsection
