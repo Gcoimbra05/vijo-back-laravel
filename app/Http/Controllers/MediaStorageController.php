@@ -13,6 +13,31 @@ use Illuminate\Support\Facades\Validator;
 
 class MediaStorageController extends Controller
 {
+    private static $bucket = null;
+    private static $s3Client = null;
+
+    private static function getS3Client()
+    {
+        if (self::$s3Client === null) {
+            self::$s3Client = new S3Client([
+                'version' => 'latest',
+                'region' => config('filesystems.disks.s3.region'),
+                'credentials' => [
+                    'key' => config('filesystems.disks.s3.key'),
+                    'secret' => config('filesystems.disks.s3.secret'),
+                ],
+                'http' => [
+                    'timeout' => 30,
+                    'connect_timeout' => 5,
+                ]
+            ]);
+
+            self::$bucket = config('filesystems.disks.s3.bucket');
+        }
+
+        return self::$s3Client;
+    }
+
     /**
      * Upload video to the configured storage (S3 or local).
      */
@@ -48,13 +73,13 @@ class MediaStorageController extends Controller
 
         $thumbnailName = Str::of($fileName)->basename('.' . $fileExtension) . '.jpg';
         $thumbnailPath = storage_path($tempFolderPath . DIRECTORY_SEPARATOR . $thumbnailName);
-        
+
         // Remove existing thumbnail if it exists to prevent FFmpeg prompt
         if (file_exists($thumbnailPath)) {
             @unlink($thumbnailPath);
             Log::info('Removed existing thumbnail: ' . $thumbnailPath);
         }
-        
+
         // Generate thumbnail
         $thumbnailCommand = "ffmpeg -y -i " . escapeshellarg($localVideoPath) . " -frames:v 1 -update 1 " . escapeshellarg($thumbnailPath) . " 2>&1";
         $thumbnailResult = shell_exec($thumbnailCommand);
@@ -67,13 +92,13 @@ class MediaStorageController extends Controller
             $outputFile = $localVideoPath;
         } else {
             $outputFile = str_replace("." . $fileExtension, ".mp4", $localVideoPath);
-            
+
             // Remove existing output file if it exists to prevent FFmpeg prompt
             if (file_exists($outputFile)) {
                 @unlink($outputFile);
                 Log::info('Removed existing output file: ' . $outputFile);
             }
-            
+
             $ffmpegCommand = "ffmpeg -y -i " . escapeshellarg($localVideoPath) . " -c:v libx264 -profile:v baseline -level 3.0 -pix_fmt yuv420p -vf 'scale=trunc(iw/2)*2:trunc(ih/2)*2' -r 30 -b:v 1000k -c:a aac -b:a 128k -movflags +faststart " . escapeshellarg($outputFile) . " 2>&1";
             $conversionResult = shell_exec($ffmpegCommand);
             Log::info('Video conversion result: ' . $conversionResult);
@@ -332,6 +357,95 @@ class MediaStorageController extends Controller
                 flush();
             }
         }, 200, $headers); // Full content
+    }
+
+    public static function handlePublicFilesNew(Request $request, $type, $filename)
+    {
+        $startTime = microtime(true);
+        $path = $type . '/' . $filename;
+
+        $s3 = self::getS3Client();
+        $bucket = self::$bucket;
+
+        Log::info('Iniciando requisição para arquivo: ' . $path);
+
+        try {
+            $head = $s3->headObject([
+                'Bucket' => $bucket,
+                'Key'    => $path,
+            ]);
+
+            Log::info('HeadObject concluído em: ' . (microtime(true) - $startTime) . 's');
+        } catch (\Aws\S3\Exception\S3Exception $e) {
+            Log::error('Erro HeadObject S3: ' . $e->getMessage());
+            abort(404, 'Arquivo não encontrado no S3');
+        }
+
+        $size = $head['ContentLength'];
+        $mimeType = $head['ContentType'] ?? 'video/mp4';
+
+        $headers = [
+            'Content-Type'        => $mimeType,
+            'Accept-Ranges'       => 'bytes',
+            'Cache-Control'       => 'public, max-age=31536000, immutable',
+            'Expires'             => gmdate('D, d M Y H:i:s', time() + 31536000) . ' GMT',
+            'Access-Control-Allow-Origin' => '*',
+            'Access-Control-Allow-Headers' => 'Range',
+            'Access-Control-Expose-Headers' => 'Content-Range, Content-Length, Accept-Ranges',
+        ];
+
+        $range = $request->header('Range');
+        if ($range && preg_match('/bytes=(\d+)-(\d*)/', $range, $matches)) {
+            $start = intval($matches[1]);
+            $end = $matches[2] !== '' ? intval($matches[2]) : $size - 1;
+            $end = min($end, $size - 1);
+            $length = $end - $start + 1;
+
+            $headers['Content-Range'] = "bytes $start-$end/$size";
+            $headers['Content-Length'] = $length;
+
+            Log::info("Range request: $start-$end ($length bytes)");
+
+            try {
+                $getObjectStart = microtime(true);
+                $object = $s3->getObject([
+                    'Bucket' => $bucket,
+                    'Key'    => $path,
+                    'Range'  => "bytes=$start-$end",
+                ]);
+
+                Log::info('GetObject range concluído em: ' . (microtime(true) - $getObjectStart) . 's');
+                Log::info('Tempo total range: ' . (microtime(true) - $startTime) . 's');
+
+                return response($object['Body']->getContents(), 206, $headers);
+
+            } catch (\Aws\S3\Exception\S3Exception $e) {
+                Log::error('Erro GetObject range S3: ' . $e->getMessage());
+                abort(500, 'Erro ao carregar chunk do vídeo');
+            }
+        }
+
+        // Sem range header - arquivo completo (raro para vídeos)
+        $headers['Content-Length'] = $size;
+
+        Log::info("Full content request: $size bytes");
+
+        try {
+            $getObjectStart = microtime(true);
+            $object = $s3->getObject([
+                'Bucket' => $bucket,
+                'Key'    => $path,
+            ]);
+
+            Log::info('GetObject full concluído em: ' . (microtime(true) - $getObjectStart) . 's');
+            Log::info('Tempo total full: ' . (microtime(true) - $startTime) . 's');
+
+            return response($object['Body']->getContents(), 200, $headers);
+
+        } catch (\Aws\S3\Exception\S3Exception $e) {
+            Log::error('Erro GetObject full S3: ' . $e->getMessage());
+            abort(500, 'Erro ao carregar arquivo');
+        }
     }
 
     /* private static function fileBelongsToUser($type, $filename)

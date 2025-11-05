@@ -33,9 +33,15 @@ Route::get('/', function () {
 Route::get('images/{filename}', function (Request $request, $filename) {
     return MediaStorageController::handlePublicFiles($request, 'images', $filename);
 });
+
 Route::get('videos/{filename}', function (Request $request, $filename) {
     return MediaStorageController::handlePublicFiles($request, 'videos', $filename);
 });
+
+Route::get('videos-test/{filename}', function (Request $request, $filename) {
+    return MediaStorageController::handlePublicFilesNew($request, 'videos', $filename);
+});
+
 Route::get('thumbnails/{filename}', function (Request $request, $filename) {
     return MediaStorageController::handlePublicFiles($request, 'thumbnails', $filename);
 });
@@ -148,7 +154,7 @@ Route::prefix('admin')->group(function () {
 
         // Platform Texts
         Route::resource('platform_texts', PlatformTextController::class);
-    
+
         Route::prefix('catalog')->group(function () {
             Route::get('/', [CatalogController::class, 'index'])->name('catalog.index');
             Route::get('/add', [CatalogController::class, 'add'])->name('catalog.add');
