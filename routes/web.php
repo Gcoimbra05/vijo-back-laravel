@@ -30,7 +30,7 @@ Route::get('videos/{filename}', function (Request $request, $filename) {
 });
 
 Route::get('videos-test/{filename}', function (Request $request, $filename) {
-    return MediaStorageController::handlePublicFilesNew($request, 'videos', $filename);
+    return MediaStorageController::streamWithPresignedUrl($request, 'videos', $filename);
 });
 
 Route::get('thumbnails/{filename}', function (Request $request, $filename) {

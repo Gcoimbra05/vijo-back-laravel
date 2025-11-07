@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Cache;
 use Symfony\Component\HttpFoundation\File\File;
 use Intervention\Image\Facades\Image;
 use Aws\S3\S3Client;
@@ -36,6 +37,73 @@ class MediaStorageController extends Controller
         }
 
         return self::$s3Client;
+    }
+
+    public static function getPresignedUrl($type, $filename, $expiresIn = 60)
+    {
+        $cacheKey = "presigned_url_{$type}_{$filename}";
+
+        $cachedData = Cache::get($cacheKey);
+        if ($cachedData && isset($cachedData['expires_at']) && now() < $cachedData['expires_at']) {
+            return [
+                'success' => true,
+                'url' => $cachedData['url'],
+                'expires_at' => $cachedData['expires_at'],
+                'cached' => true
+            ];
+        }
+
+        try {
+            $s3 = self::getS3Client();
+            $path = $type . '/' . $filename;
+
+            try {
+                $s3->headObject([
+                    'Bucket' => self::$bucket,
+                    'Key' => $path,
+                ]);
+            } catch (\Aws\S3\Exception\S3Exception $e) {
+                return [
+                    'success' => false,
+                    'message' => 'File not found in S3',
+                    'error' => $e->getMessage()
+                ];
+            }
+            $cmd = $s3->getCommand('GetObject', [
+                'Bucket' => self::$bucket,
+                'Key' => $path,
+                'ResponseContentDisposition' => 'inline',
+                'ResponseCacheControl' => 'public, max-age=3600'
+            ]);
+
+            $request = $s3->createPresignedRequest($cmd, "+{$expiresIn} minutes");
+            $presignedUrl = (string) $request->getUri();
+
+            $expiresAt = now()->addMinutes($expiresIn);
+
+            $cacheMinutes = intval($expiresIn * 0.9);
+            $urlData = [
+                'url' => $presignedUrl,
+                'expires_at' => $expiresAt,
+                'generated_at' => now()
+            ];
+
+            Cache::put($cacheKey, $urlData, $cacheMinutes);
+
+            return [
+                'success' => true,
+                'url' => $presignedUrl,
+                'expires_at' => $expiresAt,
+                'cached' => false
+            ];
+
+        } catch (\Exception $e) {
+            return [
+                'success' => false,
+                'message' => 'Error generating presigned URL',
+                'error' => $e->getMessage()
+            ];
+        }
     }
 
     /**
@@ -73,13 +141,13 @@ class MediaStorageController extends Controller
 
         $thumbnailName = Str::of($fileName)->basename('.' . $fileExtension) . '.jpg';
         $thumbnailPath = storage_path($tempFolderPath . DIRECTORY_SEPARATOR . $thumbnailName);
-        
+
         // Remove existing thumbnail if it exists to prevent FFmpeg prompt
         if (file_exists($thumbnailPath)) {
             @unlink($thumbnailPath);
             Log::info('Removed existing thumbnail: ' . $thumbnailPath);
         }
-        
+
         // Generate thumbnail
         $thumbnailCommand = "ffmpeg -y -i " . escapeshellarg($localVideoPath) . " -frames:v 1 -update 1 " . escapeshellarg($thumbnailPath) . " 2>&1";
         $thumbnailResult = shell_exec($thumbnailCommand);
@@ -92,7 +160,7 @@ class MediaStorageController extends Controller
             $outputFile = $localVideoPath;
         } else {
             $outputFile = str_replace("." . $fileExtension, ".mp4", $localVideoPath);
-            
+
             // Remove existing output file if it exists to prevent FFmpeg prompt
             if ($localVideoPath != $outputFile && file_exists($outputFile)) {
                 @unlink($outputFile);
@@ -359,93 +427,26 @@ class MediaStorageController extends Controller
         }, 200, $headers); // Full content
     }
 
-    public static function handlePublicFilesNew(Request $request, $type, $filename)
+    public static function streamWithPresignedUrl(Request $request, $type, $filename)
     {
-        $startTime = microtime(true);
-        $path = $type . '/' . $filename;
+        $urlResult = self::getPresignedUrl($type, $filename, 60);
 
-        $s3 = self::getS3Client();
-        $bucket = self::$bucket;
-
-        Log::info('Iniciando requisição para arquivo: ' . $path);
-
-        try {
-            $head = $s3->headObject([
-                'Bucket' => $bucket,
-                'Key'    => $path,
-            ]);
-
-            Log::info('HeadObject concluído em: ' . (microtime(true) - $startTime) . 's');
-        } catch (\Aws\S3\Exception\S3Exception $e) {
-            Log::error('Erro HeadObject S3: ' . $e->getMessage());
-            abort(404, 'Arquivo não encontrado no S3');
+        if (!$urlResult['success']) {
+            return self::handlePublicFiles($request, $type, $filename);
         }
 
-        $size = $head['ContentLength'];
-        $mimeType = $head['ContentType'] ?? 'video/mp4';
-
-        $headers = [
-            'Content-Type'        => $mimeType,
-            'Accept-Ranges'       => 'bytes',
-            'Cache-Control'       => 'public, max-age=31536000, immutable',
-            'Expires'             => gmdate('D, d M Y H:i:s', time() + 31536000) . ' GMT',
-            'Access-Control-Allow-Origin' => '*',
-            'Access-Control-Allow-Headers' => 'Range',
-            'Access-Control-Expose-Headers' => 'Content-Range, Content-Length, Accept-Ranges',
-        ];
-
+        $presignedUrl = $urlResult['url'];
         $range = $request->header('Range');
-        if ($range && preg_match('/bytes=(\d+)-(\d*)/', $range, $matches)) {
-            $start = intval($matches[1]);
-            $end = $matches[2] !== '' ? intval($matches[2]) : $size - 1;
-            $end = min($end, $size - 1);
-            $length = $end - $start + 1;
 
-            $headers['Content-Range'] = "bytes $start-$end/$size";
-            $headers['Content-Length'] = $length;
-
-            Log::info("Range request: $start-$end ($length bytes)");
-
-            try {
-                $getObjectStart = microtime(true);
-                $object = $s3->getObject([
-                    'Bucket' => $bucket,
-                    'Key'    => $path,
-                    'Range'  => "bytes=$start-$end",
-                ]);
-
-                Log::info('GetObject range concluído em: ' . (microtime(true) - $getObjectStart) . 's');
-                Log::info('Tempo total range: ' . (microtime(true) - $startTime) . 's');
-
-                return response($object['Body']->getContents(), 206, $headers);
-
-            } catch (\Aws\S3\Exception\S3Exception $e) {
-                Log::error('Erro GetObject range S3: ' . $e->getMessage());
-                abort(500, 'Erro ao carregar chunk do vídeo');
-            }
-        }
-
-        // Sem range header - arquivo completo (raro para vídeos)
-        $headers['Content-Length'] = $size;
-
-        Log::info("Full content request: $size bytes");
-
-        try {
-            $getObjectStart = microtime(true);
-            $object = $s3->getObject([
-                'Bucket' => $bucket,
-                'Key'    => $path,
+        if ($range) {
+            return redirect($presignedUrl, 302, [
+                'Cache-Control' => 'no-cache'
             ]);
-
-            Log::info('GetObject full concluído em: ' . (microtime(true) - $getObjectStart) . 's');
-            Log::info('Tempo total full: ' . (microtime(true) - $startTime) . 's');
-
-            return response($object['Body']->getContents(), 200, $headers);
-
-        } catch (\Aws\S3\Exception\S3Exception $e) {
-            Log::error('Erro GetObject full S3: ' . $e->getMessage());
-            abort(500, 'Erro ao carregar arquivo');
         }
+
+        return redirect($presignedUrl, 302, [
+            'Cache-Control' => 'public, max-age=300'
+        ]);
     }
 
     /* private static function fileBelongsToUser($type, $filename)
