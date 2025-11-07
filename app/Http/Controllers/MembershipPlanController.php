@@ -10,59 +10,58 @@ class MembershipPlanController extends Controller
 {
     public function index()
     {
-        $memberships = MembershipPlan::where('status', 1)
+        $membership_plans = MembershipPlan::where('status', 1)
             ->get(['id', 'name', 'description', 'slug']);
-        $pageTitle = 'Membership Plans';
-        $nav_bar = 'Memberships Plans';
-        $breadcrumbs = [
-            ['label' => 'Memberships Plans', 'url' => null],
-        ];
 
-        return view('admin.memberships.list', compact('memberships', 'pageTitle', 'nav_bar', 'breadcrumbs'));
-    }
+        if ($membership_plans->isEmpty()) {
+            $responseData = [
+                'status'  => false,
+                'message' => "No membership plans available.",
+                'results' => [
+                    'membership_plans' => []
+                ]
+            ];
+        } else {
+            $responseData = [
+                'status'  => true,
+                'message' => "",
+                'results' => [
+                    'membership_plans' => $membership_plans
+                ]
+            ];
+        }
 
-    public function add()
-    {
-        $pageTitle = "Add Membership Plans";
-        $nav_bar = "Memberships Plans";
-        $breadcrumbs = [
-            ['label' => 'Memberships', 'url' => route('membership.index')],
-            ['label' => 'Add Membership Plan', 'url' => null],
-        ];
-
-        return view('admin.memberships.form', [
-            'action' => 'Add',
-            'pageTitle' => $pageTitle,
-            'nav_bar' => $nav_bar,
-            'breadcrumbs' => $breadcrumbs,
-            'info' => [],
-        ]);
+        return response()->json($responseData);
     }
 
     public function show($id)
     {
-        $info = MembershipPlan::findOrFail($id);
-        $action = 'Edit';
+        $plan = MembershipPlan::find($id);
 
-        $pageTitle = "Edit Membership Plan";
-        $nav_bar = "Membership Plans";
-        $breadcrumbs = [
-            ['label' => 'Memberships', 'url' => route('membership.index')],
-            ['label' => 'Edit Membership Plan', 'url' => null],
-        ];
+        if (!$plan) {
+            $responseData = [
+                'status'  => false,
+                'message' => "Membership plan not found.",
+                'results' => [
+                    'membership_plan' => null
+                ]
+            ];
+        } else {
+            $responseData = [
+                'status'  => true,
+                'message' => "",
+                'results' => [
+                    'membership_plan' => $plan
+                ]
+            ];
+        }
 
-        return view('admin.memberships.form', [
-            'info' => [$info],
-            'action' => $action,
-            'pageTitle' => $pageTitle,
-            'nav_bar' => $nav_bar,
-            'breadcrumbs' => $breadcrumbs,
-        ]);
+        return response()->json($responseData);
     }
 
     public function store(Request $request)
     {
-        $validated = $request->validate([
+        $request->validate([
             'name' => 'required|string|max:100',
             'description' => 'nullable|string|max:250',
             'payment_mode' => 'required|boolean',
@@ -72,13 +71,27 @@ class MembershipPlanController extends Controller
             'status' => 'required|boolean',
         ]);
 
-        $plan = MembershipPlan::create($validated);
+        $plan = MembershipPlan::create($request->all());
 
         if ($plan) {
-            return redirect()->route('membership.index')->with('success', 'Membership Plan added successfully.');
+            $responseData = [
+                'status'  => true,
+                'message' => "",
+                'results' => [
+                    'membership_plan' => $plan
+                ]
+            ];
+        } else {
+            $responseData = [
+                'status'  => false,
+                'message' => "Failed to create membership plan.",
+                'results' => [
+                    'membership_plan' => null
+                ]
+            ];
         }
 
-        return redirect()->route('membership.index')->with('error', 'Failed to create membership plan.');
+        return response()->json($responseData, $plan ? 201 : 400);
     }
 
     public function update(Request $request, $id)
@@ -96,13 +109,27 @@ class MembershipPlanController extends Controller
         $plan = MembershipPlan::find($id);
 
         if (!$plan) {
-            return response()->json(['status' => false, 'message' => "Membership plan not found."], 404);
+            $responseData = [
+                'status'  => false,
+                'message' => "Membership plan not found.",
+                'results' => [
+                    'membership_plan' => null
+                ]
+            ];
+            return response()->json($responseData, 404);
         }
 
         $plan->update($request->all());
 
-        return redirect()->route('membership.index')
-            ->with('success', 'Membership Plan edited successfully.');
+        $responseData = [
+            'status'  => true,
+            'message' => "",
+            'results' => [
+                'membership_plan' => $plan
+            ]
+        ];
+
+        return response()->json($responseData);
     }
 
     public function destroy($id)
@@ -110,12 +137,27 @@ class MembershipPlanController extends Controller
         $plan = MembershipPlan::find($id);
 
         if (!$plan) {
-            return response()->json(['status' => false, 'message' => "Membership plan not found."], 404);
+            $responseData = [
+                'status'  => false,
+                'message' => "Membership plan not found.",
+                'results' => [
+                    'membership_plan' => null
+                ]
+            ];
+            return response()->json($responseData, 404);
         }
 
         $plan->delete();
 
-        return redirect()->route('membership.index')->with('success', 'Membership Plan deleted successfully.');
+        $responseData = [
+            'status'  => true,
+            'message' => "Membership plan deleted successfully.",
+            'results' => [
+                'membership_plan' => null
+            ]
+        ];
+
+        return response()->json($responseData, 200);
     }
 
     public static function getMembershipPlans()
@@ -134,23 +176,5 @@ class MembershipPlanController extends Controller
             ->toArray();
 
         return $membershipPlans;
-    }
-
-    public function deactivate($id)
-    {
-        $plan = MembershipPlan::findOrFail($id);
-        $plan->status = 0;
-        $plan->save();
-
-        return redirect()->route('membership.index')->with('success', 'Membership plan deactivated successfully.');
-    }
-
-    public function activate($id)
-    {
-        $plan = MembershipPlan::findOrFail($id);
-        $plan->status = 1;
-        $plan->save();
-
-        return redirect()->route('membership.index')->with('success', 'Membership plan activated successfully.');
     }
 }

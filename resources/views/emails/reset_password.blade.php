@@ -4,13 +4,13 @@
     </tr>
     <tr>
         <td style="padding-top: 16px; font-size: 28px; font-weight: 500; line-height: 120%; letter-spacing: 0%;">
-            Reset your Vijo ™ password.
+            Reset your Vijo™ password.
         </td>
     </tr>
     <tr>
         <td style="padding-top: 16px; font-size: 16px; font-weight: 500; line-height: 140%;">
             Hi {{ $user->first_name ?? '[First Name]' }},<br><br>
-            We received a request to reset your password on Vijo ™.
+            We received a request to reset your password on Vijo™.
         </td>
     </tr>
     <tr>

@@ -11,6 +11,7 @@ use App\Services\Emlo\EmloSegmentParameterService;
 use App\Services\QueryParamsHelperService;
 
 use App\Exceptions\Emlo\EmloNotFoundException;
+use Illuminate\Support\Facades\DB;
 
 
 
@@ -205,5 +206,25 @@ class EmloResponseService
         } catch (Exception $e) {
             Log::debug("error is: " . $e->getMessage());
         }
+    }
+
+    public function getAllRawParamValues($userId, $secondary = false)
+    {
+        $query = DB::table('emlo_response_values')
+            ->select('emlo_response_values.numeric_value', 'emlo_response_values.string_value',
+            'emlo_response_values.emlo_param_spec_id', 'emlo_response_values.created_at')
+            ->join('emlo_responses', 'emlo_responses.id', '=', 'emlo_response_values.response_id')
+            ->join('video_requests', 'video_requests.id', '=', 'emlo_responses.request_id')
+            ->where('video_requests.user_id', $userId);
+        
+        if ($secondary) {
+            $query->whereIn('emlo_response_values.emlo_param_spec_id', [12,13,14,15]);
+        } else {
+            $query->whereNotNull('emlo_response_values.emlo_param_spec_id');
+        }
+        
+        $values = $query->get();
+        $groupedValues = $values->groupBy('emlo_param_spec_id');
+        return $groupedValues;
     }
 }

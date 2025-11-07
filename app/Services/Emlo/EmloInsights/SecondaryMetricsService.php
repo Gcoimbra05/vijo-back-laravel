@@ -374,7 +374,7 @@ class SecondaryMetricsService {
                 "items"=> [
                     [
                         "range"=> "0",
-                        "label"=> "Optimal",
+                        "label"=> "Best - No Aggression",
                         "percentage"=> 0,
                         "isCurrent"=> false
                     ],

@@ -18,7 +18,7 @@ use App\Models\VideoRequest;
 use App\Services\CredScore\CredScoreService;
 use App\Services\Emlo\EmloDatabaseLoader;
 use App\Services\Emlo\EmloInsights\AveragesService;
-use Exception;
+use Throwable;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
@@ -49,6 +49,10 @@ class EmloInsightsService
     public function getInsightsDataV2(Request $request)
     {
         $routeName = Route::currentRouteName();
+        $paramsInUse = [];
+        $dataSubSection = '';
+        $filterId = $request->get('filter_id');
+        $compareId = $request->get('compare_id');
 
         if ($routeName == 'api.v2.insights.v2.secondary-metrics') {
             $paramsInUse = EmloDatabaseLoader::getSecondaryMetricParams();
@@ -63,7 +67,7 @@ class EmloInsightsService
             return response()->json(['error' => 'user not found'], 404);
         }
 
-        try{
+        try {
             $request = VideoRequest::where('user_id', $userId)
                 ->whereHas('videos')
                 ->whereHas('emloInsightsParamAggregates')
@@ -73,6 +77,8 @@ class EmloInsightsService
                 Log::info('No video request with aggregation found for user: ' . $userId);
                 throw New VideoRequestNotFoundException("video request w/ insights not found for user {$userId}");
             }
+
+            Log::debug("the request is: " . $request->id);
 
             // Get the aggregation
             $aggregates = EmloInsightsParamAggregate::select(
@@ -90,34 +96,61 @@ class EmloInsightsService
                 throw new EmloNotFoundException("emlo insights not found for request {$request->id}");
             }
 
-            $latestValues = $this->getRawParamValues($request->id);
+            if ($routeName == 'api.v2.insights.v2.secondary-metrics') {
+                $allValuesOfAllParams = $this->emloResponseService->getAllRawParamValues($userId, true);
+            } else {
+                $allValuesOfAllParams = $this->emloResponseService->getAllRawParamValues($userId);
+            }
+
+            if (empty($allValuesOfAllParams)) {
+                Log::info('the allValuesOfAllParams is empty');
+                throw new EmloNotFoundException("emlo values of param not found for request {$request->id}");
+            }
+            
+            foreach ($allValuesOfAllParams as $allValuesOfParam) {
+                foreach ($allValuesOfParam as $valueOfParam) {
+                    if ($valueOfParam->string_value == null && $valueOfParam->numeric_value != null) {
+                        $valueOfParam->value = $valueOfParam->numeric_value;
+                    } else if ($valueOfParam->string_value != null && $valueOfParam->numeric_value == null) {
+                        $valueOfParam->value = $valueOfParam->string_value;
+                    } else {
+                        $valueOfParam->value = null;
+                    }
+                }
+            }
+
 
             $allEmotionsData = [];
 
             foreach ($paramsInUse as $paramInUse) {
-                $aggregatesOfParam = $aggregates->where('emlo_param_spec_id', $paramInUse->id)->first();
+                $aggregatesOfParam = $aggregatesOfParam = $aggregates
+                    ->where('emlo_param_spec_id', $paramInUse->id)
+                    ->sortByDesc('created_at')
+                    ->first();
 
-                $latestValue = $latestValues->firstWhere('emlo_param_spec_id', $paramInUse->id)?->value ?? 0;
-                $latestValue = (int) ($paramInUse->needs_normalization ? EmloHelperService::applyNormalizationFormula($latestValue, $paramInUse->param_name) : $latestValue);
+                Log::debug('aggros of params are: ' . $aggregatesOfParam);
+                $allValuesOfParam = $allValuesOfAllParams->get($paramInUse->id);
+                $latestValue = $allValuesOfParam?->sortByDesc('created_at')->first()->value;  
 
-                $lastMeasured = $latestValues->firstWhere('emlo_param_spec_id', $paramInUse->id)?->created_at->format('M j, Y') ?? '';
-                $lastMeasuredDetailed = $latestValues
-                    ->firstWhere('emlo_param_spec_id', $paramInUse->id)?->created_at
-                    ->format('M j, Y g:iA') ?? '';
-
-
-                if ($latestValue != 0) {
-                    $conditionMet = $this->ruleEvaluationService->quickRuleCheck($latestValue, $latestValues, $paramInUse);
-                } else if ($latestValue == 0 && $paramInUse->param_name == 'Aggression') {
-                    $conditionMet = $this->ruleEvaluationService->quickRuleCheck($latestValue, $latestValues, $paramInUse);
+                if ($paramInUse->needs_normalization) {
+                    $latestValue = (int) EmloHelperService::applyNormalizationFormula($latestValue, $paramInUse->param_name);
+                    foreach ($allValuesOfParam as $valueOfParam) {
+                        $valueOfParam->value = (int) EmloHelperService::applyNormalizationFormula($valueOfParam->value, $paramInUse->param_name);
+                    }
                 }
+                Log::debug('latest value for param:' . $paramInUse->param_name . 'is:' . json_encode($latestValue));
+              
+                $createdAt = $allValuesOfParam?->sortByDesc('created_at')->first()?->created_at;
+                $lastMeasured = Carbon::parse($createdAt)->format('M j, Y');
+                $lastMeasuredDetailed = Carbon::parse($createdAt)->format('M j, Y g:iA');
+
+
+                $conditionMet = $this->ruleEvaluationService->quickRuleCheck($latestValue, $allValuesOfParam, $paramInUse);
+
                 
                 $timeOfDayAverages = $this->createTimeofDayAverages($aggregatesOfParam);
-
                 $weeklyData = $this->averagesService->createWeeklyData($aggregatesOfParam);
-
                 $thirtyDayData = $this->averagesService->create30DayData($aggregatesOfParam);
-
                 $threeMonthsData = $this->averagesService->aggregateMonthlyData($aggregatesOfParam, '3months');
                 $sixMonthsData = $this->averagesService->aggregateMonthlyData($aggregatesOfParam, '6months');
                 $monthsSinceStartData = $this->averagesService->aggregateMonthlyData($aggregatesOfParam, 'since_start');
@@ -154,7 +187,9 @@ class EmloInsightsService
                 }
                 $allEmotionsData [] = $emotionData;
             } 
-        } catch (Exception) {
+        } catch (Throwable $e) {
+            Log::error($e->getMessage());
+            Log::error($e->getTraceAsString());
             foreach ($paramsInUse as $paramInUse) {
                 if ($dataSubSection == 'emotions') {
                     $emotionData = $this->createEmotionData($paramInUse);
@@ -167,6 +202,42 @@ class EmloInsightsService
         
         if ($dataSubSection == 'advanced') $allEmotionsData = $this->orderSecondaryMetricsFinalArray($allEmotionsData);
         if ($dataSubSection == 'emotions') $allEmotionsData = $this->emloHelperService->orderInsightsFinalArray($allEmotionsData);
+
+        if ($compareId && !empty($allEmotionsData)) {
+            foreach ($allEmotionsData as &$emotionData) {
+                $emotionData['compare'] = [
+                    "current" => 10,
+                    "average" => 55,
+                    "dayChartData" => [
+                        "mon" => 64,
+                        "tue" => 72,
+                        "wed" => 26,
+                        "thu" => 59,
+                        "fri" => 67,
+                        "sat" => 0,
+                        "sun" => 0
+                    ],
+                    "timeChartData" => [
+                        "morning" => 60,
+                        "afternoon" => 64,
+                        "evening" => 63
+                    ],
+                    "timelineData" => [
+                        "30days" => [
+                            ["label" => "10/6", "value" => 57],
+                            ["label" => "10/9", "value" => 46],
+                            ["label" => "10/10", "value" => 74],
+                            ["label" => "10/13", "value" => 61],
+                            ["label" => "10/16", "value" => 65],
+                            ["label" => "10/20", "value" => 83],
+                            ["label" => "10/23", "value" => 55],
+                            ["label" => "10/27", "value" => 40],
+                            ["label" => "10/30", "value" => 12],
+                        ]
+                    ]
+                ];
+            }
+        }
 
         return response()->json([
                 'status' => 'success',
@@ -202,6 +273,7 @@ class EmloInsightsService
             "name"=> $paramInUse->simplified_param_name ?? '',
             "current" => $latest_value ?? 0,
             "average" => $aggregate->total_average ?? 0,
+            "compare" => null,
             "lastMeasured" => $lastMeasured ?? '',
             "range" => $conditionMet->emotion_performance ?? '',
             "dayChartData" =>  $weeklyData ?? [],
@@ -241,6 +313,7 @@ class EmloInsightsService
             "name"=> $this->changeParamName($paramInUse) ?? $paramInUse->simplified_param_name?? "",
             "current" => $latest_value ?? 0,
             "average" => $aggregate->total_average ?? 0,
+            "compare" => null,
             "lastMeasured" => $lastMeasured ?? '',
             "range" => $conditionMet->emotion_performance ?? '',
             "description" => $paramInUse->description ?? '',
@@ -363,55 +436,7 @@ class EmloInsightsService
         ];
     }
 
-    public function getRawParamValues($requestId)
-    {
-        $response = EmloResponse::select('id')
-            ->where('request_id', $requestId)
-            ->first();
-
-        if(!$response) {
-            throw new EmloNotFoundException("EMLO response not found for request {$requestId}");
-        }
-
-        Log::debug("response is: " . json_encode($response) . "request  is: " . json_encode($requestId));
-
-        // Get regular param values
-        $regularValues = EmloResponseValue::select('emlo_response_values.numeric_value', 'emlo_response_values.string_value', 'emlo_response_paths.emlo_param_spec_id', 'emlo_response_values.created_at')
-                ->join('emlo_response_paths', 'emlo_response_values.path_id', '=', 'emlo_response_paths.id')
-                ->whereNotNull('emlo_response_paths.emlo_param_spec_id')
-                ->where('emlo_response_values.response_id', $response->id)
-                ->get();
-
-        // Get segment param values
-        $segmentValues = EmloResponseValue::select('numeric_value', 'emlo_param_spec_id', 'emlo_response_values.created_at')
-                ->where('emlo_response_values.response_id', $response->id)
-                ->whereNotNull('emlo_param_spec_id')
-                ->get();
-
-        Log::debug("segment values are: " . json_encode($segmentValues));
-
-        $regularParams = collect($regularValues->map(function ($responseValue) {
-            return (object) [
-                'emlo_param_spec_id' => $responseValue->emlo_param_spec_id ?? null,
-                'value' => $responseValue->numeric_value ?? (int)($responseValue->string_value ?? 0),
-                'created_at' => $responseValue->created_at ?? null
-            ];
-        }));
-
-        // Transform segment param values
-        $segmentParams = collect($segmentValues->map(function ($responseValue) {
-            return (object) [
-                'emlo_param_spec_id' => $responseValue->emlo_param_spec_id ?? null,
-                'value' => $responseValue->numeric_value ?? (int)($responseValue->string_value ?? 0),
-                'created_at' => $responseValue->created_at ?? null
-            ];
-        }));
-
-        // Combine both collections
-        $allParams = $regularParams->merge($segmentParams);
-
-        return $allParams;
-    }
+    
 
     public function getUserActivity($userId, $filterBy)
     {

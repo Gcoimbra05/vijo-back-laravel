@@ -32,7 +32,7 @@ class EmloResponseValue extends Model implements AuditableContract
      * @param string $data_type
      * @return mixed Contains result ID or false boolean flag indicating failure of insertion
      */
-    public static function storePathValue($response_id, $path_id, $value, $data_type)
+    public static function storePathValue($response_id, $path_id, $value, $data_type, $emlo_param_spec_id)
     {
         // Initialize all value fields to null
         $numeric_value = null;
@@ -79,6 +79,7 @@ class EmloResponseValue extends Model implements AuditableContract
             'numeric_value' => $numeric_value,
             'string_value' => $string_value,
             'boolean_value' => $boolean_value,
+            'emlo_param_spec_id' => $emlo_param_spec_id
         ];
         
         // Insert the data

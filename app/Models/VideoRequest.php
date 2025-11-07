@@ -64,6 +64,11 @@ class VideoRequest extends Model implements AuditableContract
         return $this->hasMany(Video::class, 'request_id');
     }
 
+    public function videoRequestShares()
+    {
+        return $this->hasMany(VideoRequestShare::class, 'request_id');
+    }
+
     public function latestVideo()
     {
         return $this->hasOne(Video::class, 'request_id')->latestOfMany();
@@ -84,5 +89,27 @@ class VideoRequest extends Model implements AuditableContract
     public function credScoreInsightsAggregates()
     {
         return $this->hasMany(CredScoreInsightsAggregate::class, 'request_id');
+    }
+
+    public function delete()
+    {
+        $videos = Video::where('request_id', $this->id)->get();
+        foreach ($videos as $video) {
+            $video->delete();
+        }
+        Transcript::where('request_id', $this->id)->delete();
+        LlmResponse::where('request_id', $this->id)->delete();
+        $emloResponses = EmloResponse::where('request_id', $this->id)->get();
+        foreach ($emloResponses as $emloResponse) {
+            EmloResponseValue::where('response_id', $emloResponse->id)->delete();
+            $emloResponse->delete();
+        }
+        LlmResponse::where('request_id', $this->id)->delete();
+        KpiMetricValue::where('request_id', $this->id)->delete();
+        EmloInsightsParamAggregate::where('request_id', $this->id)->delete();
+        CredScoreValue::where('request_id', $this->id)->delete();
+        CredScoreInsightsAggregate::where('request_id', $this->id)->delete();
+
+        parent::delete();
     }
 }

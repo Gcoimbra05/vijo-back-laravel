@@ -59,9 +59,4 @@ class Contact extends Model implements AuditableContract
             ->groups()
             ->get();
     }
-
-    public static function getByUser(int $userId)
-    {
-        return self::where('user_id', $userId)->get();
-    }
 }

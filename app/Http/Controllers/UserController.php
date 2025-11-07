@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\GeneralHelper;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -20,10 +21,6 @@ use Illuminate\Support\Facades\Password;
 use Illuminate\Auth\Events\Verified;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
-use Symfony\Component\Intl\Countries;
-use App\Models\Contact;
-use App\Models\ContactGroup;
-use App\Models\Affiliate;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
@@ -158,8 +155,8 @@ class UserController extends Controller
             'last_name' => $request->last_name,
             'email' => $request->email,
             'password' => bcrypt($request->password),
-            'country_code' => $request->country_code,
-            'mobile' => $request->mobile,
+            'country_code' => GeneralHelper::onlyNumbers($request->country_code),
+            'mobile' => GeneralHelper::onlyNumbers($request->mobile),
             'optInNewsUpdates' => $request->optInNewsUpdates ?? 0,
             'timezone' => $request->timezone,
         ]);
@@ -169,8 +166,8 @@ class UserController extends Controller
         $otp_result = $twoFactorAuth->sendCode(new Request([
             'type' => 'email',
             'email' => $request->email,
-            'mobile' => $request->mobile,
-            'country_code' => $request->country_code,
+            'mobile' => GeneralHelper::onlyNumbers($request->mobile),
+            'country_code' => GeneralHelper::onlyNumbers($request->country_code),
         ]));
 
         if ($otp_result->getStatusCode() !== 200) {
@@ -216,51 +213,24 @@ class UserController extends Controller
             'password' => 'sometimes|required|string|min:8',
             'country_code' => 'nullable|string|max:10',
             'mobile' => 'nullable|string|max:20',
-            'status' => 'sometimes|boolean',
-            'is_verified' => 'sometimes|boolean',
-            'is_admin' => 'sometimes|boolean',
-            'guided_tours' => 'sometimes|boolean',
-            'plan_id' => 'nullable|exists:membership_plans,id',
-            'plan_start_date' => 'nullable|date',
-            'email_verified_at' => 'nullable|date',
-            'last_login_date' => 'nullable|date',
-            'description' => 'nullable|string|max:255',
-            'notifications' => 'sometimes|boolean',
             'reminders' => 'sometimes|boolean',
+            'notifications' => 'sometimes|boolean',
             'timezone' => 'sometimes|string|max:100',
             'optInNewsUpdates' => 'sometimes|boolean',
             'two_factor_enabled' => 'sometimes|boolean',
         ]);
 
-        $user->first_name = $request->first_name;
-        $user->last_name = $request->last_name;
-        $user->email = $request->email;
-        $user->country_code = $request->country_code;
-        $user->mobile = $request->mobile;
-        $user->timezone = $request->timezone;
-        $user->status = $request->status;
-        $user->is_verified = $request->is_verified;
-        $user->is_admin = $request->is_admin;
-        $user->guided_tours = $request->guided_tours;
-        $user->plan_id = $request->plan_id;
-        $user->plan_start_date = $request->plan_start_date;
-        $user->email_verified_at = $request->email_verified_at;
-        $user->last_login_date = $request->last_login_date;
-        $user->description = $request->description;
-        $user->notifications = $request->notifications ?? 0;
-        $user->reminders = $request->reminders ?? 0;
-        $user->optInNewsUpdates = $request->optInNewsUpdates ?? 0;
-        $user->two_factor_enabled = $request->two_factor_enabled ?? 0;
+        $user->update([
+            'country_code' => GeneralHelper::onlyNumbers($request->country_code),
+            'mobile' => GeneralHelper::onlyNumbers($request->mobile),
+        ] + $request->only('first_name', 'last_name', 'email', 'reminders', 'notifications', 'timezone', 'optInNewsUpdates', 'two_factor_enabled'));
 
         if ($request->filled('password')) {
             $user->password = bcrypt($request->password);
+            $user->save();
         }
 
-        $user->save();
-
-        return request()->wantsJson()
-            ? response()->json(['message' => 'User updated successfully.'])
-            : redirect('admin/users')->with('success', 'User updated successfully.');
+        return response()->json($user);
     }
 
     public function destroy($id)
@@ -628,129 +598,6 @@ class UserController extends Controller
         return response()->json($dashboardData);
     }
 
-    public function adminIndex()
-    {
-        $nav_bar = 'users';
-        $users = User::all();
-
-        $breadcrumbs = [
-            ['label' => 'Users', 'url' => null],
-        ];
-
-        return view('admin.users.index', compact('users', 'nav_bar', 'breadcrumbs'));
-    }
-
-    public function deactivate($id)
-    {
-        $user = User::find($id);
-        if (!$user) {
-            return response()->json(['message' => 'User not found'], 404);
-        }
-
-        $user->status = false;
-        $user->save();
-
-        $display_msg = array(
-            'msg'   => 'Status has been changed successfully',
-            'type'  => 'success',
-            'icon'  => 'bx bx-check'
-        );
-
-        session()->flash('display_msg', $display_msg);
-
-        return redirect()->to('admin/users');
-    }
-
-    public function activate($id)
-    {
-        $user = User::find($id);
-        if (!$user) {
-            return response()->json(['message' => 'User not found'], 404);
-        }
-
-        $user->status = true;
-        $user->save();
-
-        $display_msg = array(
-            'msg'   => 'Status has been changed successfully',
-            'type'  => 'success',
-            'icon'  => 'bx bx-check'
-        );
-
-        session()->flash('display_msg', $display_msg);
-
-        return redirect()->to('admin/users');
-    }
-
-    public function auditLogsView($id)
-    {
-        $user = User::find($id);
-        if (!$user) {
-            return response()->json(['message' => 'User not found'], 404);
-        }
-
-        $auditLogs = [];
-        $nav_bar = 'users';
-
-        $breadcrumbs = [
-            ['label' => 'Users', 'url' => route('users.adminIndex')],
-            ['label' => 'Audit Logs', 'url' => null]
-        ];
-
-        return view('admin.users.audit_logs', compact('user', 'auditLogs', 'nav_bar', 'breadcrumbs'));
-    }
-
-    public function journalHistoryView($id)
-    {
-        $user = User::find($id);
-        if (!$user) {
-            return response()->json(['message' => 'User not found'], 404);
-        }
-
-        $journalHistory = [];
-        $nav_bar = 'users';
-
-        $breadcrumbs = [
-            ['label' => 'Users', 'url' => route('users.adminIndex')],
-            ['label' => 'Journal History', 'url' => null]
-        ];
-
-        return view('admin.users.journal_history', compact('user', 'journalHistory', 'nav_bar', 'breadcrumbs'));
-    }
-
-    public function edit(User $user)
-    {
-        $pageTitle = "Edit Person";
-        $nav_bar = "Users";
-        $breadcrumbs = [
-            ['label' => 'Users', 'url' => route('users.adminIndex')],
-            ['label' => 'Edit Person', 'url' => null],
-        ];
-        $countries = Countries::getNames();
-        $membershipPlans = MembershipPlan::all();
-        $contacts = Contact::getByUser($user->id);
-        $contactgroups = ContactGroup::getByUser($user->id);
-        $affiliates = Affiliate::getByUser($user->id);
-
-        $timezonesByCountry = [];
-        foreach (array_keys($countries) as $code) {
-            $timezonesByCountry[$code] = \DateTimeZone::listIdentifiers(\DateTimeZone::PER_COUNTRY, $code);
-        }
-
-        return view('admin.users.edit', compact('user', 'pageTitle', 'nav_bar', 'breadcrumbs', 'countries', 'timezonesByCountry', 'membershipPlans', 'contacts', 'contactgroups', 'affiliates'));
-    }
-
-    public function contactsByUser($userId)
-    {
-        $contacts = Contact::getByUser($userId);
-        $contactgroups = ContactGroup::getByUser($userId);
-        $affiliates = Affiliate::getByUser($userId);
-
-        $user = User::findOrFail($userId);
-
-        return view('admin.users.contacts', compact('contacts', 'user', 'contactgroups', 'affiliates'));
-    }
-
     public function handleVijoOfDay($timezone = 'America/New_York')
     {
         $catalogs = Catalog::where('status', 1)
@@ -976,8 +823,8 @@ class UserController extends Controller
         if ($request->type === 'email') {
             $user->email = $request->new_email;
         } else {
-            $user->country_code = $request->country_code;
-            $user->mobile = $request->mobile;
+            $user->country_code = GeneralHelper::onlyNumbers($request->country_code);
+            $user->mobile = GeneralHelper::onlyNumbers($request->mobile);
         }
         $user->save();
 

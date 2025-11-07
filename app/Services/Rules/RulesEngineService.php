@@ -82,7 +82,10 @@ class RulesEngineService {
     private function getStatusInfo($singleValueOfParam , $allValuesOfParam)
     {
         $standardDeviation = self::standardDeviation($allValuesOfParam->pluck('value'));
-        $mean = self::mean($allValuesOfParam);
+        $mean = self::mean($allValuesOfParam->pluck('value'));
+        Log::debug('standard deviation: ' . $standardDeviation);
+        Log::debug('mean: ' . $mean);
+
         $statusInfo = $this->evaluateStandardDeviation($singleValueOfParam, $mean,$standardDeviation);
         return $statusInfo;
     }
@@ -224,7 +227,6 @@ class RulesEngineService {
         // Convert all values to numbers and filter out non-numeric values
         $numericValues = $numbers->filter(function ($value) {
             $isNumeric = is_numeric($value);
-            Log::info("Value: " . var_export($value, true) . " | is_numeric: " . ($isNumeric ? 'true' : 'false'));
             return $isNumeric;
         })->map(function ($value) {
             return (float) $value;

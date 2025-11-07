@@ -6,59 +6,18 @@ use App\Models\Tag;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Auth;
-use App\Models\User;
-use App\Models\Category;
 
 class TagController extends Controller
 {
     public function index()
     {
         $tags = Tag::with(['category', 'creator'])->get();
-        if (request()->wantsJson()) {
-            return response()->json([
-                'success' => true,
-                'message' => 'Tags retrieved successfully.',
-                'data' => $tags,
-            ]);
-        }
-
-        $breadcrumbs = [
-            ['label' => 'Tags', 'url' => null],
-        ];
-        $nav_bar = 'tags';
-        $pageTitle = 'Tags';
-
-        return view('admin.tags.list', compact('tags', 'pageTitle', 'nav_bar', 'breadcrumbs'));
-    }
-
-    public function add()
-    {
-        $pageTitle = "Add Tag";
-        $nav_bar = "tags";
-
-        $users = User::all();
-        $categories = Category::all();
-        $types = Tag::$type;
-
-        $breadcrumbs = [
-            ['label' => 'tags', 'url' => route('tag.index')],
-            ['label' => 'Add Tags', 'url' => null],
-        ];
-
-        return view('admin.tags.form', [
-            'action' => 'Add',
-            'pageTitle' => $pageTitle,
-            'nav_bar' => $nav_bar,
-            'breadcrumbs' => $breadcrumbs,
-            'info' => [],
-            'users' => $users,
-            'categories' => $categories,
-            'types' => $types,
-            'selectedUserId' => old('created_by_user', null),
+        return response()->json([
+            'success' => true,
+            'message' => 'Tags retrieved successfully.',
+            'data' => $tags,
         ]);
-
     }
-
 
     public function show($id)
     {
@@ -80,7 +39,7 @@ class TagController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'category_id' => 'required|integer|exists:categories,id',
+            'category_id' => 'required|integer|exists:catalog_categories,id',
             'name' => 'nullable|string|max:100',
             'description' => 'nullable|string',
             'type' => 'required|in:catalog,journalTag,custom',
@@ -89,16 +48,11 @@ class TagController extends Controller
         ]);
 
         $tag = Tag::create($request->all());
-        if ($request->wantsJson()) {
-            return response()->json([
-                'success' => true,
-                'message' => 'Tag created successfully.',
-                'data' => $tag->load(['category', 'creator']),
-            ], 201);
-        }
-
-        return redirect()->route('tag.index')
-            ->with('success', 'Tag created successfully.');
+        return response()->json([
+            'success' => true,
+            'message' => 'Tag created successfully.',
+            'data' => $tag->load(['category', 'creator']),
+        ], 201);
     }
 
     public function update(Request $request, $id)
@@ -113,7 +67,7 @@ class TagController extends Controller
         }
 
         $request->validate([
-            'category_id' => 'sometimes|required|integer|exists:categories,id',
+            'category_id' => 'sometimes|required|integer|exists:catalog_categories,id',
             'name' => 'nullable|string|max:100',
             'description' => 'nullable|string',
             'type' => 'sometimes|required|in:catalog,journalTag,custom',
@@ -122,40 +76,29 @@ class TagController extends Controller
         ]);
 
         $tag->update($request->all());
-        if ($request->wantsJson()) {
-            return response()->json([
-                'success' => true,
-                'message' => 'Tag updated successfully.',
-                'data' => $tag->load(['category', 'creator']),
-            ]);
-        }
-
-        return redirect()->route('tag.index')
-            ->with('success', 'Tag update successfully.');
+        return response()->json([
+            'success' => true,
+            'message' => 'Tag updated successfully.',
+            'data' => $tag->load(['category', 'creator']),
+        ]);
     }
 
-    public function destroy(Request $request, $id)
+    public function destroy($id)
     {
         $tag = Tag::find($id);
         if (!$tag) {
-            return $request->wantsJson()
-                ? response()->json([
-                    'success' => false,
-                    'message' => 'Tag not found.',
-                    'data' => null,
-                ], 404)
-                : redirect()->route('tag.index')->with('error', 'Tag not found.');
-        }
-
-        $tag->delete();
-
-        return $request->wantsJson()
-            ? response()->json([
-                'success' => true,
-                'message' => 'Tag deleted successfully.',
+            return response()->json([
+                'success' => false,
+                'message' => 'Tag not found.',
                 'data' => null,
-            ])
-            : redirect()->route('tag.index')->with('success', 'Tag deleted successfully.');
+            ], 404);
+        }
+        $tag->delete();
+        return response()->json([
+            'success' => true,
+            'message' => 'Tag deleted successfully.',
+            'data' => null,
+        ]);
     }
 
     public static function handleProvidedTags($tags, $categoryId = null)
@@ -182,6 +125,7 @@ class TagController extends Controller
             $tagTitle = isset($tagParts[1]) ? $tagParts[1] : null;
 
             if ($tagId == 0 && $tagTitle) {
+                // Verifica se já existe tag custom com mesmo nome, categoria e usuário
                 $existingTag = Tag::where('category_id', $categoryId)
                     ->where('name', $tagTitle)
                     ->where('type', 'custom')
@@ -236,72 +180,5 @@ class TagController extends Controller
         }
 
         return $catalogTags;
-    }
-
-    public function edit(Request $request, $id)
-    {
-        $tag = Tag::find($id);
-        if (!$tag) {
-            return $request->wantsJson()
-                ? response()->json([
-                    'success' => false,
-                    'message' => 'Tag not found.',
-                    'data' => null,
-                ], 404)
-                : redirect()->route('tag.index')->with('error', 'Tag not found.');
-        }
-
-        $pageTitle = "Edit Tag";
-        $nav_bar = "tags";
-
-        $users = User::all();
-        $categories = Category::all();
-        $types = Tag::$type;
-
-        $breadcrumbs = [
-            ['label' => 'Tags', 'url' => route('tag.index')],
-            ['label' => 'Edit Tag', 'url' => null],
-        ];
-
-        $selectedUserId = old('created_by_user', $tag->created_by_user);
-
-        return view('admin.tags.form', [
-            'action' => 'Edit',
-            'pageTitle' => $pageTitle,
-            'nav_bar' => $nav_bar,
-            'breadcrumbs' => $breadcrumbs,
-            'info' => [$tag],
-            'users' => $users,
-            'categories' => $categories,
-            'types' => $types,
-            'selectedUserId' => $selectedUserId,
-        ]);
-    }
-
-
-    public function deactivate($id)
-    {
-        $tag = Tag::find($id);
-        if (!$tag) {
-            return redirect()->route('tag.index')->with('error', 'Tag not found.');
-        }
-
-        $tag->status = 0;
-        $tag->save();
-
-        return redirect()->route('tag.index')->with('success', 'Tag deactivated successfully.');
-    }
-
-    public function activate($id)
-    {
-        $tag = Tag::find($id);
-        if (!$tag) {
-            return redirect()->route('tag.index')->with('error', 'Tag not found.');
-        }
-
-        $tag->status = 1;
-        $tag->save();
-
-        return redirect()->route('tag.index')->with('success', 'Tag activated successfully.');
     }
 }

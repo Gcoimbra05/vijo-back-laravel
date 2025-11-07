@@ -28,7 +28,7 @@
     </tr>
     <tr>
         <td style="padding-top: 24px; font-size: 15px; font-weight: 500; line-height: 140%; color: #1A1C1F;">
-            Let Vijo ™ help you reflect and navigate emotion, as you get to know your best self.
+            Let Vijo™ help you reflect and navigate emotion, as you get to know your best self.
             <a href="{{ $signUpUrl ?? '#' }}" style="color: #4F46E5; text-decoration: underline;">Sign up today</a>
         </td>
     </tr>

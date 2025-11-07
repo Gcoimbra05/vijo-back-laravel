@@ -62,10 +62,10 @@
         </table>
 
         <!-- Footer -->
-        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top: 40px;">
+        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width: 480px; margin-top: 40px;">
           <tr>
             <td style="background-color: #DBE1FF; padding: 16px 24px; font-size: 16px; font-weight: 500; color: #495057;">
-              <p style="margin: 8px 0 0;">Copyright © 2025 Vijo ™<br>All rights reserved</p>
+              <p style="margin: 8px 0 0;">Copyright © 2025 Vijo™<br>All rights reserved</p>
             </td>
           </tr>
         </table>

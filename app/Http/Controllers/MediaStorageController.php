@@ -73,13 +73,13 @@ class MediaStorageController extends Controller
 
         $thumbnailName = Str::of($fileName)->basename('.' . $fileExtension) . '.jpg';
         $thumbnailPath = storage_path($tempFolderPath . DIRECTORY_SEPARATOR . $thumbnailName);
-
+        
         // Remove existing thumbnail if it exists to prevent FFmpeg prompt
         if (file_exists($thumbnailPath)) {
             @unlink($thumbnailPath);
             Log::info('Removed existing thumbnail: ' . $thumbnailPath);
         }
-
+        
         // Generate thumbnail
         $thumbnailCommand = "ffmpeg -y -i " . escapeshellarg($localVideoPath) . " -frames:v 1 -update 1 " . escapeshellarg($thumbnailPath) . " 2>&1";
         $thumbnailResult = shell_exec($thumbnailCommand);
@@ -88,13 +88,13 @@ class MediaStorageController extends Controller
         $originalSize = filesize($localVideoPath);
 
         // Compression/conversion to MP4 if necessary
-        if (strtolower($fileExtension) === 'mp4' && $originalSize < 30000000) {
+        if (strtolower($fileExtension) === 'mp4' && $originalSize < 30000000) { // MB = 30
             $outputFile = $localVideoPath;
         } else {
             $outputFile = str_replace("." . $fileExtension, ".mp4", $localVideoPath);
-
+            
             // Remove existing output file if it exists to prevent FFmpeg prompt
-            if (file_exists($outputFile)) {
+            if ($localVideoPath != $outputFile && file_exists($outputFile)) {
                 @unlink($outputFile);
                 Log::info('Removed existing output file: ' . $outputFile);
             }

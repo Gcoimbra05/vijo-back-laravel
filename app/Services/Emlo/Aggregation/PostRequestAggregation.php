@@ -18,6 +18,7 @@ use App\Services\Emlo\EmloInsights\InsightsV2Service;
 use App\Services\Emlo\EmloInsights\ProgressOverTimeService;
 use App\Services\Emlo\EmloInsights\SecondaryMetricsService;
 use App\Services\Emlo\EmloHelperService;
+use Illuminate\Support\Facades\DB;
 
 class PostRequestAggregation {
 
@@ -70,9 +71,15 @@ class PostRequestAggregation {
                     ];
                     Log::info("EmloInsightsParamAggregate::create", $inputData);
                     EmloInsightsParamAggregate::create($inputData);
-            } 
-            $this->credScoreService->processCredScore($requestId, $userId);
+            }
 
+            $categoryId = DB::table('video_requests')
+                ->join('catalogs', 'video_requests.catalog_id', '=', 'catalogs.id')
+                ->where('video_requests.id', $requestId)
+                ->value('catalogs.category_id');            
+            if ($categoryId != 1) {
+                $this->credScoreService->processCredScore($requestId, $userId);
+            }
         } catch (Exception $e)  {
             Log::error("aggregation pipeline failed w/ error: " . $e->getTraceAsString());
             Log::error("aggregation pipeline failed w/ error message : " . $e->getMessage());

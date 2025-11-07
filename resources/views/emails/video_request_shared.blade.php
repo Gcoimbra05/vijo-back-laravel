@@ -22,7 +22,7 @@
         </div>
         <div class="content">
             <p>
-                You have received a new video request on the Vijo ™ platform.<br>
+                You have received a new video request on the Vijo™ platform.<br>
                 Please see the details below:
             </p>
             <table class="details-table">
@@ -74,12 +74,12 @@
                 </tr>
             </table>
             <p style="margin-top: 20px;">
-                For more details, please access the Vijo ™ platform.<br>
+                For more details, please access the Vijo™ platform.<br>
                 If you have any questions, feel free to contact our support team.
             </p>
         </div>
         <div class="footer">
-            &copy; {{ date('Y') }} Vijo ™. All rights reserved.
+            &copy; {{ date('Y') }} Vijo™. All rights reserved.
         </div>
     </div>
 </body>

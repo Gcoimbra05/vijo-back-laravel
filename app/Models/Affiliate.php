@@ -20,11 +20,6 @@ class Affiliate extends Model implements AuditableContract
         'creator_id'
     ];
 
-    // Timestamps
-    public $timestamps = true;
-    const CREATED_AT = 'created_at';
-    const UPDATED_AT = 'updated_at';
-
     public function user()
     {
         return $this->belongsTo(User::class);
@@ -33,10 +28,5 @@ class Affiliate extends Model implements AuditableContract
     public function referralCodes()
     {
         return $this->hasMany(ReferralCode::class);
-    }
-
-    public static function getByUser(int $userId)
-    {
-        return self::where('user_id', $userId)->get();
     }
 }

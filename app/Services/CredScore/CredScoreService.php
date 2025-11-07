@@ -43,19 +43,18 @@ class CredScoreService {
         if (!$userId) {
             return response()->json(['error' => 'user not found'], 404);
         }
-
+        $filterId = $request->get('filter_id');
+        $compareId = $request->get('compare_id');
         $allCredScores = [];
         $catalogsInUse = EmloDatabaseLoader::getMetricCatalogsInUse();
 
-        $credScoreValues = CredScoreValue::select('cred_score_values.cred_score', 'cred_score_values.measured_score', 'cred_score_values.perceived_score','video_requests.catalog_id', 'cred_score_values.created_at')
+        $latestValues = CredScoreValue::select('cred_score_values.cred_score', 'cred_score_values.measured_score', 'cred_score_values.perceived_score', 'video_requests.catalog_id', 'cred_score_values.created_at')
             ->join('video_requests', 'cred_score_values.request_id', '=', 'video_requests.id')
             ->where('video_requests.user_id', $userId)
-            ->get();
-
-        $latestValues = $credScoreValues->groupBy('catalog_id')
-            ->map(function($group) {
-                return $group->sortByDesc('created_at')->first();
-            })
+            ->orderBy('video_requests.catalog_id')
+            ->orderByDesc('cred_score_values.created_at')
+            ->get()
+            ->unique('catalog_id')
             ->values();
 
         $lastMeasured = '';
@@ -102,10 +101,9 @@ class CredScoreService {
             $latestRecord = $latestValues->where('catalog_id', $catalogInUse->id)->first();
             if ($latestRecord) {
                 $latestValue = $latestRecord?->cred_score ?? 0;
-                $lastMeasuredDetailed = $latestRecord?->created_at
-                    ->format('M j, Y g:iA') ?? '';
-                if ($latestValue != 0) {
-                    $standardDeviation = RulesEngineService::standardDeviation($latestValues->pluck('value'));
+                $lastMeasuredDetailed = $latestRecord?->created_at->format('M j, Y g:iA') ?? '';
+                if ($latestValue != 0 && !is_null($latestValues)) {
+                    $standardDeviation = RulesEngineService::standardDeviation($latestValues->pluck('cred_score'));
                     $statusMessage = $this->ruleCheckCredScore($standardDeviation);
                 }
 
@@ -121,25 +119,56 @@ class CredScoreService {
                 $monthsSinceStartData = $this->averagesService->aggregateMonthlyData($aggregatesOfCatalog, 'since_start');
 
                 $credScoreData = $this->createCredScoresData(
-                            $catalogInUse, 
-                            $aggregatesOfCatalog,
-                            $lastMeasuredDetailed, 
-                            $latestValue, 
-                            $statusMessage,
-                            $weeklyData,
-                            $timeOfDayAverages,
-                            $thirtyDayData,
-                            $threeMonthsData,
-                            $sixMonthsData,
-                            $monthsSinceStartData
-                            );
-
-                $allCredScores[] = $credScoreData;
+                        $catalogInUse, 
+                        $aggregatesOfCatalog,
+                        $lastMeasuredDetailed, 
+                        $latestValue, 
+                        $statusMessage,
+                        $weeklyData,
+                        $timeOfDayAverages,
+                        $thirtyDayData,
+                        $threeMonthsData,
+                        $sixMonthsData,
+                        $monthsSinceStartData
+                    );
             } else {
-                $allCredScores[] =  $credScoreData = $this->createCredScoresData(
-                            $catalogInUse);
+                $credScoreData = $this->createCredScoresData($catalogInUse);
             }
 
+            if ($compareId && !empty($credScoreData)) {
+                $credScoreData['compare'] = [
+                    "current" => 10,
+                    "average" => 55,
+                    "dayChartData" => [
+                        "mon" => 64,
+                        "tue" => 72,
+                        "wed" => 26,
+                        "thu" => 59,
+                        "fri" => 67,
+                        "sat" => 0,
+                        "sun" => 0
+                    ],
+                    "timeChartData" => [
+                        "morning" => 60,
+                        "afternoon" => 64,
+                        "evening" => 63
+                    ],
+                    "timelineData" => [
+                        "30days" => [
+                            ["label" => "10/6", "value" => 57],
+                            ["label" => "10/9", "value" => 46],
+                            ["label" => "10/10", "value" => 74],
+                            ["label" => "10/13", "value" => 61],
+                            ["label" => "10/16", "value" => 65],
+                            ["label" => "10/20", "value" => 83],
+                            ["label" => "10/23", "value" => 55],
+                            ["label" => "10/27", "value" => 40],
+                            ["label" => "10/30", "value" => 12],
+                        ]
+                    ]
+                ];
+            }
+            $allCredScores[] = $credScoreData;
             $allCredScores = $this->emloHelperService->orderInsightsFinalArray($allCredScores);
         }
         
@@ -178,6 +207,7 @@ class CredScoreService {
             "video_type_id" => $catalogInUse->video_type_id ?? 0,
             "current" => $latest_value ?? 0,
             "average" => (int) ($aggregate->total_average ?? 0),
+            "compare" => null,
             "lastMeasured" => $lastMeasured ?? "",
             "range" => $statusMessage ?? '',
             "dayChartData" =>  $weeklyData ?? [],

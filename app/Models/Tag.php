@@ -10,18 +10,12 @@ class Tag extends Model
     use HasFactory;
 
     protected $fillable = [
+        'category_id',
         'name',
         'description',
-        'category_id',
         'type',
         'created_by_user',
         'status',
-    ];
-
-    public static $type = [
-        'catalog',
-        'journalTag',
-        'custom'
     ];
 
     public function category()
