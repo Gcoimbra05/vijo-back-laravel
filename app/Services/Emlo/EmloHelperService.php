@@ -46,6 +46,7 @@ class EmloHelperService {
                 $path_key = $path['path_key'];
                 $json_path = $path['json_path'];
                 $data_type = $path['data_type'];
+                $emlo_param_spec_id = $path['emlo_param_spec_id'];
                 $processed++;
                          
                 // Initialize counter for this path
@@ -70,7 +71,7 @@ class EmloHelperService {
                     if ($isArray) {
                         $jsonValue = json_encode($value);
                         try {
-                            $insert_result = EmloResponseValue::storePathValue($response_id, $path_id, $jsonValue, 'string');
+                            $insert_result = EmloResponseValue::storePathValue($response_id, $path_id, $jsonValue, 'string', $emlo_param_spec_id);
                             if ($insert_result) {
                                 $stored++;
                                 $valueCountByPath[$path_key]++;
@@ -86,7 +87,7 @@ class EmloHelperService {
                         }
                     } else {
                         try {
-                            $insert_result = EmloResponseValue::storePathValue($response_id, $path_id, $value, $data_type);                            
+                            $insert_result = EmloResponseValue::storePathValue($response_id, $path_id, $value, $data_type, $emlo_param_spec_id);                            
                             if ($insert_result) {
                                 $stored++;
                                 $valueCountByPath[$path_key]++;

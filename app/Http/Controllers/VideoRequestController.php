@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Exceptions\CatalogNotFoundException;
 use App\Exceptions\CredScore\CredScoreNotFoundException;
+use App\Helpers\GeneralHelper;
 use App\Models\VideoRequest;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
@@ -24,11 +25,13 @@ use App\Models\Tag;
 use App\Models\User;
 use App\Models\KpiMetricSpecification;
 use App\Models\Transcript;
+use App\Models\VideoRequestShare;
 use App\Services\Emlo\EmloResponseService;
 use App\Services\Emlo\EmloSegmentParameterService;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
 use App\Services\CredScore\CredScoreService;
+use App\Services\Emlo\EmloInsights\SnapshotService;
 use App\Services\VideoDetailServices\EmotionService;
 use Exception;
 
@@ -108,7 +111,7 @@ class VideoRequestController extends Controller
                 })
                 ->orWhere(function ($query) {
                     $query->where('ref_country_code', Auth::user()->country_code)
-                        ->where('ref_mobile', Auth::user()->mobile)
+                        ->where('ref_mobile', GeneralHelper::onlyNumbers(Auth::user()->mobile))
                         ->where(function ($query) {
                             $query->whereNotNull('contact_id')
                                 ->orWhereNotNull('group_id');
@@ -274,7 +277,7 @@ class VideoRequestController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Video request updated successfully.',
-            'data' => $videoRequest,
+            'data' => $videoRequest
         ]);
     }
 
@@ -381,8 +384,8 @@ class VideoRequestController extends Controller
             'contact_id'  => $contact->id,
             'ref_first_name' => $contact->first_name,
             'ref_last_name' => $contact->last_name,
-            'ref_country_code' => $contact->country_code,
-            'ref_mobile' => $contact->mobile,
+            'ref_country_code' => GeneralHelper::onlyNumbers($contact->country_code),
+            'ref_mobile' => GeneralHelper::onlyNumbers($contact->mobile),
             'ref_email' => $contact->email,
             'ref_note'    => $note,
             'status'      => 'Pending',
@@ -920,20 +923,34 @@ class VideoRequestController extends Controller
 
     public function getVideoGalleries(Request $request)
     {
-        $userId = Auth::id();
+        $user = Auth::user();
+        $userId = $user->id;
+
+        $sharedRequestIds = VideoRequestShare::where(function($query) use ($user) {
+            $query->where('recipient_user_id', $user->id)
+                ->orWhere('email', $user->email)
+                ->orWhere('mobile', GeneralHelper::onlyNumbers($user->mobile));
+            })
+            ->whereHas('request.latestVideo')
+            ->pluck('request_id')
+            ->filter()
+            ->unique()
+            ->toArray();
+
+        $userRequestIds = VideoRequest::where('user_id', $userId)
+            ->whereNotNull('title')
+            ->whereHas('latestVideo')
+            ->pluck('id')
+            ->toArray();
+
+        $allRequestIds = array_unique(array_merge($userRequestIds, $sharedRequestIds));
 
         $allRequests = VideoRequest::with(['latestVideo', 'catalog.category', 'user'])
-            ->where('user_id', $userId)
-            ->whereNotNull('title')
-            ->where(function($query) use ($userId) {
-                $query->where('user_id', $userId)
-                    ->orWhere('ref_user_id', $userId);
-                })
-            ->whereHas('latestVideo')
+            ->whereIn('id', $allRequestIds)
             ->orderBy('created_at', 'desc')
             ->get();
 
-        $requestData = $allRequests->map(function($req) use ($userId) {
+        $requestData = $allRequests->map(function($req) use ($userId, $sharedRequestIds) {
             $video = $req->latestVideo;
             $catalog = $req->catalog;
             $user = $req->user;
@@ -945,28 +962,75 @@ class VideoRequestController extends Controller
                 $type = ($userId == $req->ref_user_id) ? 'shared_with_me' : 'shared_by_me';
             }
 
+            $shared = '';
+            if (in_array($req->id, $sharedRequestIds)) {
+                $shareRecord = VideoRequestShare::where('request_id', $req->id)
+                    ->where(function($query) use ($userId) {
+                        $user = Auth::user();
+                        $query->where('recipient_user_id', $userId)
+                            ->orWhere('email', $user->email)
+                            ->orWhere('mobile', GeneralHelper::onlyNumbers($user->mobile));
+                    })
+                    ->with('sender')
+                    ->first();
+                
+                if ($shareRecord && $shareRecord->sender) {
+                    $senderName = trim(($shareRecord->sender->first_name ?? ''));
+                    $shared = "Shared By " . ($senderName ?: '');
+                } else {
+                    $shared = "Shared";
+                }
+            } elseif ($req->user_id == $userId) {
+                $shareCount = VideoRequestShare::where('request_id', $req->id)
+                    ->where('sender_user_id', $userId)
+                    ->count();
+
+                if ($shareCount > 0) {
+                    if ($shareCount == 1) {
+                        $shareRecord = VideoRequestShare::where('request_id', $req->id)
+                            ->where('sender_user_id', $userId)
+                            ->with('recipient')
+                            ->first();
+                        
+                        $recipientName = '';
+                        if ($shareRecord->recipient) {
+                            $recipientName = trim(($shareRecord->recipient->first_name ?? ''));
+                        }
+
+                        if (!$recipientName && ($shareRecord->first_name)) {
+                            $recipientName = trim(($shareRecord->first_name ?? ''));
+                        }
+
+                        $shared = "Shared with " . ($recipientName ?: 'User');
+                    } else {
+                        $shared = "Shared with Others";
+                    }
+                }
+            }
+
             return [
-                'id'                  => $req->id,
-                'user_id'             => $req->user_id,
-                'journal_title'       => $req->title ?? ($catalog->title ?? ''),
-                'ref_user_id'         => $req->ref_user_id ?? 0,
-                'journal_type'        => $type,
-                'recommendation_id'   => $req->recommendation_id ?? '',
+                'catalogEmoji'        => $catalog->emoji ?? '',
                 'category_name'       => $catalog && $catalog->category ? $catalog->category->name : '',
-                'is_private'          => $req->is_private ?? 0,
-                'rrc_video1'          => $video ? $video->video_name : '',
-                'rrc_video1_thumb'    => $video ? $video->thumbnail_name : '',
-                'video'               => $video ? $video->video_url : '',
-                'video_thumb'         => $video ? $video->thumbnail_url : '',
-                'recordedBy'          => $req->user_id == $req->ref_user_id ? 'self' : 'other',
-                'parent_catalog_id'   => $catalog->parent_catalog_id ?? 0,
                 'cp_id'               => $catalog->cp_id ?? 0,
                 'created_at'          => $req->created_at ? date('M d, Y H:i', strtotime($req->created_at)) : '',
                 'date'                => $req->created_at ? date('M d, Y g:iA', strtotime($req->created_at)) : '',
+                'id'                  => $req->id,
+                'is_private'          => $req->is_private ?? 0,
+                'journal_title'       => $req->title ?? ($catalog->title ?? ''),
+                'journal_type'        => $type,
                 'mediaId'             => $video ? $video->id : 0,
-                'catalogEmoji'        => $catalog->emoji ?? '',
-                'user_name'           => $user ? ($user->name ?? trim(($user->first_name ?? '') . ' ' . ($user->last_name ?? ''))) : '',
+                'parent_catalog_id'   => $catalog->parent_catalog_id ?? 0,
+                'recommendation_id'   => $req->recommendation_id ?? '',
+                'recordedBy'          => $req->user_id == $req->ref_user_id ? 'self' : 'other',
+                'ref_user_id'         => $req->ref_user_id ?? 0,
+                'rrc_video1'          => $video ? $video->video_name : '',
+                'rrc_video1_thumb'    => $video ? $video->thumbnail_name : '',
+                'shared'              => $shared,
                 'tags'                => $tags ?? [],
+                'user_id'             => $req->user_id,
+                'user_name'           => $user ? ($user->name ?? trim(($user->first_name ?? '') . ' ' . ($user->last_name ?? ''))) : '',
+                'video'               => $video ? $video->video_url : '',
+                'video_thumb'         => $video ? $video->thumbnail_url : '',
             ];
         })->toArray();
 
@@ -1001,11 +1065,28 @@ class VideoRequestController extends Controller
           ->first();
 
         if (!$videoRequest) {
-            return response()->json([
-                'status' => false,
-                'message' => 'Journal not found or access denied.',
-                'results' => null
-            ], 404);
+            $user = Auth::user();
+            $shareVideoRequest = VideoRequestShare::where(function($query) use ($user) {
+                $query->where('recipient_user_id', $user->id)
+                    ->orWhere('email', $user->email)
+                    ->orWhere('mobile', GeneralHelper::onlyNumbers($user->mobile));
+                })
+                ->where('request_id', $id)
+                ->whereHas('request.latestVideo')
+                ->first();
+            if ($shareVideoRequest) {
+                $videoRequest = VideoRequest::with([
+                    'catalog.category',
+                    'latestVideo',
+                    'user'
+                ])->where('id', $id)->first();
+            } else {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Journal not found or access denied.',
+                    'results' => null
+                ], 404);
+            }
         }
 
         $contacts = [];
@@ -1105,6 +1186,11 @@ class VideoRequestController extends Controller
         }
         $isEmotionalCategory = $catalog ? in_array($catalog->category_id, [2, 3]) : true;
 
+        $snapshot = [];
+        if ($isEmotionalCategory && $videoRequest->user_id == $userId) {
+            $snapshot = app(SnapshotService::class)->getEmotionalSnapshot($videoRequest->id);
+        }
+
         $data = [
             'catalog_id'              => $catalog->id ?? '',
             'catalog_message'         => $catalog->message ?? 'Checking in on your stress takes awareness and courage.',
@@ -1118,6 +1204,7 @@ class VideoRequestController extends Controller
             'perceived_score'         => $perceivedScore ?? 0,
             'actual_score'            => $measuredScore ?? 0,
             'emotional_insights'      => $formattedEmotions ?? [],
+            'emotional_snapshot'      => $snapshot ?? [],
             'final_video_transcript'  => $staticData['final_video_transcript'],
             'groups'                  => $groups,
             'gptSummary'              => $llmResponse,
@@ -1318,8 +1405,8 @@ class VideoRequestController extends Controller
                 'group_id'        => $row['group_id'],
                 'ref_first_name'  => $row['first_name'],
                 'ref_last_name'   => $row['last_name'],
-                'ref_country_code'=> $row['country_code'],
-                'ref_mobile'      => $row['mobile'],
+                'ref_country_code'=> GeneralHelper::onlyNumbers($row['country_code']),
+                'ref_mobile'      => GeneralHelper::onlyNumbers($row['mobile']),
                 'ref_email'       => $row['email'],
                 'ref_note'        => $note,
                 'ref_user_id'     => $refUserId,
@@ -1552,7 +1639,7 @@ class VideoRequestController extends Controller
 
         foreach ($phoneNumbers as $row) {
             $countryCode = $row['country_code'];
-            $mobile = $row['mobile'];
+            $mobile = GeneralHelper::onlyNumbers($row['mobile']);
             $email = $row['email'];
 
             // Find ref_user_id if a user exists with the same mobile/email
@@ -1598,23 +1685,20 @@ class VideoRequestController extends Controller
                 continue;
             }
 
-            // Create the share as a new VideoRequest (type = 'share')
-            VideoRequest::create([
-                'user_id'         => $userId,
-                'catalog_id'      => $originalRequest->catalog_id,
-                'contact_id'      => $row['contact_id'],
-                'group_id'        => $row['group_id'],
-                'ref_user_id'     => $refUserId,
-                'ref_first_name'  => $row['first_name'] ?? null,
-                'ref_last_name'   => $row['last_name'] ?? null,
-                'ref_country_code'=> $countryCode,
-                'ref_mobile'      => $mobile,
-                'ref_email'       => $refEmail,
-                'ref_note'        => $originalRequest->ref_note,
-                'title'           => $originalRequest->title,
-                'tags'            => $originalRequest->tags,
-                'type'            => 'share',
-                'status'          => 'Pending',
+            // Create the share as a new VideoRequestShare
+            VideoRequestShare::create([
+                'request_id'        => $originalRequestId,
+                'sender_user_id'    => $userId,
+                'recipient_user_id' => $refUserId,
+                'first_name'        => $row['first_name'] ?? null,
+                'last_name'         => $row['last_name'] ?? null,
+                'country_code'      => GeneralHelper::onlyNumbers($countryCode),
+                'mobile'            => GeneralHelper::onlyNumbers($mobile),
+                'email'             => $refEmail,
+                'note'              => $originalRequest->ref_note,
+                'contact_id'        => $row['contact_id'],
+                'group_id'          => $row['group_id'],
+                'status'            => 0, // ou 'Pending' se preferir string
             ]);
 
             $fullName = trim(($row['first_name'] ?? '') . ' ' . ($row['last_name'] ?? ''));
@@ -1638,9 +1722,9 @@ class VideoRequestController extends Controller
                             'note'          => $originalRequest->ref_note ?? '',
                             'signUpUrl'     => $envUrl,
                         ]
-                    ], function ($message) use ($refEmail, $fullName) {
+                    ], function ($message) use ($refEmail, $sendName) {
                         $message->to($refEmail)
-                            ->subject('👀 ' . $fullName . ' has shared a Vijo with you');
+                            ->subject('👀 ' . $sendName . ' has shared a Vijo with you');
                     });
                 } catch (\Exception $e) {
                     Log::error('Error sending email: ' . $e->getMessage());

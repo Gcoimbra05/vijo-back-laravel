@@ -211,6 +211,7 @@ class InsightsV2Service {
 
     public function getUserActivityStats($userId)
     {
+
         // Total number of check-ins (logins)
         $totalCheckIns = UserLogin::where('user_id', $userId)->count();
 
@@ -220,21 +221,22 @@ class InsightsV2Service {
             ->whereYear('logged_in_at', Carbon::now()->year)
             ->count();
 
-        // Distinct days with login (for streak calculation)
-        $loginDays = UserLogin::where('user_id', $userId)
-            ->orderBy('logged_in_at')
-            ->pluck('logged_in_at')
+        // Distinct days with video recordings (for streak calculation)
+        $recordingDays = VideoRequest::where('user_id', $userId)
+            ->whereHas('videos')
+            ->orderBy('created_at')
+            ->pluck('created_at')
             ->map(fn($dt) => Carbon::parse($dt)->toDateString())
             ->unique()
             ->values();
 
-        // Streak calculation
+        // Streak calculation (based on video recordings)
         $currentStreak = 0;
         $longestStreak = 0;
         $streak = 0;
         $prev = null;
 
-        foreach ($loginDays as $day) {
+        foreach ($recordingDays as $day) {
             if ($prev && Carbon::parse($prev)->diffInDays($day) === 1) {
                 $streak++;
             } else {
@@ -246,13 +248,13 @@ class InsightsV2Service {
             $prev = $day;
         }
 
-        // If the last login was today, the current streak is valid
+        // If the last recording was today, the current streak is valid
         $currentStreak = 0;
-        if ($loginDays->count() && Carbon::parse($loginDays->last())->isToday()) {
+        if ($recordingDays->count() && Carbon::parse($recordingDays->last())->isToday()) {
             // Count how many consecutive days up to today
             $currentStreak = 1;
-            for ($i = $loginDays->count() - 2; $i >= 0; $i--) {
-                if (Carbon::parse($loginDays[$i])->diffInDays($loginDays[$i + 1]) === 1) {
+            for ($i = $recordingDays->count() - 2; $i >= 0; $i--) {
+                if (Carbon::parse($recordingDays[$i])->diffInDays($recordingDays[$i + 1]) === 1) {
                     $currentStreak++;
                 } else {
                     break;

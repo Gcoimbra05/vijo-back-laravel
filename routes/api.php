@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\AffiliateController;
+use App\Http\Controllers\AiAgentController;
+use App\Http\Controllers\BaselineController;
 use App\Http\Controllers\ReferralCodeController;
 use App\Http\Controllers\CatalogAnswerController;
 use App\Http\Controllers\CatalogController;
@@ -17,15 +19,15 @@ use App\Http\Controllers\VideoRequestController;
 use App\Http\Controllers\TwoFactorAuthController;
 use App\Http\Controllers\VideoController;
 use App\Http\Middleware\ForceJsonResponse;
-
 use App\Http\Controllers\LlmTemplateController;
 use App\Http\Controllers\RuleEvaluationController;
 use App\Http\Controllers\SettingsController;
 use Illuminate\Support\Facades\Route;
-
 use App\Http\Controllers\EmloResponseController;
 use App\Http\Controllers\EmloResponseParamSpecsController;
 use App\Http\Controllers\PlatformTextController;
+use App\Http\Controllers\InsightsFilterController;
+use App\Http\Controllers\InsightsController;
 use App\Http\Controllers\QuickGoalController;
 use App\Http\Controllers\SkipVijoController;
 use App\Http\Controllers\UserFeedbackController;
@@ -107,6 +109,8 @@ Route::prefix('v2')->middleware(ForceJsonResponse::class)->group(function () {
         Route::apiResource('catalogs', CatalogController::class);
         Route::get('catalogs-by-category/{categoryId}', [CatalogController::class, 'getCatalogsByCategory']);
 
+        Route::apiResource('insights-filters', InsightsFilterController::class);
+
         Route::apiResource('categories', CategoryController::class);
         Route::apiResource('contacts', ContactController::class);
         Route::post('contacts/multiple', [ContactController::class, 'createMultiple']);
@@ -114,6 +118,8 @@ Route::prefix('v2')->middleware(ForceJsonResponse::class)->group(function () {
         Route::delete('groups/{group}/contacts/{contact}', [GroupController::class, 'removeContact']);
 
         Route::apiResource('referral-codes', ReferralCodeController::class);
+
+        Route::apiResource('baselines', BaselineController::class);
 
         // need to make these admin only
         Route::apiResource('affiliates', AffiliateController::class);
@@ -124,17 +130,22 @@ Route::prefix('v2')->middleware(ForceJsonResponse::class)->group(function () {
         Route::get('cred-score/{request_id}', [CredScoreController::class, 'getCredScore']);
 
         Route::prefix('emlo-response')->group(function () {
-            Route::get('{request_id}/{param}/compare', [RuleEvaluationController::class, 'evaluateRules']);
             Route::get('{param}/specification', [EmloResponseParamSpecsController::class, 'showByParamName']);
             Route::get('{request_id}/{param}', [EmloResponseController::class, 'getParamValueByRequestId']);
         });
 
-        Route::get('/insights-v2', [EmloInsightsService::class, 'getInsightsDataV2'])
+        Route::prefix('ai-agent')->group(function () {
+            Route::get('/emotion-insights/{emotion_name}', [AiAgentController::class, 'getSingleParamEmotionalInsights']);
+
+        });
+
+        Route::get('/insights-v2', [InsightsController::class, 'getInsights'])
             ->name('api.v2.insights.v2');
 
-        Route::get('/insights-v2/secondaryMetrics', [EmloInsightsService::class, 'getInsightsDataV2'])
+        Route::get('/insights-v2/secondaryMetrics', [InsightsController::class, 'getInsights'])
             ->name('api.v2.insights.v2.secondary-metrics');
         Route::get('/insights-v2/vijos', [CredScoreService::class, 'getAllLatestCredScoreData']);
+        //Route::get('/insights-v2/secondaryMetrics', [EmloInsightsService::class, 'getInsightsDataV2'])->name('api.v2.insights.v2.secondary-metrics');
 
         Route::get('/stripe/customer-portal', [StripeWebhookController::class, 'getCustomerPortal']);
 

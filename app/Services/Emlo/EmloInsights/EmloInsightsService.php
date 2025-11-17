@@ -2,37 +2,21 @@
 
 namespace App\Services\Emlo\EmloInsights;
 
-use App\Exceptions\CredScore\CredScoreNotFoundException;
-use App\Exceptions\Emlo\EmloNotFoundException;
-use App\Exceptions\VideoRequestNotFoundException;
+use Illuminate\Support\Facades\Log;
+use Carbon\Carbon;
 
-use App\Models\CredScoreInsightsAggregate;
-use App\Models\CredScoreValue;
 use App\Models\EmloInsightsParamAggregate;
-use App\Models\EmloInsightsSecondaryMetric;
 use App\Models\EmloResponseParamSpecs;
-use App\Models\EmloResponseValue;
-use App\Models\EmloResponse;
 use App\Models\VideoRequest;
 
 use App\Services\CredScore\CredScoreService;
 use App\Services\Emlo\EmloDatabaseLoader;
 use App\Services\Emlo\EmloInsights\AveragesService;
-use Exception;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Carbon\Carbon;
-use App\Services\Emlo\EmloResponseService;
-use App\Services\Emlo\EmloHelperService;
-use Illuminate\Support\Facades\Auth;
-
 use App\Services\Emlo\EmloInsights\InsightsV2Service;
 use App\Services\Emlo\EmloInsights\ProgressOverTimeService;
-use App\Services\Emlo\EmloInsights\SecondaryMetricsService;
 use App\Services\Rules\RuleEvaluationService;
-use Illuminate\Support\Facades\Log;
-
-use Illuminate\Support\Facades\Route;
+use App\Services\Emlo\EmloResponseService;
+use App\Services\Emlo\EmloHelperService;
 
 class EmloInsightsService
 {
@@ -40,15 +24,69 @@ class EmloInsightsService
         protected EmloResponseService $emloResponseService,
         protected ProgressOverTimeService $progressOverTimeService,
         protected InsightsV2Service $insightsV2Service,
-        protected SecondaryMetricsService $secondaryMetricsService,
         protected AveragesService $averagesService,
         protected CredScoreService $credScoreService,
         protected RuleEvaluationService $ruleEvaluationService,
         protected EmloHelperService $emloHelperService){}
 
-    public function getInsightsDataV2(Request $request)
+    public function getInsightsDataForSingleParam($userId, $requestId, $paramName)
     {
-        $routeName = Route::currentRouteName();
+        $paramSpec = EmloResponseParamSpecs::select('*')->where('param_name', $paramName)
+            ->first();
+        if (!$paramSpec) {
+            return [];
+        }
+
+        $aggregates = EmloInsightsParamAggregate::select('*')
+            ->where('request_id', $requestId)
+            ->where('emlo_param_spec_id', $paramSpec->id)
+            ->first();
+        if (!$aggregates) {
+            return $this->createEmotionDataArray($paramSpec);
+        }
+
+        /** @var \Illuminate\Support\Collection $allValuesOfParam */
+        $allValuesOfParam = $this->emloResponseService->getAllRawParamValues($userId, false, $paramSpec->id);
+        if (empty($allValuesOfParam)) {
+            return $this->createEmotionDataArray($paramSpec);
+        }
+
+        foreach ($allValuesOfParam as $valueOfParam) {
+            if ($valueOfParam->string_value == null && $valueOfParam->numeric_value != null) {
+                $valueOfParam->value = $valueOfParam->numeric_value;
+            } else if ($valueOfParam->string_value != null && $valueOfParam->numeric_value == null) {
+                $valueOfParam->value = $valueOfParam->string_value;
+            } else {
+                $valueOfParam->value = null;
+            }
+
+            if ($paramSpec->needs_normalization) {
+                $valueOfParam->value = (int) EmloHelperService::applyNormalizationFormula($valueOfParam->value, $paramSpec->param_name);
+            }
+        }
+        
+        $latestValue = $allValuesOfParam?->sortByDesc('created_at')->first()->value;  
+        $createdAt = $allValuesOfParam?->sortByDesc('created_at')->first()?->created_at;
+        $conditionMet = $this->ruleEvaluationService->quickRuleCheck($latestValue, $allValuesOfParam, $paramSpec);
+        
+        $emotionData = $this->createEmotionDataArray(
+            $paramSpec, 
+            $createdAt,
+            $latestValue,
+            $conditionMet,
+            $aggregates
+        );
+        return $emotionData;
+    }
+
+    public function getInsightsData($routeName, $userId, $baseline1, $baseline2)
+    {
+        Log::debug("baseline1: " . json_encode($baseline1) . "baseline2: " . json_encode($baseline2));
+
+        $paramsInUse = [];
+        $dataSubSection = '';
+        //$filterId = $request->get('filter_id');
+        //$compareId = $request->get('compare_id');
 
         if ($routeName == 'api.v2.insights.v2.secondary-metrics') {
             $paramsInUse = EmloDatabaseLoader::getSecondaryMetricParams();
@@ -58,202 +96,255 @@ class EmloInsightsService
             $dataSubSection = 'emotions';
         }
 
-        $userId = Auth::id();
-        if (!$userId) {
-            return response()->json(['error' => 'user not found'], 404);
+        $allEmotionsData = $this->constructDataArrayForBaselines($userId, $paramsInUse, $dataSubSection, $routeName, $baseline1, $baseline2);
+
+        $data = [
+            $dataSubSection => [
+                'lastMeasured' => $lastMeasured ?? '',
+                'profile' => $allEmotionsData ?? [],
+            ]
+        ];
+        return $data;
+    }
+
+    private function constructDataArrayForBaselines($userId, $paramsInUse, $dataSubSection, $routeName, $baseline1, $baseline2)
+    {
+        if ($baseline1 && !$baseline2) {
+            Log::debug("1st branch");
+            $allEmotionsData = $this->retrieveDataAndFillUpDataArray($userId, $paramsInUse, $dataSubSection, $routeName, $baseline1);
+        } else if ($baseline1 && $baseline2) {
+            Log::debug("2nd branch");
+            $baseline2Data = $this->retrieveDataAndFillUpDataArray($userId, $paramsInUse, $dataSubSection, $routeName, $baseline2);
+            Log::debug("baseline2 data: " . json_encode($baseline2Data));
+            $allEmotionsData = $this->retrieveDataAndFillUpDataArray($userId, $paramsInUse, $dataSubSection, $routeName, $baseline1, $baseline2Data);
+            Log::debug("data about to be returned: " . json_encode($allEmotionsData));
+        } else {
+            Log::debug("3rd branch");
+            $allEmotionsData = $this->retrieveDataAndFillUpDataArray($userId, $paramsInUse, $dataSubSection, $routeName);
         }
 
-        try{
-            $request = VideoRequest::where('user_id', $userId)
-                ->whereHas('videos')
-                ->whereHas('emloInsightsParamAggregates')
-                ->orderBy('created_at', 'desc')
+        if(!$allEmotionsData) {
+            return $this->buildEmptyResponseArray($paramsInUse, $dataSubSection);
+        }
+        return $allEmotionsData;
+    }
+    private function retrieveDataAndFillUpDataArray($userId, $paramsInUse, $dataSubSection, $routeName, $baseline = null, $compareArray = null)
+    {
+        $request = VideoRequest::latestWithVideoAndParamAggregates($userId, $baseline?->starts_at, $baseline?->ends_at);
+        if (!$request) {
+            return [];
+        }
+        Log::debug("the request is: " . json_encode($request));
+
+        $aggregates = EmloInsightsParamAggregate::select('*')
+            ->where('request_id', $request->id)
+            ->get();
+        // Check if the collection is empty
+        if ($aggregates->isEmpty()) {
+            return [];
+        }
+
+        Log::debug("the aggregates are: " . json_encode($aggregates));
+
+        $allValuesOfAllParams = $this->resolveAllParamValues($routeName, $userId, $baseline?->starts_at, $baseline?->ends_at);
+        if ($allValuesOfAllParams->isEmpty()) {
+            return [];
+        }
+
+        Log::debug("the allValuesOfAllParams" . "for baseline: " . json_encode($baseline) . "are: " . json_encode($allValuesOfAllParams));
+
+        $allEmotionsData = [];
+
+        foreach ($paramsInUse as $paramInUse) {
+            $aggregatesOfParam = $aggregates
+                ->where('emlo_param_spec_id', $paramInUse->id)
+                ->sortByDesc('created_at')
                 ->first();
-            if (!$request) {
-                Log::info('No video request with aggregation found for user: ' . $userId);
-                throw New VideoRequestNotFoundException("video request w/ insights not found for user {$userId}");
+
+            /** @var \Illuminate\Support\Collection $allValuesOfParam */
+            $allValuesOfParam = $allValuesOfAllParams->get($paramInUse->id);
+            if (!$allValuesOfParam) {
+                $allEmotionsData [] = $this->createEmotionDataArray($paramInUse);
+                continue;
             }
 
-            // Get the aggregation
-            $aggregates = EmloInsightsParamAggregate::select(
-                    'emlo_param_spec_id',
-                    'since_start',
-                    "since_start_progress_over_time",
-                    'morning',
-                    'afternoon',
-                    'evening',
-                    'total_average',
-                    'last_30_days_progress_over_time')
-                ->where('request_id', $request->id)
-                ->get();
-            if (!$aggregates) {
-                throw new EmloNotFoundException("emlo insights not found for request {$request->id}");
+            $this->normalizeAllParamValues($paramInUse, $allValuesOfParam);
+
+            $latestValue = $allValuesOfParam?->sortByDesc('created_at')->first()->value;
+            $createdAt = $allValuesOfParam?->sortByDesc('created_at')->first()?->created_at;
+            $conditionMet = $this->ruleEvaluationService->quickRuleCheck($latestValue, $allValuesOfParam, $paramInUse);
+            
+            $compareArrayOfParam = null;
+            if ($compareArray) {
+                $searchId = $paramInUse->simplified_param_name;
+                $filtered = array_filter($compareArray, function($item) use ($searchId) {
+                    return isset($item['id']) && $item['id'] === $searchId;
+                });
+                $compareArrayOfParam = !empty($filtered) ? reset($filtered) : null;
             }
-
-            $latestValues = $this->getRawParamValues($request->id);
-
-            $allEmotionsData = [];
-
-            foreach ($paramsInUse as $paramInUse) {
-                $aggregatesOfParam = $aggregates->where('emlo_param_spec_id', $paramInUse->id)->first();
-
-                $latestValue = $latestValues->firstWhere('emlo_param_spec_id', $paramInUse->id)?->value ?? 0;
-                $latestValue = (int) ($paramInUse->needs_normalization ? EmloHelperService::applyNormalizationFormula($latestValue, $paramInUse->param_name) : $latestValue);
-
-                $lastMeasured = $latestValues->firstWhere('emlo_param_spec_id', $paramInUse->id)?->created_at->format('M j, Y') ?? '';
-                $lastMeasuredDetailed = $latestValues
-                    ->firstWhere('emlo_param_spec_id', $paramInUse->id)?->created_at
-                    ->format('M j, Y g:iA') ?? '';
-
-
-                if ($latestValue != 0) {
-                    $conditionMet = $this->ruleEvaluationService->quickRuleCheck($latestValue, $latestValues, $paramInUse);
-                } else if ($latestValue == 0 && $paramInUse->param_name == 'Aggression') {
-                    $conditionMet = $this->ruleEvaluationService->quickRuleCheck($latestValue, $latestValues, $paramInUse);
-                }
-                
-                $timeOfDayAverages = $this->createTimeofDayAverages($aggregatesOfParam);
-
-                $weeklyData = $this->averagesService->createWeeklyData($aggregatesOfParam);
-
-                $thirtyDayData = $this->averagesService->create30DayData($aggregatesOfParam);
-
-                $threeMonthsData = $this->averagesService->aggregateMonthlyData($aggregatesOfParam, '3months');
-                $sixMonthsData = $this->averagesService->aggregateMonthlyData($aggregatesOfParam, '6months');
-                $monthsSinceStartData = $this->averagesService->aggregateMonthlyData($aggregatesOfParam, 'since_start');
-
-
-                if ($dataSubSection == 'emotions') {
-                    $emotionData = $this->createEmotionData(
-                        $paramInUse, 
-                        $aggregatesOfParam,
-                        $lastMeasuredDetailed,
-                        $latestValue,
-                        $conditionMet,
-                            $weeklyData,
-                            $timeOfDayAverages,
-                                $thirtyDayData,
-                            $threeMonthsData,
-                            $sixMonthsData,
-                            $monthsSinceStartData
-                    );
-                } else if ($dataSubSection == 'advanced') {
-                    $emotionData = $this->createSecondaryMetricData(
-                        $paramInUse, 
-                        $aggregatesOfParam,
-                        $latestValue,
-                        $lastMeasuredDetailed,
-                        $conditionMet,
-                            $weeklyData,
-                            $timeOfDayAverages,
-                                $thirtyDayData,
-                            $threeMonthsData,
-                            $sixMonthsData,
-                            $monthsSinceStartData
-                    );
-                }
-                $allEmotionsData [] = $emotionData;
-            } 
-        } catch (Exception) {
-            foreach ($paramsInUse as $paramInUse) {
-                if ($dataSubSection == 'emotions') {
-                    $emotionData = $this->createEmotionData($paramInUse);
-                } else if ($dataSubSection == 'advanced') {
-                    $emotionData = $this->createSecondaryMetricData($paramInUse);
-                }
-                $allEmotionsData [] = $emotionData;
-            }
-        }
+            
+            $emotionData = $this->createDataArrayForSubsection($dataSubSection, $paramInUse, $createdAt, $latestValue, $conditionMet, $aggregatesOfParam, $compareArrayOfParam);
+            $allEmotionsData [] = $emotionData;
+        } 
         
         if ($dataSubSection == 'advanced') $allEmotionsData = $this->orderSecondaryMetricsFinalArray($allEmotionsData);
         if ($dataSubSection == 'emotions') $allEmotionsData = $this->emloHelperService->orderInsightsFinalArray($allEmotionsData);
 
-        return response()->json([
-                'status' => 'success',
-                'message' => 'Insights data retrieved successfully',
-                'data' => [
-                    $dataSubSection => [
-                        'lastMeasured' => $lastMeasured ?? '',
-                        'profile' => $allEmotionsData ?? [],
-                    ]
-                ]
-            ]
-        );
+        Log::debug("data about to be returned:" . json_encode($allEmotionsData));
+        return $allEmotionsData;
     }
 
-    private function createEmotionData(
-        $paramInUse = null, 
-        $aggregate = null, 
-        $lastMeasured = null,
-        $latest_value = null, 
-        $conditionMet = null,
-        $weeklyData = null,
-        $timeOfDayAverages = null,
-        $thirtyDayData = null,
-        $threeMonthsData = null,
-        $sixMonthsData = null,
-        $monthsSinceStartData = null
-        ) 
+    private function createDataArrayForSubsection($dataSubSection, $paramInUse, $createdAt, $latestValue, $conditionMet, $aggregatesOfParam, $compareArray = null)
     {
+        if ($dataSubSection == 'emotions') {
+            $emotionData = $this->createEmotionDataArray(
+                $paramInUse, 
+                $createdAt,
+                $latestValue,
+                $conditionMet,
+                $aggregatesOfParam,
+                $compareArray
+
+            );
+        } else if ($dataSubSection == 'advanced') {
+            $emotionData = $this->createSecondaryMetricDataArray(
+                $paramInUse, 
+                $latestValue,
+                $createdAt,
+                $conditionMet,
+                $aggregatesOfParam,
+                $compareArray
+            );
+        }
+        return $emotionData;
+    }
+
+    private function resolveAllParamValues($routeName, $userId, $startsAt = null,  $endsAt = null)
+    {
+        if ($routeName == 'api.v2.insights.v2.secondary-metrics') {
+            $allValuesOfAllParams = $this->emloResponseService->getAllRawParamValues($userId, true, null, $startsAt, endDate: $endsAt);
+        } else {
+            $allValuesOfAllParams = $this->emloResponseService->getAllRawParamValues($userId, null, null, $startsAt, endDate: $endsAt);
+        }
+
+        if ($allValuesOfAllParams->isEmpty()) {
+            return collect(); // or new Collection()
+        }
+        
+        foreach ($allValuesOfAllParams as $allValuesOfParam) {
+            foreach ($allValuesOfParam as $valueOfParam) {
+                if ($valueOfParam->string_value === null && $valueOfParam->numeric_value !== null) {
+                    $valueOfParam->value = $valueOfParam->numeric_value;
+                } else if ($valueOfParam->string_value !== null && $valueOfParam->numeric_value === null) {
+                    $valueOfParam->value = $valueOfParam->string_value;
+                } else {
+                    $valueOfParam->value = null;
+                }
+            }
+        }
+        return $allValuesOfAllParams;
+    }
+
+    private function normalizeAllParamValues($paramInUse, $allValuesOfParam)
+    {
+        if ($paramInUse->needs_normalization) {
+            foreach ($allValuesOfParam as $valueOfParam) {
+                $valueOfParam->value = (int) EmloHelperService::applyNormalizationFormula($valueOfParam->value, $paramInUse->param_name);
+            }
+        }
+    }
+
+    private function buildEmptyResponseArray($paramsInUse, $dataSubSection)
+    {
+        $allEmotionsData = [];
+        
+        foreach ($paramsInUse as $paramInUse) {
+            if ($dataSubSection == 'emotions') {
+                $allEmotionsData[] = $this->createEmotionDataArray($paramInUse);
+            } else if ($dataSubSection == 'advanced') {
+                $allEmotionsData[] = $this->createSecondaryMetricDataArray($paramInUse);
+            }
+        }
+        
+        if ($dataSubSection == 'advanced') {
+            $allEmotionsData = $this->orderSecondaryMetricsFinalArray($allEmotionsData);
+        } else {
+            $allEmotionsData = $this->emloHelperService->orderInsightsFinalArray($allEmotionsData);
+        }
 
         return [
-            "id" => $paramInUse->simplified_param_name ?? '',
-            "emoji"=> $paramInUse->emoji ?? '',
-            "name"=> $paramInUse->simplified_param_name ?? '',
-            "current" => $latest_value ?? 0,
-            "average" => $aggregate->total_average ?? 0,
-            "lastMeasured" => $lastMeasured ?? '',
-            "range" => $conditionMet->emotion_performance ?? '',
-            "dayChartData" =>  $weeklyData ?? [],
-            "timeChartData" => $timeOfDayAverages ?? [],
-            "timelineData" => [
-                "30days" => $thirtyDayData ?? [],
-                "3months" => $threeMonthsData ?? [],
-                "6months" => $sixMonthsData ?? [],
-                "all" => $monthsSinceStartData ?? []
+            $dataSubSection => [
+                'lastMeasured' => '',
+                'profile' => $allEmotionsData,
             ]
         ];
     }
 
-    private function createSecondaryMetricData(
-        $paramInUse = null, 
-        $aggregate = null, 
-        $latest_value = null,
-        $lastMeasured = null,
+    public function createEmotionDataArray(
+        $paramInUse = null,
+        $createdAt = null,
+        $latest_value = null, 
         $conditionMet = null,
-        $weeklyData = null,
-        $timeOfDayAverages = null,
-        $thirtyDayData = null,
-        $threeMonthsData = null,
-        $sixMonthsData = null,
-        $monthsSinceStartData = null
-        ) 
+        $aggregatesOfParam = null,
+        $compareArray = null
+    ) 
     {
+        $safeAggregate = $aggregatesOfParam ?? new \stdClass();
+        
+        return [
+            "id" => $paramInUse?->simplified_param_name ?? '',
+            "emoji" => $paramInUse?->emoji ?? '',
+            "name" => $paramInUse?->simplified_param_name ?? '',
+            "current" => $latest_value ?? 0,
+            "average" => $safeAggregate->total_average ?? 0,
+            "compare" => $compareArray ?? null,
+            "lastMeasured" => $createdAt ? (Carbon::parse($createdAt)->format('M j, Y g:iA') ?? '') : '',
+            "range" => $conditionMet?->emotion_performance ?? '',
+            "dayChartData" => $aggregatesOfParam ? ($this->averagesService->createWeeklyData($aggregatesOfParam) ?? []) : [],
+            "timeChartData" => $aggregatesOfParam ? ($this->createTimeofDayAverages($aggregatesOfParam) ?? []) : [],
+            "timelineData" => [
+                "30days" => $aggregatesOfParam ? ($this->averagesService->create30DayData($aggregatesOfParam) ?? []) : [],
+                "3months" => $aggregatesOfParam ? ($this->averagesService->aggregateMonthlyData($aggregatesOfParam, '3months') ?? []) : [],
+                "6months" => $aggregatesOfParam ? ($this->averagesService->aggregateMonthlyData($aggregatesOfParam, '6months') ?? []) : [],
+                "all" => $aggregatesOfParam ? ($this->averagesService->aggregateMonthlyData($aggregatesOfParam, 'since_start') ?? []) : []
+            ]
+        ];
+    }
 
+    private function createSecondaryMetricDataArray(
+        $paramInUse = null, 
+        $latest_value = null,
+        $createdAt = null,
+        $conditionMet = null,
+        $aggregatesOfParam = null,
+        $compareArray = null
+    ) 
+    {
         $statusType = '';
         if (!empty($conditionMet)) {
             $statusType = $this->getStatusType($paramInUse, $conditionMet->emotion_performance_secondary);
         }
-
+        
         return [
-            "id" => $paramInUse->simplified_param_name ?? '',
-            "emoji"=> $paramInUse->emoji ?? '',
-            "name"=> $this->changeParamName($paramInUse) ?? $paramInUse->simplified_param_name?? "",
+            "id" => $paramInUse?->simplified_param_name ?? '',
+            "emoji" => $paramInUse?->emoji ?? '',
+            "name" => $this->changeParamName($paramInUse) ?? $paramInUse?->simplified_param_name ?? "",
             "current" => $latest_value ?? 0,
-            "average" => $aggregate->total_average ?? 0,
-            "lastMeasured" => $lastMeasured ?? '',
-            "range" => $conditionMet->emotion_performance ?? '',
-            "description" => $paramInUse->description ?? '',
-            "status" => $conditionMet->emotion_performance ?? '',
-            "statusMessage" => $conditionMet->message ?? '',
+            "average" => $aggregatesOfParam?->total_average ?? 0,
+            "compare" => $compareArray ?? null,
+            "lastMeasured" => $createdAt ? (Carbon::parse($createdAt)->format('M j, Y g:iA') ?? '') : '',
+            "range" => $conditionMet?->emotion_performance ?? '',
+            "description" => $paramInUse?->description ?? '',
+            "status" => $conditionMet?->emotion_performance ?? '',
+            "statusMessage" => $conditionMet?->message ?? '',
             "statusType" => $statusType,
-            "dayChartData" =>  $weeklyData ?? [],
-            "timeChartData" => $timeOfDayAverages ?? [],
+            "dayChartData" => $aggregatesOfParam ? ($this->averagesService->createWeeklyData($aggregatesOfParam) ?? []) : [],
+            "timeChartData" => $aggregatesOfParam ? ($this->createTimeofDayAverages($aggregatesOfParam) ?? []) : [],
             "timelineData" => [
-                "30days" => $thirtyDayData ?? [],
-                "3months" => $threeMonthsData ?? [],
-                "6months" => $sixMonthsData ?? [],
-                "all" => $monthsSinceStartData ?? []
+                "30days" => $aggregatesOfParam ? ($this->averagesService->create30DayData($aggregatesOfParam) ?? []) : [],
+                "3months" => $aggregatesOfParam ? ($this->averagesService->aggregateMonthlyData($aggregatesOfParam, '3months') ?? []) : [],
+                "6months" => $aggregatesOfParam ? ($this->averagesService->aggregateMonthlyData($aggregatesOfParam, '6months') ?? []) : [],
+                "all" => $aggregatesOfParam ? ($this->averagesService->aggregateMonthlyData($aggregatesOfParam, 'since_start') ?? []) : []
             ]
         ];
     }
@@ -363,56 +454,6 @@ class EmloInsightsService
         ];
     }
 
-    public function getRawParamValues($requestId)
-    {
-        $response = EmloResponse::select('id')
-            ->where('request_id', $requestId)
-            ->first();
-
-        if(!$response) {
-            throw new EmloNotFoundException("EMLO response not found for request {$requestId}");
-        }
-
-        Log::debug("response is: " . json_encode($response) . "request  is: " . json_encode($requestId));
-
-        // Get regular param values
-        $regularValues = EmloResponseValue::select('emlo_response_values.numeric_value', 'emlo_response_values.string_value', 'emlo_response_paths.emlo_param_spec_id', 'emlo_response_values.created_at')
-                ->join('emlo_response_paths', 'emlo_response_values.path_id', '=', 'emlo_response_paths.id')
-                ->whereNotNull('emlo_response_paths.emlo_param_spec_id')
-                ->where('emlo_response_values.response_id', $response->id)
-                ->get();
-
-        // Get segment param values
-        $segmentValues = EmloResponseValue::select('numeric_value', 'emlo_param_spec_id', 'emlo_response_values.created_at')
-                ->where('emlo_response_values.response_id', $response->id)
-                ->whereNotNull('emlo_param_spec_id')
-                ->get();
-
-        Log::debug("segment values are: " . json_encode($segmentValues));
-
-        $regularParams = collect($regularValues->map(function ($responseValue) {
-            return (object) [
-                'emlo_param_spec_id' => $responseValue->emlo_param_spec_id ?? null,
-                'value' => $responseValue->numeric_value ?? (int)($responseValue->string_value ?? 0),
-                'created_at' => $responseValue->created_at ?? null
-            ];
-        }));
-
-        // Transform segment param values
-        $segmentParams = collect($segmentValues->map(function ($responseValue) {
-            return (object) [
-                'emlo_param_spec_id' => $responseValue->emlo_param_spec_id ?? null,
-                'value' => $responseValue->numeric_value ?? (int)($responseValue->string_value ?? 0),
-                'created_at' => $responseValue->created_at ?? null
-            ];
-        }));
-
-        // Combine both collections
-        $allParams = $regularParams->merge($segmentParams);
-
-        return $allParams;
-    }
-
     public function getUserActivity($userId, $filterBy)
     {
         $stats = $this->insightsV2Service->getUserActivityStats($userId);
@@ -456,43 +497,8 @@ class EmloInsightsService
         ];
     }
 
-    private function getTimeWindow($filterBy, $userId)
+    private function getTimestampsOfBaselines($baseline1, $baseline2)
     {
-        $now = Carbon::now();
 
-        switch ($filterBy) {
-            case 'last_7_days':
-                return [
-                    'start' => $now->copy()->subDays(7),
-                    'end' => $now->copy()
-                ];
-
-            case 'last_30_days':
-                return [
-                    'start' => $now->copy()->subDays(30),
-                    'end' => $now->copy()
-                ];
-
-            case 'since_start':
-                $query = DB::table('video_requests');
-                
-                // Add user filter if provided
-                if ($userId) {
-                    $query->where('user_id', $userId);
-                }
-                
-                $earliest = $query->min('created_at');
-                
-                return [
-                    'start' => $earliest ? Carbon::parse($earliest) : $now->copy()->subYear(),
-                    'end' => $now->copy()
-                ];
-
-            default:
-                return [
-                    'start' => $now->copy()->subDays(7),
-                    'end' => $now->copy()
-                ];
-        }
-    }  
+    }
 }

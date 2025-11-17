@@ -45,11 +45,9 @@ class ProcessVideoUpload implements ShouldQueue
 
     public function handle()
     {
-        Log::info('Processing video upload', [
+        Log::info('Processing video upload Job', [
             'videoRequestId' => $this->videoRequestId,
-            'filePath' => $this->filePath,
-            'videoDuration' => $this->videoDuration,
-            'originalName' => $this->originalName,
+            'filePath' => $this->filePath
         ]);
 
         try {

@@ -16,8 +16,8 @@ use App\Services\Emlo\EmloResponseService;
 use Illuminate\Support\Facades\Log;
 use App\Services\Emlo\EmloInsights\InsightsV2Service;
 use App\Services\Emlo\EmloInsights\ProgressOverTimeService;
-use App\Services\Emlo\EmloInsights\SecondaryMetricsService;
 use App\Services\Emlo\EmloHelperService;
+use Illuminate\Support\Facades\DB;
 
 class PostRequestAggregation {
 
@@ -25,7 +25,6 @@ class PostRequestAggregation {
         protected EmloResponseService $emloResponseService,
         protected ProgressOverTimeService $progressOverTimeService,
         protected InsightsV2Service $insightsV2Service,
-        protected SecondaryMetricsService $secondaryMetricsService,
         protected AveragesService $averagesService,
         protected EmloInsightsService $emloInsightsService,
         protected CredScoreService $credScoreService){}
@@ -35,24 +34,30 @@ class PostRequestAggregation {
         try {
             $paramsWSpec = EmloResponseParamSpecs::select('param_name', 'id', 'needs_normalization')->get();
             foreach ($paramsWSpec as $paramWSpec) {
+                    $allValuesOfParam = $this->emloResponseService->getAllRawParamValues($userId, false, $paramWSpec->id);
+                    foreach ($allValuesOfParam as $valueOfParam) {
+                        if ($valueOfParam->string_value == null && $valueOfParam->numeric_value != null) {
+                            $valueOfParam->value = $valueOfParam->numeric_value;
+                        } else if ($valueOfParam->string_value != null && $valueOfParam->numeric_value == null) {
+                            $valueOfParam->value = $valueOfParam->string_value;
+                        } else {
+                            $valueOfParam->value = null;
+                        }
 
-                    $result = $this->emloResponseService->getAllValuesOfParam($paramWSpec->param_name, $userId, []);
-                    foreach ($result as $value) {
-                        if ($paramWSpec->needs_normalization == 1) {
-                            Log::debug("satisfied condition");
-                            $value->value = (int) EmloHelperService::applyNormalizationFormula($value->value, $paramWSpec->param_name);
+                        if ($paramWSpec->needs_normalization) {
+                            $valueOfParam->value = (int) EmloHelperService::applyNormalizationFormula($valueOfParam->value, $paramWSpec->param_name);
                         }
                     }
-                    
-                    $last_7_days = $this->averagesService->aggregateData($result, 'last_7_days');
-                    $last_30_days = $this->averagesService->aggregateData($result, 'last_30_days');
-                    $since_start = $this->averagesService->aggregateData($result, 'since_start');
-                    $timeOfDayAverages = $this->averagesService->createTimeOfDayAverages($result);
-                    $last_7_days_progressOverTimeData = $this->progressOverTimeService->getProgressOverTimeData($result, 'last_7_days');
-                    $last_30_days_progressOverTimeData = $this->progressOverTimeService->getProgressOverTimeData($result, 'last_30_days');
-                    $since_start_progressOverTimeData = $this->progressOverTimeService->getProgressOverTimeData($result, 'since_start');
 
-                    $totalAverage = $this->averagesService->getOverallAverage($result, 'since_start');
+                    $last_7_days = $this->averagesService->aggregateData($allValuesOfParam, 'last_7_days');
+                    $last_30_days = $this->averagesService->aggregateData($allValuesOfParam, 'last_30_days');
+                    $since_start = $this->averagesService->aggregateData($allValuesOfParam, 'since_start');
+                    $timeOfDayAverages = $this->averagesService->createTimeOfDayAverages($allValuesOfParam);
+                    $last_7_days_progressOverTimeData = $this->progressOverTimeService->getProgressOverTimeData($allValuesOfParam, 'last_7_days');
+                    $last_30_days_progressOverTimeData = $this->progressOverTimeService->getProgressOverTimeData($allValuesOfParam, 'last_30_days');
+                    $since_start_progressOverTimeData = $this->progressOverTimeService->getProgressOverTimeData($allValuesOfParam, 'since_start');
+
+                    $totalAverage = $this->averagesService->getOverallAverage($allValuesOfParam, 'since_start');
 
                     $inputData = [
                         'request_id' => $requestId,
@@ -68,11 +73,16 @@ class PostRequestAggregation {
                         'since_start_progress_over_time' => json_encode($since_start_progressOverTimeData),
                         'total_average' => $totalAverage
                     ];
-                    Log::info("EmloInsightsParamAggregate::create", $inputData);
                     EmloInsightsParamAggregate::create($inputData);
-            } 
-            $this->credScoreService->processCredScore($requestId, $userId);
+            }
 
+            $categoryId = DB::table('video_requests')
+                ->join('catalogs', 'video_requests.catalog_id', '=', 'catalogs.id')
+                ->where('video_requests.id', $requestId)
+                ->value('catalogs.category_id');            
+            if ($categoryId != 1) {
+                $this->credScoreService->processCredScore($requestId, $userId);
+            }
         } catch (Exception $e)  {
             Log::error("aggregation pipeline failed w/ error: " . $e->getTraceAsString());
             Log::error("aggregation pipeline failed w/ error message : " . $e->getMessage());

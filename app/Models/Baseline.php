@@ -7,20 +7,15 @@ use Illuminate\Database\Eloquent\Model;
 use OwenIt\Auditing\Contracts\Auditable as AuditableContract;
 use OwenIt\Auditing\Auditable;
 
-class Category extends Model implements AuditableContract
+class Baseline extends Model implements AuditableContract
 {
     use HasFactory, Auditable;
 
+    protected $table = 'baselines';
     protected $fillable = [
+        'user_id',
         'name',
-        'description',
-        'emoji',
-        'order',
-        'status',
+        'starts_at',
+        'ends_at'
     ];
-
-    public function catalogs()
-    {
-        return $this->hasMany(Catalog::class, 'category_id');
-    }
 }

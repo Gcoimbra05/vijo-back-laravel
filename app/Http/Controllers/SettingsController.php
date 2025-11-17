@@ -106,8 +106,8 @@ class SettingsController extends Controller
                     "label" => "BR (+55)"
                 ],
                 [
-                    "code" => 63,
-                    "label" => "PH (+63)"
+                    "code" => 385,
+                    "label" => "HR (+385)"
                 ],
                 [
                     "code" => 91,
@@ -118,8 +118,12 @@ class SettingsController extends Controller
                     "label" => "IL (+972)"
                 ],
                 [
-                    "code" => 385,
-                    "label" => "HR (+385)"
+                    "code" => 47,
+                    "label" => "NO (+47)"
+                ],
+                [
+                    "code" => 63,
+                    "label" => "PH (+63)"
                 ],
             ],
         ]);

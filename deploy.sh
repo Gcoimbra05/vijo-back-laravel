@@ -47,13 +47,13 @@ sudo supervisorctl update
 sudo supervisorctl restart all
 
 # Set correct file owner (e.g., www-data for Apache/Nginx)
-sudo chown -R $SERVER_USER:www-data /var/www/html/vijo_laravel
+sudo chown -R $SERVER_USER:www-data $APP_DIR
 
 # Grant write permission to group (www-data) where needed
-sudo chmod -R ug+rwX /var/www/html/vijo_laravel
+sudo chmod -R ug+rwX $APP_DIR
 
 # Ensure vendor folder has proper permissions
-sudo chmod -R 775 /var/www/html/vijo_laravel/vendor
+sudo chmod -R 775 $APP_DIR/vendor
 
 # echo "♻️ Restarting PHP-FPM (to clear OpCache)..."
 # sudo systemctl restart php$PHP_VERSION-fpm

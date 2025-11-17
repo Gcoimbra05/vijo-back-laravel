@@ -98,7 +98,6 @@ class CatalogController extends Controller
             'is_promotional' => $request->is_promotional,
             'is_premium' => $request->is_premium,
             'video_type_id' => $request->video_type_id,
-            'cred_score_id' => $request->cred_score_id ?? 1,
         ]);
 
         if ($request->wantsJson()) {
@@ -131,7 +130,6 @@ class CatalogController extends Controller
             ['label' => 'Edit Catalog', 'url' => null],
         ];
         $tags = Tag::all();
-        $from = request()->get('from', 'catalog');
 
         return view('admin.catalogs.form', [
             'action' => 'Edit',
@@ -143,8 +141,7 @@ class CatalogController extends Controller
             'videoTypes' => $videoTypes,
             'categories' => $categories,
             'catalogs' => $catalogs,
-            'tags' => $tags,
-            'from' => $from,
+            'tags' => $tags
         ]);
 
     }
@@ -219,13 +216,8 @@ class CatalogController extends Controller
 
     public function getSuggestedCatalogs($userId = null, $limit = 3)
     {
-        // Find all active catalogs in the current category
         $categoryId = $this->catalog->category_id ?? 0;
         $today = now()->toDateString();
-        $allCatalogs = Catalog::where('is_deleted', 0)
-            ->where('status', 1)
-            ->where('category_id', $categoryId)
-            ->get(['id', 'title', 'description', 'emoji', 'video_type_id', 'category_id']);
 
         // Get catalogs skipped by the user today
         $skippedCatalogIds = SkipVijo::where('user_id', $userId)
@@ -233,41 +225,27 @@ class CatalogController extends Controller
             ->pluck('catalog_id')
             ->toArray();
 
-        // Count how many times each catalog was recorded by the user today
-        $catalogCounts = VideoRequest::where('user_id', $userId)
-            ->whereIn('catalog_id', $allCatalogs->pluck('id'))
+        // Get all active catalogs in the category, not skipped today
+        $catalogs = Catalog::where('is_deleted', 0)
+            ->where('status', 1)
+            ->where('category_id', $categoryId)
+            ->whereNotIn('id', $skippedCatalogIds)
+            ->get(['id', 'title', 'description', 'emoji', 'video_type_id', 'category_id']);
+
+        // Get usage count for each catalog today
+        $usageCounts = VideoRequest::where('user_id', $userId)
+            ->whereIn('catalog_id', $catalogs->pluck('id'))
             ->whereDate('created_at', $today)
             ->selectRaw('catalog_id, COUNT(*) as count')
             ->groupBy('catalog_id')
             ->pluck('count', 'catalog_id');
 
-        // Find the lowest number of recordings
-        $minCount = $catalogCounts->count() ? $catalogCounts->min() : 0;
+        // Sort catalogs by least used first
+        $sortedCatalogs = $catalogs->sortBy(function($catalog) use ($usageCounts) {
+            return $usageCounts[$catalog->id] ?? 0;
+        })->values();
 
-        // Filter catalogs that the user recorded the least number of times and did not skip today
-        $suggestedCatalogs = $allCatalogs->filter(function($catalog) use ($catalogCounts, $minCount, $skippedCatalogIds) {
-            return ($catalogCounts[$catalog->id] ?? 0) == $minCount && !in_array($catalog->id, $skippedCatalogIds);
-        });
-
-        // Avoid recommending the same catalog that is currently being displayed
-        $suggestedCatalogs = $suggestedCatalogs->filter(function($catalog) {
-            return $catalog->id !== ($this->catalog->id ?? 0);
-        });
-
-        // If there are not enough, fill with other catalogs from other categories not skipped today
-        if ($suggestedCatalogs->count() < $limit) {
-            $needed = $limit - $suggestedCatalogs->count();
-            $otherCatalogs = Catalog::where('is_deleted', 0)
-                ->where('status', 1)
-                ->where('category_id', '<>', $categoryId)
-                ->whereNotIn('id', $skippedCatalogIds)
-                ->where('id', '<>', ($this->catalog->id ?? 0))
-                ->limit($needed)
-                ->get(['id', 'title', 'description', 'emoji', 'video_type_id', 'category_id']);
-            $suggestedCatalogs = $suggestedCatalogs->concat($otherCatalogs);
-        }
-
-        return $suggestedCatalogs->take($limit)->values();
+        return $sortedCatalogs->take($limit);
     }
 
 }
