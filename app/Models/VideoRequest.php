@@ -112,4 +112,17 @@ class VideoRequest extends Model implements AuditableContract
 
         parent::delete();
     }
+
+    public static function latestWithVideoAndParamAggregates($userId, $startDate = null, $endDate = null)
+    {
+        return static::where('user_id', $userId)
+            ->whereHas('videos')
+            ->whereHas('emloInsightsParamAggregates')
+            ->when($startDate && $endDate, function ($query) use ($startDate, $endDate) {
+                $query->whereBetween('created_at', [$startDate, $endDate]);
+            })
+            ->latest()
+            ->first();
+    }
+
 }

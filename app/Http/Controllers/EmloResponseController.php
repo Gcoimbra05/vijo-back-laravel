@@ -13,7 +13,6 @@ use App\Services\Emlo\EmloInsights\EmloInsightsService;
 
 use App\Exceptions\Emlo\EmloNotFoundException;
 use App\Models\VideoRequest;
-use Symfony\Component\HttpKernel\Event\RequestEvent;
 
 class EmloResponseController extends Controller {
 
@@ -174,11 +173,7 @@ class EmloResponseController extends Controller {
             ], 404);
         }
 
-        $request = VideoRequest::where('user_id', $userId)
-            ->whereHas('videos')
-            ->whereHas('emloInsightsParamAggregates')
-            ->orderBy('created_at', 'desc')
-            ->first();
+        $request = VideoRequest::latestWithVideoAndParamAggregates($userId);
 
         $snapshot = $lastVijo = null;
         if ($request){

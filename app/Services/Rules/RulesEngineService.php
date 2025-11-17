@@ -23,19 +23,21 @@ class RulesEngineService {
             return [];
         }
 
-        $longMessage = "";
+        $longMessage = $shortMessage = "";
         $conditionsMet = [];
         
-        if (!$paramSpec->secondary) {
-            $statusInfo = $this->getStatusInfo($paramValue,$allValuesOfParam);
-            $shortMessage = $statusInfo['message'];
+        if (!$paramSpec->secondary && !is_null($paramValue) && !is_null($allValuesOfParam)) {
+            $statusInfo = $this->getStatusInfo($paramValue, $allValuesOfParam);
+            if ($statusInfo) {
+                $shortMessage = $statusInfo['message'];
 
-            if ($statusInfo['order_index'] != null) {
-                $message = RuleCondition::select('message')
-                    ->where('rule_id', $rule->id)
-                    ->where('order_index', $statusInfo['order_index'])
-                    ->first();
-                $longMessage = $message?->message;
+                if ($statusInfo['order_index'] != null) {
+                    $message = RuleCondition::select('message')
+                        ->where('rule_id', $rule->id)
+                        ->where('order_index', $statusInfo['order_index'])
+                        ->first();
+                    $longMessage = $message?->message;
+                }
             }
 
             $conditionMet = (object) [
@@ -44,9 +46,6 @@ class RulesEngineService {
             ];
 
             $conditionsMet [] = $conditionMet;
-
-
-
         } else {
             $statusInfo = $this->getStatusInfo($paramValue, $allValuesOfParam);
             $shortMessage = $statusInfo['message'];
@@ -71,7 +70,6 @@ class RulesEngineService {
 
                     $conditionsMet [] = $conditionMet;
                 }
-
             }
         }
 
@@ -79,14 +77,15 @@ class RulesEngineService {
         return $conditionsMet;
     }
 
-    private function getStatusInfo($singleValueOfParam , $allValuesOfParam)
+    private function getStatusInfo($singleValueOfParam, $allValuesOfParam)
     {
-        $standardDeviation = self::standardDeviation($allValuesOfParam->pluck('value'));
-        $mean = self::mean($allValuesOfParam->pluck('value'));
+        $valuesCollection = collect($allValuesOfParam);
+        $standardDeviation = self::standardDeviation($valuesCollection->pluck('value'));
+        $mean = self::mean($valuesCollection->pluck('value'));
         Log::debug('standard deviation: ' . $standardDeviation);
         Log::debug('mean: ' . $mean);
 
-        $statusInfo = $this->evaluateStandardDeviation($singleValueOfParam, $mean,$standardDeviation);
+        $statusInfo = $this->evaluateStandardDeviation($singleValueOfParam, $mean, $standardDeviation);
         return $statusInfo;
     }
 

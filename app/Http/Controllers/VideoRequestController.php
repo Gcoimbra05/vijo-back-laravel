@@ -277,8 +277,7 @@ class VideoRequestController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Video request updated successfully.',
-            'data' => $videoRequest,
-            'payload' => $request->all()
+            'data' => $videoRequest
         ]);
     }
 

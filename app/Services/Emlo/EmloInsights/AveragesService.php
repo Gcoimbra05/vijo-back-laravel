@@ -97,8 +97,8 @@ class AveragesService {
     {
         // Apply date filtering at the beginning
         $filteredCollection = $this->applyDateFilter($collection, $filter);
-        
-        $daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
+        $daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
         $result = [];
 
         // Group existing data by day

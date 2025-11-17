@@ -28,58 +28,6 @@ class EmloResponseService
         $this->emloSegmentService = $emloSegmentService;
     }
 
-    public function getAllValuesOfParam($paramName, $userId, $queryOptions)
-    {
-        $param = EmloResponseParamSpecs::select('id', 'type', 'needs_normalization', 'path_key')->where('param_name', $paramName)->first();
-        if(!$param) {
-            throw new EmloNotFoundException('$paramName ' . $paramName . ' does not exist');
-        }
-
-        if ($param->type == 'regular') {
-            $pathId = $param->path_key ? EmloResponsePath::getPathId($param->path_key) : EmloResponsePath::getPathId($paramName);
-            if (!$pathId) {
-                throw new EmloNotFoundException("EMLO response path not found for path key '{$param->path_key}'");
-            }
-
-            $query = EmloResponseValue::select('response_id', 'path_id', 'numeric_value', 'string_value', 'boolean_value', 'created_at')
-                ->where('path_id', $pathId->id)
-                ->whereHas('response.request', function ($subQuery) use ($userId) {
-                    $subQuery->where('user_id', $userId);
-                });
-
-            $query = QueryParamsHelperService::applyQueryOptions($query, $queryOptions);
-            $responseValues = $query->get();
-
-            $query = QueryParamsHelperService::applyQueryOptions($query, $queryOptions);
-            $responseValues = $query->get();
-
-            $formattedResponses = $this->formatResponseValues($responseValues, $paramName);
-            if ($formattedResponses->isEmpty()) {
-                Log::warning("No formatted responses found for parameter '{$paramName}'");
-                return collect(); // Return empty collection instead of throwing exception
-            }
-
-            return $formattedResponses;
-        } else if ($param->type == 'segment') {
-            $responseValues = EmloResponseValue::select('response_id', 'path_id', 'numeric_value', 'string_value', 'boolean_value', 'created_at', 'emlo_param_spec_id')
-                ->where('emlo_param_spec_id', $param->id)
-                ->whereHas('response.request', function ($subQuery) use ($userId) {
-                    $subQuery->where('user_id', $userId);
-                })
-                ->get();
-            
-            $formattedResponses = $this->formatResponseValues($responseValues);
-            if ($formattedResponses->isEmpty()) {
-                Log::warning("No formatted responses found for parameter '{$paramName}'");
-                return collect(); // Return empty collection instead of throwing exception
-            }
-            
-            return $formattedResponses;
-        }
-
-        return collect(); // Default return empty collection
-    }
-
     public function getParamValueByRequestId($requestId, $userId, $paramName)
     {
         $param = EmloResponseParamSpecs::select('type', 'needs_normalization', 'path_key')
@@ -208,14 +156,17 @@ class EmloResponseService
         }
     }
 
-    public function getAllRawParamValues($userId, $secondary = false)
+    public function getAllRawParamValues($userId, $secondary = false, $paramSpecId = null, $startDate = null, $endDate = null)
     {
         $query = DB::table('emlo_response_values')
             ->select('emlo_response_values.numeric_value', 'emlo_response_values.string_value',
             'emlo_response_values.emlo_param_spec_id', 'emlo_response_values.created_at')
             ->join('emlo_responses', 'emlo_responses.id', '=', 'emlo_response_values.response_id')
             ->join('video_requests', 'video_requests.id', '=', 'emlo_responses.request_id')
-            ->where('video_requests.user_id', $userId);
+            ->where('video_requests.user_id', $userId)
+            ->when($startDate && $endDate, function ($query) use ($startDate, $endDate) {
+                $query->whereBetween('emlo_response_values.created_at', [$startDate, $endDate]);
+            });
         
         if ($secondary) {
             $query->whereIn('emlo_response_values.emlo_param_spec_id', [12,13,14,15]);
@@ -223,8 +174,14 @@ class EmloResponseService
             $query->whereNotNull('emlo_response_values.emlo_param_spec_id');
         }
         
+        if ($paramSpecId) {
+            $query->where('emlo_response_values.emlo_param_spec_id', $paramSpecId);
+            // Return flat collection when filtering by specific param
+            return $query->get();
+        }
+    
+        // Return grouped collection when getting all params
         $values = $query->get();
-        $groupedValues = $values->groupBy('emlo_param_spec_id');
-        return $groupedValues;
+        return $values->groupBy('emlo_param_spec_id');
     }
 }

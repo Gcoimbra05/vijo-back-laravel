@@ -21,9 +21,13 @@ class ContactGroup extends Model implements AuditableContract
         'name',
         'created_at',
         'updated_at',
+        'status'
     ];
 
     public $timestamps = true;
+
+    const CREATED_AT = 'created_at';
+    const UPDATED_AT = 'updated_at';
 
     // Relationships
     public function contacts()
@@ -68,5 +72,10 @@ class ContactGroup extends Model implements AuditableContract
             ->skip($startAt)
             ->take($perPage)
             ->paginate($perPage, ['*'], 'page', floor($startAt / $perPage) + 1);
+    }
+
+    public static function getByUser(int $userId)
+    {
+        return self::where('user_id', $userId)->get();
     }
 }

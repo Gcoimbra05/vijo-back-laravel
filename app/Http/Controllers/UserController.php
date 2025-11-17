@@ -21,6 +21,10 @@ use Illuminate\Support\Facades\Password;
 use Illuminate\Auth\Events\Verified;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
+use Symfony\Component\Intl\Countries;
+use App\Models\Contact;
+use App\Models\ContactGroup;
+use App\Models\Affiliate;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
@@ -213,8 +217,10 @@ class UserController extends Controller
             'password' => 'sometimes|required|string|min:8',
             'country_code' => 'nullable|string|max:10',
             'mobile' => 'nullable|string|max:20',
-            'reminders' => 'sometimes|boolean',
+            'guided_tours' => 'sometimes|boolean',
+            'description' => 'nullable|string|max:255',
             'notifications' => 'sometimes|boolean',
+            'reminders' => 'sometimes|boolean',
             'timezone' => 'sometimes|string|max:100',
             'optInNewsUpdates' => 'sometimes|boolean',
             'two_factor_enabled' => 'sometimes|boolean',
@@ -223,14 +229,21 @@ class UserController extends Controller
         $user->update([
             'country_code' => GeneralHelper::onlyNumbers($request->country_code),
             'mobile' => GeneralHelper::onlyNumbers($request->mobile),
-        ] + $request->only('first_name', 'last_name', 'email', 'reminders', 'notifications', 'timezone', 'optInNewsUpdates', 'two_factor_enabled'));
+            'notifications' => $request->notifications ?? 0,
+            'reminders' => $request->reminders ?? 0,
+            'optInNewsUpdates' => $request->optInNewsUpdates ?? 0,
+            'two_factor_enabled' => $request->two_factor_enabled ?? 0,
+        ] + $request->only('first_name', 'last_name', 'email', 'guided_tours', 'description', 'timezone'));
 
         if ($request->filled('password')) {
             $user->password = bcrypt($request->password);
-            $user->save();
         }
 
-        return response()->json($user);
+        $user->save();
+
+        return request()->wantsJson()
+            ? response()->json(['message' => 'User updated successfully.'])
+            : redirect('admin/users')->with('success', 'User updated successfully.');
     }
 
     public function destroy($id)
@@ -596,6 +609,129 @@ class UserController extends Controller
         });
 
         return response()->json($dashboardData);
+    }
+
+    public function adminIndex()
+    {
+        $nav_bar = 'users';
+        $users = User::all();
+
+        $breadcrumbs = [
+            ['label' => 'Users', 'url' => null],
+        ];
+
+        return view('admin.users.index', compact('users', 'nav_bar', 'breadcrumbs'));
+    }
+
+    public function deactivate($id)
+    {
+        $user = User::find($id);
+        if (!$user) {
+            return response()->json(['message' => 'User not found'], 404);
+        }
+
+        $user->status = false;
+        $user->save();
+
+        $display_msg = array(
+            'msg'   => 'Status has been changed successfully',
+            'type'  => 'success',
+            'icon'  => 'bx bx-check'
+        );
+
+        session()->flash('display_msg', $display_msg);
+
+        return redirect()->to('admin/users');
+    }
+
+    public function activate($id)
+    {
+        $user = User::find($id);
+        if (!$user) {
+            return response()->json(['message' => 'User not found'], 404);
+        }
+
+        $user->status = true;
+        $user->save();
+
+        $display_msg = array(
+            'msg'   => 'Status has been changed successfully',
+            'type'  => 'success',
+            'icon'  => 'bx bx-check'
+        );
+
+        session()->flash('display_msg', $display_msg);
+
+        return redirect()->to('admin/users');
+    }
+
+    public function auditLogsView($id)
+    {
+        $user = User::find($id);
+        if (!$user) {
+            return response()->json(['message' => 'User not found'], 404);
+        }
+
+        $auditLogs = [];
+        $nav_bar = 'users';
+
+        $breadcrumbs = [
+            ['label' => 'Users', 'url' => route('users.adminIndex')],
+            ['label' => 'Audit Logs', 'url' => null]
+        ];
+
+        return view('admin.users.audit_logs', compact('user', 'auditLogs', 'nav_bar', 'breadcrumbs'));
+    }
+
+    public function journalHistoryView($id)
+    {
+        $user = User::find($id);
+        if (!$user) {
+            return response()->json(['message' => 'User not found'], 404);
+        }
+
+        $journalHistory = [];
+        $nav_bar = 'users';
+
+        $breadcrumbs = [
+            ['label' => 'Users', 'url' => route('users.adminIndex')],
+            ['label' => 'Journal History', 'url' => null]
+        ];
+
+        return view('admin.users.journal_history', compact('user', 'journalHistory', 'nav_bar', 'breadcrumbs'));
+    }
+
+    public function edit(User $user)
+    {
+        $pageTitle = "Edit Person";
+        $nav_bar = "Users";
+        $breadcrumbs = [
+            ['label' => 'Users', 'url' => route('users.adminIndex')],
+            ['label' => 'Edit Person', 'url' => null],
+        ];
+        $countries = Countries::getNames();
+        $membershipPlans = MembershipPlan::all();
+        $contacts = Contact::getByUser($user->id);
+        $contactgroups = ContactGroup::getByUser($user->id);
+        $affiliates = Affiliate::getByUser($user->id);
+
+        $timezonesByCountry = [];
+        foreach (array_keys($countries) as $code) {
+            $timezonesByCountry[$code] = \DateTimeZone::listIdentifiers(\DateTimeZone::PER_COUNTRY, $code);
+        }
+
+        return view('admin.users.edit', compact('user', 'pageTitle', 'nav_bar', 'breadcrumbs', 'countries', 'timezonesByCountry', 'membershipPlans', 'contacts', 'contactgroups', 'affiliates'));
+    }
+
+    public function contactsByUser($userId)
+    {
+        $contacts = Contact::getByUser($userId);
+        $contactgroups = ContactGroup::getByUser($userId);
+        $affiliates = Affiliate::getByUser($userId);
+
+        $user = User::findOrFail($userId);
+
+        return view('admin.users.contacts', compact('contacts', 'user', 'contactgroups', 'affiliates'));
     }
 
     public function handleVijoOfDay($timezone = 'America/New_York')

@@ -55,4 +55,9 @@ class Catalog extends Model implements AuditableContract
     {
         return $this->belongsTo(VideoType::class, 'video_type_id');
     }
+
+    public function tags()
+    {
+        return $this->belongsToMany(Tag::class, 'catalog_tag', 'catalog_id', 'tag_id');
+    }
 }

@@ -106,7 +106,7 @@ class InsightsV2Service {
                 'description' => 'How strongly anger comes through (0 is best)',
                 'currentValue' => round((rand(0, 20) / 10), 1),
                 'items' => [
-                    ['range' => '0', 'label' => 'Best - No Aggression', 'percentage' => rand(60, 70)],
+                    ['range' => '0', 'label' => 'Optimal', 'percentage' => rand(60, 70)],
                     ['range' => '1-2', 'label' => 'Acceptable', 'percentage' => rand(25, 35), 'isCurrent' => true],
                     ['range' => '>2', 'label' => 'Needs Attention', 'percentage' => rand(5, 10)]
                 ]

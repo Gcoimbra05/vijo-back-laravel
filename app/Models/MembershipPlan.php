@@ -28,4 +28,5 @@ class MembershipPlan extends Model implements AuditableContract
     {
         return $this->hasMany(Subscription::class);
     }
+
 }

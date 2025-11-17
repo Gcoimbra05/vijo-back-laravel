@@ -155,18 +155,15 @@ class MediaStorageController extends Controller
 
         $originalSize = filesize($localVideoPath);
 
-        // Compression/conversion to MP4 if necessary
-        if (strtolower($fileExtension) === 'mp4' && $originalSize < 30000000) { // MB = 30
-            $outputFile = $localVideoPath;
-        } else {
-            $outputFile = str_replace("." . $fileExtension, ".mp4", $localVideoPath);
-
-            // Remove existing output file if it exists to prevent FFmpeg prompt
-            if ($localVideoPath != $outputFile && file_exists($outputFile)) {
+        // Always write to a new output file to avoid FFmpeg in-place overwrite errors
+        $outputFile = $localVideoPath;
+        $needsConversion = !(strtolower($fileExtension) === 'mp4' && $originalSize < 30000000);
+        if ($needsConversion) {
+            $outputFile = str_replace('.' . $fileExtension, '_converted.mp4', $localVideoPath);
+            if (file_exists($outputFile)) {
                 @unlink($outputFile);
                 Log::info('Removed existing output file: ' . $outputFile);
             }
-
             $ffmpegCommand = "ffmpeg -y -i " . escapeshellarg($localVideoPath) . " -c:v libx264 -profile:v baseline -level 3.0 -pix_fmt yuv420p -vf 'scale=trunc(iw/2)*2:trunc(ih/2)*2' -r 30 -b:v 1000k -c:a aac -b:a 128k -movflags +faststart " . escapeshellarg($outputFile) . " 2>&1";
             $conversionResult = shell_exec($ffmpegCommand);
             Log::info('Video conversion result: ' . $conversionResult);
@@ -181,6 +178,13 @@ class MediaStorageController extends Controller
             if ($durationOutput) {
                 $duration = (int) floatval($durationOutput);
             }
+        }
+
+        // If conversion happened, replace original with converted file
+        if ($outputFile !== $localVideoPath && file_exists($outputFile)) {
+            @unlink($localVideoPath); // Remove original
+            rename($outputFile, $localVideoPath); // Move converted to original path
+            $outputFile = $localVideoPath;
         }
 
         // Upload to S3 or local
@@ -202,10 +206,6 @@ class MediaStorageController extends Controller
         Log::info('Cleaning up temporary files: ' . $localVideoPath . ', ' . $thumbnailPath);
         @unlink($localVideoPath);
         @unlink($thumbnailPath);
-        // Only delete $outputFile if it's different from $localVideoPath
-        if ($outputFile !== $localVideoPath) {
-            @unlink($outputFile);
-        }
 
         return response()->json([
             'success'         => true,
