@@ -78,7 +78,7 @@ use Carbon\Carbon;
                                         <i class="bx bx-dots-vertical-rounded"></i>
                                     </button>
                                     <div class="dropdown-menu">
-                                        {{-- direciona para users.upgrade do usuário específico --}}
+                                        {{-- directs to users.upgrade of the specific user --}}
                                         <a class="dropdown-item" href="{{ route('users.edit', optional($userlogin->user)->id) }}">
                                             <i class="bx bx-user me-1"></i> View User
                                         </a>

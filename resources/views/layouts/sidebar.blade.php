@@ -29,7 +29,7 @@
         </li>
 
         <!-- Customers -->
-        <li class="menu-item <?php if (in_array($nav_bar, array('businesses', 'users', 'emailtemplate', 'platformtext', 'userlogin'))) { ?>open<?php } ?>">
+        <li class="menu-item <?php if (in_array($nav_bar, array('businesses', 'users', 'emailtemplate', 'platformtext', 'userlogin', 'userfeedbacks'))) { ?>open<?php } ?>">
             <a href="javascript:void(0);" class="menu-link menu-toggle">
                 <i class="menu-icon tf-icons bx bx-collection"></i>
                 <div data-i18n="Customers">Customers</div>
@@ -37,13 +37,19 @@
             <ul class="menu-sub">
                 <li class="menu-item <?php if ($nav_bar == 'users') { ?>active<?php } ?>">
                     <a href="{{ url('admin/users') }}" class="menu-link">
-                        <div data-i18n="Members">Users</div>
+                        <div data-i18n="users">Users</div>
                     </a>
                 </li>
                 
                 <li class="menu-item <?php if ($nav_bar == 'userlogin') { ?>active<?php } ?>">
                     <a href="{{ url('admin/userlogin') }}" class="menu-link">
-                        <div data-i18n="PlatformText">User Login</div>
+                        <div data-i18n="userlogin">User Login</div>
+                    </a>
+                </li>
+
+                <li class="menu-item <?php if ($nav_bar == 'userfeedbacks') { ?>active<?php } ?>">
+                    <a href="{{ url('admin/userfeedbacks') }}" class="menu-link">
+                        <div data-i18n="userfeedbacks">User Feedbacks</div>
                     </a>
                 </li>
 

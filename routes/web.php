@@ -21,6 +21,12 @@ use App\Http\Controllers\VideoRequestController;
 use App\Http\Controllers\VideoTypeController;
 use App\Http\Controllers\TagController;
 use App\Http\Controllers\EmailTemplateController;
+use App\Http\Controllers\JobController;
+use App\Http\Controllers\JobBatchesController;
+use App\Http\Controllers\FailedJobsController;
+use App\Http\Controllers\UserLoginController;
+use App\Http\Controllers\UserFeedbackController;
+use App\Http\Controllers\UserFeedbackReplyController;
 
 Route::get('/', function () {
     return view('welcome');
@@ -85,6 +91,37 @@ Route::prefix('admin')->group(function () {
         Route::resource('users', UserController::class)->except(['index']);
         Route::get('admin/users/{user:name}/edit', [UserController::class, 'edit']);
         Route::get('users/{userId}/contacts', [UserController::class, 'contactsByUser'])->name('users.contacts');
+
+        // User Logins
+        Route::prefix('userlogin')->group(function () {
+            Route::get('/', [UserLoginController::class, 'index'])->name('userlogin.index');
+            Route::get('/create', [UserLoginController::class, 'create'])->name('userlogin.create');
+            Route::post('/', [UserLoginController::class, 'store'])->name('userlogin.store');
+            Route::get('/show/{id}', [UserLoginController::class, 'show'])->name('userlogin.show');
+            Route::put('/{id}', [UserLoginController::class, 'update'])->name('userlogin.update');
+            Route::get('/delete/{id}', [UserLoginController::class, 'destroy'])->name('userlogin.delete');
+        });
+
+        // User Feedback
+        Route::prefix('userfeedbacks')->group(function () {
+            Route::get('/', [UserFeedbackController::class, 'index'])->name('userfeedbacks.index');
+            Route::get('/create', [UserFeedbackController::class, 'create'])->name('userfeedbacks.create');
+            Route::post('/', [UserFeedbackController::class, 'store'])->name('userfeedbacks.store');
+            Route::get('/show/{id}', [UserFeedbackController::class, 'show'])->name('userfeedbacks.show');
+            Route::put('/{id}', [UserFeedbackController::class, 'update'])->name('userfeedbacks.update');
+            Route::get('/delete/{id}', [UserFeedbackController::class, 'destroy'])->name('userfeedbacks.delete');
+
+            Route::get('/read/{id}', [UserFeedbackController::class, 'read'])->name('userfeedbacks.read');
+            Route::get('/unread/{id}', [UserFeedbackController::class, 'unread'])->name('userfeedbacks.unread');
+        });
+
+        // User Feedback Reply
+        Route::prefix('userfeedbackreply')->group(function () {
+            Route::get('/', [UserFeedbackReplyController::class, 'index'])->name('userfeedbackreply.index');
+            Route::get('/create', [UserFeedbackReplyController::class, 'create'])->name('userfeedbackreply.create');
+            Route::post('/', [UserFeedbackReplyController::class, 'store'])->name('userfeedbackreply.store');
+            Route::get('/show/{id}', [UserFeedbackReplyController::class, 'show'])->name('userfeedbackreply.show');
+        });
 
         Route::post('/logout', [AdminLoginController::class, 'logout'])->name('logout');
 
