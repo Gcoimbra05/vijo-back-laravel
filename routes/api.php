@@ -29,9 +29,11 @@ use App\Http\Controllers\EmloResponseParamSpecsController;
 use App\Http\Controllers\PlatformTextController;
 use App\Http\Controllers\InsightsFilterController;
 use App\Http\Controllers\InsightsController;
+use App\Http\Controllers\OpenAiSessionController;
 use App\Http\Controllers\QuickGoalController;
 use App\Http\Controllers\SkipVijoController;
 use App\Http\Controllers\UserFeedbackController;
+use App\Http\Controllers\VijoPlansController;
 use App\Services\CredScore\CredScoreService;
 use App\Services\Emlo\EmloInsights\EmloInsightsService;
 
@@ -138,6 +140,8 @@ Route::prefix('v2')->middleware(ForceJsonResponse::class)->group(function () {
             Route::get('{request_id}/{param}', [EmloResponseController::class, 'getParamValueByRequestId']);
         });
 
+        Route::get('realtime-session', [OpenAiSessionController::class, 'createRealTimeSession']);
+
         Route::prefix('ai-agent')->group(function () {
             Route::get('/emotion-insights/{emotion_name}', [AiAgentController::class, 'getSingleParamEmotionalInsights']);
 
@@ -154,6 +158,8 @@ Route::prefix('v2')->middleware(ForceJsonResponse::class)->group(function () {
         Route::get('/stripe/customer-portal', [StripeWebhookController::class, 'getCustomerPortal']);
 
         Route::apiResource('coupons', CouponController::class);
+
+        Route::apiResource('vijo-plans', VijoPlansController::class);
 
         // Profile and Security
         Route::post('/validate-profile', [UserController::class, 'validateProfile']);
