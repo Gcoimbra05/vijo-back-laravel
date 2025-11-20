@@ -12,19 +12,32 @@ class InsightsFilterController extends Controller
     public function index()
     {
         $userId = Auth::id();
+        $user = User::find($userId);
+        $timezone = $user && $user->timezone ? $user->timezone : config('app.timezone', 'America/New_York');
         $filters = InsightsFilter::where('user_id', $userId)->get();
         if ($filters->isEmpty()) {
-            $user = User::find($userId);
+            $startDate = $user ? $user->created_at->setTimezone($timezone)->toDateString() : now()->setTimezone($timezone)->toDateString();
             $filter = InsightsFilter::create([
                 'user_id' => $userId,
                 'title' => 'Current',
-                'start_date' => $user ? $user->created_at->toDateString() : now()->toDateString(),
+                'start_date' => $startDate,
                 'end_date' => null,
                 'default' => true,
             ]);
             $filters = collect([$filter]);
         }
 
+        $filters = $filters->map(function($filter) use ($timezone) {
+            if ($filter->start_date) {
+                $filter->start_date = 
+                    \Carbon\Carbon::parse($filter->start_date)->setTimezone($timezone)->toDateString();
+            }
+            if ($filter->end_date) {
+                $filter->end_date = 
+                    \Carbon\Carbon::parse($filter->end_date)->setTimezone($timezone)->toDateString();
+            }
+            return $filter;
+        });
         return response()->json($filters);
     }
 

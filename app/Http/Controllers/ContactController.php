@@ -97,7 +97,7 @@ class ContactController extends Controller
 
         $validated = $request->validate([
             'first_name'   => 'required|string|max:255',
-            'last_name'    => 'required|string|max:255',
+            'last_name'    => 'nullable|string|max:255',
             'country_code' => 'nullable|string|max:10',
             'mobile'       => 'required|string|max:15',
             'email'        => 'nullable|email|max:255',
@@ -166,7 +166,7 @@ class ContactController extends Controller
 
         $validated = $request->validate([
             'first_name'   => 'required|string|max:255',
-            'last_name'    => 'required|string|max:255',
+            'last_name'    => 'nullable|string|max:255',
             'country_code' => 'nullable|string|max:10',
             'mobile'       => 'required|string|max:15',
             'email'        => 'nullable|email|max:255',
@@ -240,7 +240,7 @@ class ContactController extends Controller
     {
         $data = $request->all();
 
-        $requiredFields = ['first_name', 'last_name', 'mobile'];
+        $requiredFields = ['first_name', 'mobile'];
         $allowedFields = array_merge($requiredFields, ['email']);
         $filteredData = [];
         $hasDuplicates = false;

@@ -4,11 +4,10 @@ namespace App\Services\Emlo\EmloInsights;
 
 use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
-
 use App\Models\EmloInsightsParamAggregate;
 use App\Models\EmloResponseParamSpecs;
+use App\Models\User;
 use App\Models\VideoRequest;
-
 use App\Services\CredScore\CredScoreService;
 use App\Services\Emlo\EmloDatabaseLoader;
 use App\Services\Emlo\EmloInsights\AveragesService;
@@ -461,7 +460,10 @@ class EmloInsightsService
         $fullDays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
         $weeklyActivity = array_fill(0, 7, 0);
 
-        $now = Carbon::now();
+        $user = User::find($userId);
+        $timezone = $user && $user->timezone ? $user->timezone : config('app.timezone', 'America/New_York');
+
+        $now = Carbon::now($timezone);
         $startDate = $now->copy()->startOfWeek(Carbon::SUNDAY);
         $endDate = $now->copy()->endOfWeek(Carbon::SATURDAY);
 
@@ -472,7 +474,7 @@ class EmloInsightsService
 
         $daysWithRecording = [];
         foreach ($videoRequests as $videoRequest) {
-            $dayIndex = array_search(Carbon::parse($videoRequest->created_at)->format('l'), $fullDays);
+            $dayIndex = array_search(Carbon::parse($videoRequest->created_at)->setTimezone($timezone)->format('l'), $fullDays);
             if ($dayIndex !== false) {
                 $daysWithRecording[$dayIndex] = 1;
             }

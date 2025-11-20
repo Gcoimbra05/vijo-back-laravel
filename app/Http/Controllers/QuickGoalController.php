@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\QuickGoal;
+use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -130,6 +131,9 @@ class QuickGoalController extends Controller
             $userId = Auth::id();
         }
 
+        $user = User::find($userId);
+        $userTimezone = $user && $user->timezone ? $user->timezone : config('app.timezone', 'UTC');
+
         $activeGoal = QuickGoal::where('user_id', $userId)
             ->whereIn('status', ['completed', 'active'])
             ->whereDate('period_end', '>=', now()->toDateString())
@@ -146,8 +150,8 @@ class QuickGoalController extends Controller
                 'amount_of_videos' => $activeGoal->amount_of_videos,
                 'recorded' => $activeGoal->recorded,
                 'period_type' => $activeGoal->period_type,
-                'period_start' => $activeGoal->period_start,
-                'period_end' => Carbon::parse($activeGoal->period_end)->format('M d, Y'),
+                'period_start' => Carbon::parse($activeGoal->period_start)->setTimezone($userTimezone)->format('M d, Y H:i'),
+                'period_end' => Carbon::parse($activeGoal->period_end)->setTimezone($userTimezone)->format('M d, Y H:i'),
                 'status' => $activeGoal->status,
             ];
         } else {

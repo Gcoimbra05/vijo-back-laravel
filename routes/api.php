@@ -18,6 +18,7 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\VideoRequestController;
 use App\Http\Controllers\TwoFactorAuthController;
 use App\Http\Controllers\VideoController;
+use App\Http\Controllers\SmsWebhookController;
 use App\Http\Middleware\ForceJsonResponse;
 use App\Http\Controllers\LlmTemplateController;
 use App\Http\Controllers\RuleEvaluationController;
@@ -33,6 +34,9 @@ use App\Http\Controllers\SkipVijoController;
 use App\Http\Controllers\UserFeedbackController;
 use App\Services\CredScore\CredScoreService;
 use App\Services\Emlo\EmloInsights\EmloInsightsService;
+
+// Webhook for SMS opt-in/opt-out (no middleware - Twilio needs direct access)
+Route::post('/webhooks/sms', [SmsWebhookController::class, 'handleIncoming']);
 
 Route::prefix('v2')->middleware(ForceJsonResponse::class)->group(function () {
     Route::post('/resend_2fa', [TwoFactorAuthController::class, 'resend2fa']);
