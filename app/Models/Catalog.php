@@ -31,6 +31,8 @@ class Catalog extends Model implements AuditableContract
         'admin_order',
         'vijo_plan_id',
         'vijo_plan_order',
+
+
         'message',
         'primary_modality',
         'secondary_modality',
