@@ -141,6 +141,7 @@ Route::prefix('v2')->middleware(ForceJsonResponse::class)->group(function () {
         });
 
         Route::get('realtime-session', [OpenAiSessionController::class, 'createRealTimeSession']);
+        Route::post('chat/completions', [OpenAiSessionController::class, 'createCompletion']);
 
         Route::prefix('ai-agent')->group(function () {
             Route::get('/emotion-insights/{emotion_name}', [AiAgentController::class, 'getSingleParamEmotionalInsights']);
