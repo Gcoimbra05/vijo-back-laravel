@@ -357,7 +357,7 @@
                     </div>
                     <div class="mt-2">
                         <button type="submit" class="btn btn-primary me-2" id="btn_save">Save changes</button>
-                        <a href="{{ $from === 'category' ? url('admin/journal_categories/' . $info[0]['id'] . '/edit') : url('admin/catalogs') }}" class="btn btn-outline-secondary">
+                        <a href="{{ $from === 'categories' ? url('admin/journal_categories/' . $info[0]['id'] . '/edit') : url('admin/catalogs') }}" class="btn btn-outline-secondary">
                             Back
                         </a>
 

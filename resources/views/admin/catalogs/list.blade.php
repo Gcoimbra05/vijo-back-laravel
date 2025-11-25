@@ -29,9 +29,7 @@
                         <tr>
                             <td><?= $key + 1; ?></td>
                             <td><?= $catalog->title; ?></td>
-                            <td>
-                                <?= !empty($catalog->emoji) ? mb_convert_encoding('&#x' . $catalog->emoji . ';', 'UTF-8', 'HTML-ENTITIES') : '-' ?>
-                            </td>
+                            <td>{!! $catalog->emoji_rendered !!}</td>
                             <td><?= $catalog->is_premium ? 'Yes' : 'No'; ?></td>
                             <td><?= $catalog->is_promotional ? 'Yes' : 'No'; ?></td>
                             <td><?= $catalog->is_multipart ? 'Yes' : 'No'; ?></td>

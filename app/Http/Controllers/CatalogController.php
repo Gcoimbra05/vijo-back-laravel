@@ -98,6 +98,7 @@ class CatalogController extends Controller
             'is_promotional' => $request->is_promotional,
             'is_premium' => $request->is_premium,
             'video_type_id' => $request->video_type_id,
+            'from' => 'catalog',
         ]);
 
         if ($request->wantsJson()) {
@@ -141,7 +142,8 @@ class CatalogController extends Controller
             'videoTypes' => $videoTypes,
             'categories' => $categories,
             'catalogs' => $catalogs,
-            'tags' => $tags
+            'tags' => $tags,
+            'from' => request('from', 'catalog'),
         ]);
 
     }

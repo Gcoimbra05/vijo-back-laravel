@@ -125,13 +125,13 @@
                 </li>
 
                 <li class="menu-item <?php if ($nav_bar == 'job_batches') { ?>active<?php } ?>">
-                    <a href="{{ url('admin/job_batches') }}" class="menu-link">
+                    <a href="{{ url('admin/jobbatches') }}" class="menu-link">
                         <div data-i18n="Job_Batches">Job Batches</div>
                     </a>
                 </li>
 
                 <li class="menu-item <?php if ($nav_bar == 'failed_jobs') { ?>active<?php } ?>">
-                    <a href="{{ url('admin/failed_jobs') }}" class="menu-link">
+                    <a href="{{ url('admin/failedjobs') }}" class="menu-link">
                         <div data-i18n="failed_jobs">Failed Jobs</div>
                     </a>
                 </li>

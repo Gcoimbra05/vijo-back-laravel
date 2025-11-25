@@ -60,4 +60,17 @@ class Catalog extends Model implements AuditableContract
     {
         return $this->belongsToMany(Tag::class, 'catalog_tag', 'catalog_id', 'tag_id');
     }
+
+    public function getEmojiRenderedAttribute()
+    {
+        $parts = preg_split('/\s+/', trim($this->emoji));
+        $html = '';
+
+        foreach ($parts as $part) {
+            $code = str_replace('U+', '', $part);
+            $html .= '&#x' . $code . ';';
+        }
+
+        return $html;
+    }
 }

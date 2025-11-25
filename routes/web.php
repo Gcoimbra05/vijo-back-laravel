@@ -145,6 +145,7 @@ Route::prefix('admin')->group(function () {
             Route::post('/', [PlatformTextController::class, 'store'])->name('platformtext.store');
             Route::get('/show/{id}', [PlatformTextController::class, 'show'])->name('platformtext.show');
             Route::put('/{id}', [PlatformTextController::class, 'update'])->name('platformtext.update');
+            Route::get('/edit/{id}', [PlatformTextController::class, 'edit'])->name('platformtext.edit');
             Route::get('/delete/{id}', [PlatformTextController::class, 'destroy'])->name('platformtext.delete');
 
             Route::get('/activate/{id}', [PlatformTextController::class, 'activate'])->name('platformtext.activate');
@@ -214,6 +215,18 @@ Route::prefix('admin')->group(function () {
 
             Route::get('admin/memberships/deactivate/{id}', [MembershipPlanController::class, 'deactivate'])->name('membership.deactivate');
             Route::get('admin/memberships/activate/{id}', [MembershipPlanController::class, 'activate'])->name('membership.activate');
+        });
+
+        Route::prefix('job')->group(function () {
+            Route::get('/', [JobController::class, 'index'])->name('job.index');
+        });
+
+        Route::prefix('jobbatches')->group(function () {
+            Route::get('/', [JobBatchesController::class, 'index'])->name('jobbatches.index');
+        });
+
+        Route::prefix('failedjobs')->group(function () {
+            Route::get('/', [FailedJobsController::class, 'index'])->name('failedjobs.index');
         });
 });
 
