@@ -10,9 +10,7 @@ class MembershipPlanController extends Controller
 {
     public function index()
     {
-        // Fetch all membership plans (include status and all columns used in the view)
         $memberships = MembershipPlan::orderBy('id', 'desc')->get();
-
         $pageTitle = 'Membership Plans';
         $nav_bar = 'Memberships Plans';
         $breadcrumbs = [

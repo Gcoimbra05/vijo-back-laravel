@@ -76,6 +76,7 @@ Route::prefix('v2')->middleware(ForceJsonResponse::class)->group(function () {
         Route::delete('user/delete-account', [UserController::class, 'deleteAccount']);
 
         Route::get('dashboard', [UserController::class, 'getDashboardData']);
+        Route::get('activity', [UserController::class, 'getActivityData']);
         Route::get('emotional-snapshot', [EmloResponseController::class, 'getEmotionalSnapshot']);
         Route::post('update-guided-tours', [UserController::class, 'updateGuidedTour']);
         Route::get('subscription-plans', [UserController::class, 'getSubscriptionPlans']);

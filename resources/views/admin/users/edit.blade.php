@@ -366,7 +366,6 @@
                                     </div>
                             </div>
                     </div>
-
                     
                     
                     <!-- Conteúdo Contacts -->
@@ -550,12 +549,12 @@
                                             <tr>
                                                 
                                             </tr>
-                                            @endforeach
-                                            @else
-                                            <tr>
-                                                <td colspan="12" class="text-center">No records found.</td>
-                                            </tr>
-                                            @endif
+                                        @endforeach
+                                    @else
+                                        <tr>
+                                            <td colspan="12" class="text-center">No records found.</td>
+                                        </tr>
+                                    @endif
                                 </tbody>
                             </table>
                         </div>
@@ -603,20 +602,17 @@
                                                     </div>
                                                 </td>
                                             </tr>
-                                            @endforeach
-                                            @else
-                                            <tr>
-                                                <td colspan="7" class="text-center">No records found.</td>
-                                            </tr>
-                                            @endif
+                                        @endforeach
+                                    @else
+                                        <tr>
+                                            <td colspan="7" class="text-center">No records found.</td>
+                                        </tr>
+                                    @endif
                                 </tbody>
                             </table>
                         </div>
                     </div>
-
-  
                 </div>
-                        
                         
                 <div class="mb-3 col-md-12">
                     <label for="description" class="form-label">Description</label>
