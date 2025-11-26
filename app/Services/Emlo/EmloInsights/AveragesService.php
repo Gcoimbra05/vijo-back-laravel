@@ -20,11 +20,21 @@ class AveragesService {
                 'Saturday' => [],
             ];
 
+            $timezone = null;
+            if (count($allValuesOfParam) > 0) {
+                $first = $allValuesOfParam[0];
+                if (isset($first->user) && $first->user && $first->user->timezone) {
+                    $timezone = $first->user->timezone;
+                } elseif (isset($first->timezone)) {
+                    $timezone = $first->timezone;
+                }
+            }
+            if (!$timezone) {
+                $timezone = config('app.timezone', 'America/New_York');
+            }
             foreach ($allValuesOfParam as $valueOfParam) {
-                $createdAt = Carbon::parse($valueOfParam->created_at);
+                $createdAt = Carbon::parse($valueOfParam->created_at)->setTimezone($timezone);
                 $dayName = $createdAt->format('l');
-                
-                // Add to the array (not overwrite)
                 $daysWValues[$dayName][] = $valueOfParam->value;
             }
 
@@ -56,17 +66,27 @@ class AveragesService {
                 'Evening' => []
             ];
 
+            $timezone = null;
+            if (count($allValuesOfParam) > 0) {
+                $first = $allValuesOfParam[0];
+                if (isset($first->user) && $first->user && $first->user->timezone) {
+                    $timezone = $first->user->timezone;
+                } elseif (isset($first->timezone)) {
+                    $timezone = $first->timezone;
+                }
+            }
+            if (!$timezone) {
+                $timezone = config('app.timezone', 'America/New_York');
+            }
             foreach ($allValuesOfParam as $valueOfParam) {
-                $createdAt = Carbon::parse($valueOfParam->created_at);
+                $createdAt = Carbon::parse($valueOfParam->created_at)->setTimezone($timezone);
                 $hour = $createdAt->hour;
-
-                // Use if/elseif instead of switch for range comparisons
                 if ($hour >= 2 && $hour < 10) {
-                    $timeOfDayParamValues['Morning'][] = data_get($valueOfParam, $pluckBy);;
+                    $timeOfDayParamValues['Morning'][] = data_get($valueOfParam, $pluckBy);
                 } elseif ($hour >= 10 && $hour < 17) {
-                    $timeOfDayParamValues['Afternoon'][] = data_get($valueOfParam, $pluckBy);;
-                } else { // 18-23
-                    $timeOfDayParamValues['Evening'][] = data_get($valueOfParam, $pluckBy);;
+                    $timeOfDayParamValues['Afternoon'][] = data_get($valueOfParam, $pluckBy);
+                } else {
+                    $timeOfDayParamValues['Evening'][] = data_get($valueOfParam, $pluckBy);
                 }
             }
 
@@ -96,14 +116,25 @@ class AveragesService {
     private function aggregateWeeklyData($collection, $filter = 'since_start', $pluckBy = 'value')
     {
         // Apply date filtering at the beginning
-        $filteredCollection = $this->applyDateFilter($collection, $filter);
-
-        $daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        $timezone = null;
+        if ($collection->count() > 0) {
+            $first = $collection->first();
+            if (isset($first->user) && $first->user && $first->user->timezone) {
+                $timezone = $first->user->timezone;
+            } elseif (isset($first->timezone)) {
+                $timezone = $first->timezone;
+            }
+        }
+        if (!$timezone) {
+            $timezone = config('app.timezone', 'America/New_York');
+        }
+        $filteredCollection = $this->applyDateFilter($collection, $filter, $timezone);
+        $daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
         $result = [];
 
         // Group existing data by day
-        $grouped = $filteredCollection->groupBy(function ($item) {
-            $date = Carbon::parse($item->created_at);
+        $grouped = $filteredCollection->groupBy(function ($item) use ($timezone) {
+            $date = Carbon::parse($item->created_at)->setTimezone($timezone);
             return $date->format('l');
         });
 
@@ -148,13 +179,13 @@ class AveragesService {
         }
 
         // Filter data based on the time period
-        $filteredData = $this->filterDataByPeriod($jsonData, $filter);
-        
+        $timezone = config('app.timezone', 'America/New_York');
+        $filteredData = $this->filterDataByPeriod($jsonData, $filter, $timezone);
         $result = [];
-        
+
         // Group filtered data by month
-        $grouped = collect($filteredData)->groupBy(function ($item) {
-            $date = Carbon::parse($item->date);
+        $grouped = collect($filteredData)->groupBy(function ($item) use ($timezone) {
+            $date = Carbon::parse($item->date)->setTimezone($timezone);
             return $date->format('Y-m');
         });
 
@@ -187,7 +218,8 @@ class AveragesService {
 
     private function getMonthRange($filter, $data)
     {
-        $now = Carbon::now();
+        $timezone = config('app.timezone', 'America/New_York');
+        $now = Carbon::now($timezone);
         
         switch ($filter) {
             case '3months':
@@ -217,11 +249,10 @@ class AveragesService {
 
     private function filterDataByPeriod($jsonData, $filter)
     {
-        $now = Carbon::now();
-        
-        return collect($jsonData)->filter(function ($item) use ($filter, $now) {
-            $itemDate = Carbon::parse($item->date);
-            
+        $timezone = config('app.timezone', 'America/New_York');
+        $now = Carbon::now($timezone);
+        return collect($jsonData)->filter(function ($item) use ($filter, $now, $timezone) {
+            $itemDate = Carbon::parse($item->date)->setTimezone($timezone);
             switch ($filter) {
                 case '3months':
                     return $itemDate >= $now->copy()->subMonths(3);
@@ -233,23 +264,21 @@ class AveragesService {
         })->values()->toArray();
     }
 
-    private function applyDateFilter($collection, $filter)
+    private function applyDateFilter($collection, $filter, $timezone = null)
     {
-        $now = Carbon::now();
-        
+        $timezone = $timezone ?: config('app.timezone', 'America/New_York');
+        $now = Carbon::now($timezone);
         switch ($filter) {
             case 'last_7_days':
                 $startDate = $now->copy()->subDays(7);
-                return $collection->filter(function ($item) use ($startDate) {
-                    return Carbon::parse($item->created_at)->gte($startDate);
+                return $collection->filter(function ($item) use ($startDate, $timezone) {
+                    return Carbon::parse($item->created_at)->setTimezone($timezone)->gte($startDate);
                 });
-                
             case 'last_30_days':
                 $startDate = $now->copy()->subDays(30);
-                return $collection->filter(function ($item) use ($startDate) {
-                    return Carbon::parse($item->created_at)->gte($startDate);
+                return $collection->filter(function ($item) use ($startDate, $timezone) {
+                    return Carbon::parse($item->created_at)->setTimezone($timezone)->gte($startDate);
                 });
-                
             case 'since_start':
             default:
                 // Return the entire collection without filtering

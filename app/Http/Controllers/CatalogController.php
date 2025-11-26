@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Catalog;
 use App\Models\SkipVijo;
+use App\Models\User;
 use App\Models\VideoRequest;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
@@ -219,7 +220,15 @@ class CatalogController extends Controller
     public function getSuggestedCatalogs($userId = null, $limit = 3)
     {
         $categoryId = $this->catalog->category_id ?? 0;
-        $today = now()->toDateString();
+
+        $timezone = config('app.timezone', 'America/New_York');
+        if ($userId) {
+            $user = User::find($userId);
+            if ($user && $user->timezone) {
+                $timezone = $user->timezone;
+            }
+        }
+        $today = now($timezone)->toDateString();
 
         // Get catalogs skipped by the user today
         $skippedCatalogIds = SkipVijo::where('user_id', $userId)

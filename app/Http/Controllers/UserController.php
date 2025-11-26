@@ -551,8 +551,8 @@ class UserController extends Controller
                         'title' => 'Create your World',
                         'description' => 'Build your personalized experience and shape your journey. Coming soon...',
                     ],
-                    "current_date" => now()->toDateString(),
-                    "currentDate" => now()->format('l, F j, Y'),
+                    "current_date" => now()->setTimezone($timezone)->toDateString(),
+                    "currentDate" => now()->setTimezone($timezone)->format('l, F j, Y'),
                     "daily_message" => [
                         'headline' => 'DAILY INSPIRATION',
                         'emoji' => '💌',
@@ -909,7 +909,7 @@ class UserController extends Controller
         } else if (!empty($request->country_code) && !empty($request->mobile)) {
             // Send SMS
             $twoFactorController = new TwoFactorAuthController();
-            $twoFactorController->sendSms($request->country_code, $request->mobile, "Your Vijo verification code is: \n{$code}");
+            $twoFactorController->sendSms($request->country_code, $request->mobile, "Vijo verification code: {$code}\n\nReply STOP to opt-out of SMS messages and receive codes via email only. Reply HELP for support. Msg & data rates may apply.");
         }
 
         return response()->json([

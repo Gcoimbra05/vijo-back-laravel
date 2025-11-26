@@ -143,8 +143,8 @@ class TwoFactorAuthController extends Controller
             'expires_at' => Carbon::now()->addMinutes(10),
         ]);
 
-        if (!empty($user->country_code) && !empty($user->mobile)) {
-            $message = "Your Vijo verification code is: \n{$code}";
+        if (!empty($user->country_code) && !empty($user->mobile) && !$user->sms_opt_out) {
+            $message = "Vijo verification code: {$code}\n\nReply STOP to opt-out of SMS messages and receive codes via email only. Reply HELP for support. Msg & data rates may apply.";
             $this->sendSms($user->country_code, $user->mobile, $message);
         }
 
@@ -442,8 +442,8 @@ class TwoFactorAuthController extends Controller
             });
         }
 
-        if ($user->mobile && $user->country_code) {
-            $message = "Your 2FA authentication code: $otp";
+        if ($user->mobile && $user->country_code && !$user->sms_opt_out) {
+            $message = "Vijo verification code: $otp\n\nReply STOP to opt-out of SMS messages and receive codes via email only. Reply HELP for support. Msg & data rates may apply.";
             $this->sendSms($user->country_code, $user->mobile, $message);
         }
 

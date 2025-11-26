@@ -12,20 +12,22 @@ class InsightsFilterController extends Controller
     public function index()
     {
         $userId = Auth::id();
+        $user = User::find($userId);
+        $timezone = $user && $user->timezone ? $user->timezone : config('app.timezone', 'America/New_York');
         $filters = InsightsFilter::where('user_id', $userId)->get();
         if ($filters->isEmpty()) {
-            $user = User::find($userId);
+            $startDate = $user ? $user->created_at->setTimezone($timezone)->toDateString() : now()->setTimezone($timezone)->toDateString();
             $filter = InsightsFilter::create([
                 'user_id' => $userId,
                 'title' => 'Current',
-                'start_date' => $user ? $user->created_at->toDateString() : now()->toDateString(),
+                'start_date' => $startDate,
                 'end_date' => null,
                 'default' => true,
             ]);
             $filters = collect([$filter]);
         }
 
-        return view('admin.insightsfilter.form', compact('failed_jobs', 'pageTitle', 'nav_bar', 'breadcrumbs'));
+        return response()->json($filters);
     }
 
     public function show($id)

@@ -28,7 +28,18 @@ class Catalog extends Model implements AuditableContract
         'is_premium',
         'video_type_id',
         'is_multipart',
-        'admin_order'
+        'admin_order',
+        'vijo_plan_id',
+        'vijo_plan_order',
+
+
+        'message',
+        'primary_modality',
+        'secondary_modality',
+        'tertiary_modality',
+        'best_time_of_day_to_record',
+        'frequency_of_recording',
+        'frequency_of_reviewing'
     ];
 
     public function videoRequests()

@@ -1434,7 +1434,8 @@ class VideoRequestController extends Controller
             if (!empty($row['country_code']) && !empty($row['mobile'])) {
                 try {
                     $twoFactorController = new TwoFactorAuthController();
-                    $twoFactorController->sendSms($row['country_code'], $row['mobile'], "Hello {$fullName}, you have received a new video request. Access: {$url}");
+                    $senderName = trim(($user->first_name ?? '') . ' ' . ($user->last_name ?? ''));
+                    $twoFactorController->sendSms($row['country_code'], $row['mobile'], "Vijo user {$senderName} has shared a Video with you. Access: {$url} or visit Vijo.me from your iOS Safari or Android Chrome browser and register for free.\n\nReply STOP to opt-out. Reply HELP for support. Msg & data rates may apply.");
                 } catch (\Exception $e) {
                     // Log::error('Error sending SMS: ' . $e->getMessage());
                 }
@@ -1735,7 +1736,8 @@ class VideoRequestController extends Controller
             if (!empty($countryCode) && !empty($mobile)) {
                 try {
                     $twoFactorController = new TwoFactorAuthController();
-                    $twoFactorController->sendSms($countryCode, $mobile, "Hello {$fullName}, you have received a shared video. Access: {$url}");
+                    $sendName = Auth::user()->first_name ?? 'Vijo User';
+                    $twoFactorController->sendSms($countryCode, $mobile, "Vijo user {$sendName} has shared a Video with you. Access: {$url} or visit Vijo.me from your iOS Safari or Android Chrome browser and register for free.\n\nReply STOP to opt-out. Reply HELP for support. Msg & data rates may apply.");
                 } catch (\Exception $e) {
                     Log::error('Error sending SMS: ' . $e->getMessage());
                 }
@@ -1817,7 +1819,8 @@ class VideoRequestController extends Controller
             if (!empty($req->ref_country_code) && !empty($req->ref_mobile)) {
                 try {
                     $twoFactorController = new TwoFactorAuthController();
-                    $smsMessage = "Hello {$fullName}, you have a pending video to record. {$note}";
+                    $senderName = User::find($req->user_id)?->first_name ?? 'Vijo User';
+                    $smsMessage = "Reminder: Vijo user {$senderName} requested a video from you. {$note}\n\nReply STOP to opt-out. Reply HELP for support. Msg & data rates may apply.";
                     $twoFactorController->sendSms($req->ref_country_code, $req->ref_mobile, $smsMessage);
                 } catch (\Exception $e) {
                     Log::error('Error sending reminder SMS: ' . $e->getMessage());

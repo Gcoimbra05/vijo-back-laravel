@@ -74,35 +74,30 @@
                 <div data-i18n="Marketplace">Catalog</div>
             </a>
             <ul class="menu-sub">
-                <!-- Journal Types -->
                 <li class="menu-item <?php if ($nav_bar == 'journal_types') { ?>active<?php } ?>">
                     <a href="{{ url('admin/journal_types') }}" class="menu-link">
                         <div data-i18n="Journal Types">Journal Types</div>
                     </a>
                 </li>
 
-                <!-- Journal Categories -->
                 <li class="menu-item <?php if ($nav_bar == 'journal_categories') { ?>active<?php } ?>">
                     <a href="{{ url('admin/journal_categories') }}" class="menu-link">
                         <div data-i18n="Journal Categories">Journal Categories</div>
                     </a>
                 </li>
 
-                <!-- Vijo Journals -->
                 <li class="menu-item <?php if ($nav_bar == 'catalogs') { ?>active<?php } ?>">
                     <a href="{{ url('admin/catalogs') }}" class="menu-link">
                         <div data-i18n="Catalogs">Vijo Journals</div>
                     </a>
                 </li>
 
-                <!-- Tags -->
                 <li class="menu-item <?php if ($nav_bar == 'tags') { ?>active<?php } ?>">
                     <a href="{{ url('admin/tags') }}" class="menu-link">
                         <div data-i18n="Tags">Tags</div>
                     </a>
                 </li>
 
-                <!-- Membership Plan -->
                 <li class="menu-item <?php if ($nav_bar == 'Memberships Plans') { ?>active<?php } ?>">
                     <a href="{{ url('admin/memberships') }}" class="menu-link">
                         <div data-i18n="memberships">Membership Plans</div>
@@ -111,7 +106,6 @@
             </ul>
         </li>
 
-        <!-- Jobs -->
         <li class="menu-item <?php if (in_array($nav_bar, array('job', 'job_batches', 'failed_jobs'))) { ?>open<?php } ?>">
             <a href="javascript:void(0);" class="menu-link menu-toggle">
                 <i class="menu-icon tf-icons bx bx-briefcase"></i>

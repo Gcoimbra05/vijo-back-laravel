@@ -19,8 +19,21 @@ class ProgressOverTimeService {
     {
         $collection = is_array($allParamValues) ? collect($allParamValues) : $allParamValues;
 
+        $timezone = null;
+        if ($collection->count() > 0) {
+            $first = $collection->first();
+            if (isset($first->user) && $first->user && $first->user->timezone) {
+                $timezone = $first->user->timezone;
+            } elseif (isset($first->timezone)) {
+                $timezone = $first->timezone;
+            }
+        }
+        if (!$timezone) {
+            $timezone = config('app.timezone', 'America/New_York');
+        }
+
         // Apply date filter at the beginning
-        $filteredCollection = $this->applyDateFilter($collection, $filter);
+        $filteredCollection = $this->applyDateFilter($collection, $filter, $timezone);
 
         // Group existing data by day
         $allDatesWValues = $filteredCollection
@@ -28,9 +41,9 @@ class ProgressOverTimeService {
                 $value = $this->getItemValue($item, $pluckBy);
                 return $value !== null && $value != 0;
             })
-            ->groupBy(function ($item) {
+            ->groupBy(function ($item) use ($timezone) {
                 $createdAt = $this->getItemValue($item, 'created_at');
-                $date = Carbon::parse($createdAt);
+                $date = Carbon::parse($createdAt)->setTimezone($timezone);
                 return $date->format('Y-m-d');
             });
 
@@ -78,19 +91,20 @@ class ProgressOverTimeService {
         return null;
     }
 
-    private function applyDateFilter($collection, $filter)
+    private function applyDateFilter($collection, $filter, $timezone = null)
     {
+        $timezone = $timezone ?: config('app.timezone', 'America/New_York');
         switch ($filter) {
             case 'last_7_days':
-                $startDate = Carbon::now()->subDays(7)->startOfDay();
-                return $collection->filter(function ($item) use ($startDate) {
-                    return Carbon::parse($item->created_at)->gte($startDate);
+                $startDate = Carbon::now($timezone)->subDays(7)->startOfDay();
+                return $collection->filter(function ($item) use ($startDate, $timezone) {
+                    return Carbon::parse($item->created_at)->setTimezone($timezone)->gte($startDate);
                 });
 
             case 'last_30_days':
-                $startDate = Carbon::now()->subDays(30)->startOfDay();
-                return $collection->filter(function ($item) use ($startDate) {
-                    return Carbon::parse($item->created_at)->gte($startDate);
+                $startDate = Carbon::now($timezone)->subDays(30)->startOfDay();
+                return $collection->filter(function ($item) use ($startDate, $timezone) {
+                    return Carbon::parse($item->created_at)->setTimezone($timezone)->gte($startDate);
                 });
 
             case 'since_start':
