@@ -25,7 +25,7 @@ class InsightsFilterController extends Controller
             $filters = collect([$filter]);
         }
 
-        return response()->json($filters);
+        return view('admin.insightsfilter.form', compact('failed_jobs', 'pageTitle', 'nav_bar', 'breadcrumbs'));
     }
 
     public function show($id)

@@ -27,6 +27,7 @@ use App\Http\Controllers\FailedJobsController;
 use App\Http\Controllers\UserLoginController;
 use App\Http\Controllers\UserFeedbackController;
 use App\Http\Controllers\UserFeedbackReplyController;
+use App\Http\Controllers\InsightsFilterControllerr;
 
 Route::get('/', function () {
     return view('welcome');
@@ -227,6 +228,16 @@ Route::prefix('admin')->group(function () {
 
         Route::prefix('failedjobs')->group(function () {
             Route::get('/', [FailedJobsController::class, 'index'])->name('failedjobs.index');
+        });
+
+        // Insights Filter
+        Route::prefix('insightsfilter')->group(function () {
+            Route::get('/', [InsightsFilterController::class, 'index'])->name('insightsfilter.index');
+            Route::get('/create', [InsightsFilterController::class, 'create'])->name('insightsfilter.create');
+            Route::post('/', [InsightsFilterController::class, 'store'])->name('insightsfilter.store');
+            Route::get('/show/{id}', [InsightsFilterController::class, 'show'])->name('insightsfilter.show');
+            Route::put('/{id}', [InsightsFilterController::class, 'update'])->name('insightsfilter.update');
+            Route::get('/delete/{id}', [InsightsFilterController::class, 'destroy'])->name('insightsfilter.dest');
         });
 });
 

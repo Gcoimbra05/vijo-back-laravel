@@ -83,6 +83,10 @@
             <li class="nav-item" role="presentation">
                 <button class="nav-link" id="log-tab" data-bs-toggle="tab" data-bs-target="#log" type="button" role="tab">Activity Log</button>
             </li>
+             <!-- Insights filters -->
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="insights_filter-tab" data-bs-toggle="tab" data-bs-target="#insights_filter" type="button" role="tab">Insights Filters</button>
+            </li>
         </ul>
             <form action="{{ route('users.update', $user->id) }}" method="POST">
                 @csrf
@@ -363,7 +367,8 @@
                             </div>
                     </div>
 
-
+                    
+                    
                     <!-- Conteúdo Contacts -->
                         <div class="tab-pane fade" id="contact" role="tabpanel">
                             <h5>Contact list</h5>
@@ -523,6 +528,7 @@
                                     @endif
                                 </tbody>
                             </table>
+                        </div>
                     </div>
 
                     <!-- Conteúdo log -->
@@ -544,19 +550,74 @@
                                             <tr>
                                                 
                                             </tr>
-                                        @endforeach
-                                    @else
-                                        <tr>
-                                            <td colspan="12" class="text-center">No records found.</td>
-                                        </tr>
-                                    @endif
+                                            @endforeach
+                                            @else
+                                            <tr>
+                                                <td colspan="12" class="text-center">No records found.</td>
+                                            </tr>
+                                            @endif
                                 </tbody>
                             </table>
                         </div>
                     </div>
 
-                </div>
+                    <!-- Conteúdo Insights filter -->
+                    <div class="tab-pane fade" id="insights_filter" role="tabpanel">
+                        <h5>Insights Filter</h5>
+                        <hr class="line" style="border:1px solid #d3d8dc;">
+                        <div class="table-responsive text-nowrap p-0 pt-0">
+                            <table class="table table-striped table-hover dataTableList">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>title</th>
+                                        <th>start date</th>
+                                        <th>end date</th>
+                                        <th>default</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="table-border-bottom-0">
+                                    @if(isset($insights_filter) && count($insights_filter) > 0)
+                                        @foreach($insights_filter as $insight_filter)
+                                            <tr>
+                                                <td>{{ $insight_filter->id }}</td>
+                                                <td>{{ $insight_filter->title }}</td>
+                                                <td>{{ $insight_filter->start_date }}</td>
+                                                <td>{{ $insight_filter->end_date }}</td>
+                                                <td>{{ $insight_filter->default }}</td>
+                                                <td>
+                                                    <div class="dropdown">
+                                                        <button type="button" class="btn p-0 dropdown-toggle hide-arrow" data-bs-toggle="dropdown">
+                                                            <i class="bx bx-dots-vertical-rounded"></i>
+                                                        </button>
 
+                                                        <div class="dropdown-menu">
+                                                            <a class="dropdown-item" href="<?php echo route('insightsfilter.update', $insight_filter->id); ?>"><i class="bx bx-edit me-1"></i> Edit</a>
+                                                            <form action="{{ route('insightsfilters.destroy', $insight_filter->id) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this record?');">
+                                                                @csrf
+                                                                @method('DELETE')
+                                                                <button type="submit" class="dropdown-item"><i class="bx bx-trash me-1"></i> Delete</button>
+                                                            </form>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                            @endforeach
+                                            @else
+                                            <tr>
+                                                <td colspan="7" class="text-center">No records found.</td>
+                                            </tr>
+                                            @endif
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+  
+                </div>
+                        
+                        
                 <div class="mb-3 col-md-12">
                     <label for="description" class="form-label">Description</label>
                     <textarea class="form-control wide-input @error('description') is-invalid @enderror" id="description" name="description" placeholder="Ex: Description" autocomplete="off">{{ old('description') }}</textarea>
