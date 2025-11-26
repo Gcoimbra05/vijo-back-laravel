@@ -27,6 +27,7 @@ use App\Http\Controllers\FailedJobsController;
 use App\Http\Controllers\UserLoginController;
 use App\Http\Controllers\UserFeedbackController;
 use App\Http\Controllers\UserFeedbackReplyController;
+use App\Http\Controllers\InsightsFilterControllerr;
 
 Route::get('/', function () {
     return view('welcome');
@@ -119,14 +120,14 @@ Route::prefix('admin')->group(function () {
         Route::get('/deactivate/{id}', [EmailTemplateController::class, 'deactivate'])->name('emailtemplate.deactivate');
     });
 
-    // Platform Texts
-    Route::prefix('platformtext')->group(function () {
-        Route::get('/', [PlatformTextController::class, 'index'])->name('platformtext.index');
-        Route::get('/create', [PlatformTextController::class, 'create'])->name('platformtext.create');
-        Route::post('/', [PlatformTextController::class, 'store'])->name('platformtext.store');
-        Route::get('/show/{id}', [PlatformTextController::class, 'show'])->name('platformtext.show');
-        Route::put('/{id}', [PlatformTextController::class, 'update'])->name('platformtext.update');
-        Route::get('/delete/{id}', [PlatformTextController::class, 'destroy'])->name('platformtext.delete');
+        // Platform Texts
+        Route::prefix('platformtext')->group(function () {
+            Route::get('/', [PlatformTextController::class, 'index'])->name('platformtext.index');
+            Route::get('/create', [PlatformTextController::class, 'create'])->name('platformtext.create');
+            Route::post('/', [PlatformTextController::class, 'store'])->name('platformtext.store');
+            Route::get('/show/{id}', [PlatformTextController::class, 'show'])->name('platformtext.show');
+            Route::put('/{id}', [PlatformTextController::class, 'update'])->name('platformtext.update');
+            Route::get('/delete/{id}', [PlatformTextController::class, 'destroy'])->name('platformtext.delete');
 
         Route::get('/activate/{id}', [PlatformTextController::class, 'activate'])->name('platformtext.activate');
         Route::get('/deactivate/{id}', [PlatformTextController::class, 'deactivate'])->name('platformtext.deactivate');
@@ -189,9 +190,9 @@ Route::prefix('admin')->group(function () {
         Route::put('/{id}', [MembershipPlanController::class, 'update'])->name('membership.update');
         Route::get('/delete/{id}', [MembershipPlanController::class, 'destroy'])->name('membership.delete');
 
-        Route::get('admin/memberships/deactivate/{id}', [MembershipPlanController::class, 'deactivate'])->name('membership.deactivate');
-        Route::get('admin/memberships/activate/{id}', [MembershipPlanController::class, 'activate'])->name('membership.activate');
-    });
+            Route::get('admin/memberships/deactivate/{id}', [MembershipPlanController::class, 'deactivate'])->name('membership.deactivate');
+            Route::get('admin/memberships/activate/{id}', [MembershipPlanController::class, 'activate'])->name('membership.activate');
+        });
 });
 
 // Fallback Route

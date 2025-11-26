@@ -27,17 +27,6 @@ class InsightsFilterController extends Controller
             $filters = collect([$filter]);
         }
 
-        $filters = $filters->map(function($filter) use ($timezone) {
-            if ($filter->start_date) {
-                $filter->start_date = 
-                    \Carbon\Carbon::parse($filter->start_date)->setTimezone($timezone)->toDateString();
-            }
-            if ($filter->end_date) {
-                $filter->end_date = 
-                    \Carbon\Carbon::parse($filter->end_date)->setTimezone($timezone)->toDateString();
-            }
-            return $filter;
-        });
         return response()->json($filters);
     }
 

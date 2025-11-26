@@ -25,6 +25,23 @@ class CatalogController extends Controller
     {
         $catalogs = Catalog::with(['category'])->where('is_deleted', 0)->orderBy('admin_order', 'asc')->get();
 
+        // add emoji_rendered property so view shows the emoji (handles hex code, entity or char)
+        foreach ($catalogs as $c) {
+            $emojiVal = $c->emoji ?? '';
+            if ($emojiVal) {
+                $e = trim($emojiVal);
+                if (preg_match('/^[0-9a-fA-F]{2,8}$/', $e)) {
+                    $c->emoji_rendered = mb_convert_encoding('&#x' . $e . ';', 'UTF-8', 'HTML-ENTITIES');
+                } elseif (preg_match('/^(&#x[0-9a-fA-F]+;|&#\d+;)/', $e)) {
+                    $c->emoji_rendered = html_entity_decode($e, ENT_QUOTES, 'UTF-8');
+                } else {
+                    $c->emoji_rendered = $e;
+                }
+            } else {
+                $c->emoji_rendered = '-';
+            }
+        }
+
         if (request()->wantsJson()) {
             return response()->json([
                 'success' => true,
@@ -99,6 +116,7 @@ class CatalogController extends Controller
             'is_promotional' => $request->is_promotional,
             'is_premium' => $request->is_premium,
             'video_type_id' => $request->video_type_id,
+            'from' => 'catalog',
         ]);
 
         if ($request->wantsJson()) {
@@ -132,17 +150,18 @@ class CatalogController extends Controller
         ];
         $tags = Tag::all();
 
+        // Fixed: removed stray merge artifact and provide a clean array of data to the view
         return view('admin.catalogs.form', [
             'action' => 'Edit',
             'pageTitle' => $pageTitle,
             'nav_bar' => $nav_bar,
             'breadcrumbs' => $breadcrumbs,
             'info' => [$catalog],
-            'admin.catalog.edit', compact('catalog', 'videoTypes', 'categories', 'catalogs'),
             'videoTypes' => $videoTypes,
             'categories' => $categories,
             'catalogs' => $catalogs,
-            'tags' => $tags
+            'tags' => $tags,
+            'from' => request('from', 'catalog'),
         ]);
 
     }

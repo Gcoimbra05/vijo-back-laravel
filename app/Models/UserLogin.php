@@ -9,4 +9,9 @@ class UserLogin extends Model
     protected $fillable = [
         'user_id', 'logged_in_at', 'ip_address', 'user_agent'
     ];
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
 }

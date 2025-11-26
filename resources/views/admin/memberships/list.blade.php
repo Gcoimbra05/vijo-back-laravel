@@ -43,12 +43,11 @@
                                 @endswitch
                             </td>
                             <td>{{ $membership->slug }}</td>
-                            <td>
-                                @switch($membership->status)
-                                    @case(1) Activated @break
-                                    @case(0) Deactivated @break
-                                    @default {{ $membership->status }}
-                                @endswitch
+                            <td class="text-center" style="min-width:110px;">
+                                @php $isActive = intval($membership->status) === 1; @endphp
+                                <span class="badge {{ $isActive ? 'bg-success' : 'bg-secondary' }}">
+                                    {{ $isActive ? 'Activated' : 'Deactivated' }}
+                                </span>
                             </td>
                             <td>{{ optional($membership->updated_at)->format('Y-m-d') }}</td>
                             <td>

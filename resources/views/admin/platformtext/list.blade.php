@@ -65,7 +65,7 @@
                                             </a>
                                         @endif
 
-                                        <a class="dropdown-item" href="{{ route('platformtext.show', $platformtext->id) }}">
+                                        <a class="dropdown-item" href="{{ route('platformtext.edit', $platformtext->id) }}">
                                             <i class="bx bx-edit-alt me-1"></i> Edit
                                         </a>
 

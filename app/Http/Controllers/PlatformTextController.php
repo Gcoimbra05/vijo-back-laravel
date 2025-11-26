@@ -54,9 +54,17 @@ class PlatformTextController extends Controller
     {
         $text = PlatformText::find($id);
         if (!$text) {
-            return response()->json(['message' => 'Text not found'], 404);
+            return response()->json([
+                'success' => false,
+                'message' => 'Platform text not found.',
+                'data' => null,
+            ], 404);
         }
-        return response()->json($text);
+        return response()->json([
+            'success' => true,
+            'message' => 'Platform text retrieved successfully.',
+            'data' => $text,
+        ]);
     }
 
     // Create a new platform text
@@ -78,6 +86,28 @@ class PlatformTextController extends Controller
             ->with('success', 'Platform text created successfully.');
     }
 
+    public function edit($id)
+    {
+        $text = PlatformText::findOrFail($id);
+
+        $pageTitle = "Edit Platform Text";
+        $nav_bar = "platformtext";
+
+        $breadcrumbs = [
+            ['label' => 'Platform Texts', 'url' => route('platformtext.index')],
+            ['label' => 'Edit Platform Text', 'url' => null],
+        ];
+
+        return view('admin.platformtext.form', [
+            'action' => 'edit',
+            'pageTitle' => $pageTitle,
+            'nav_bar' => $nav_bar,
+            'breadcrumbs' => $breadcrumbs,
+            'platformText' => $text,  // igual ao create
+        ]);
+    }
+
+
     // Update an existing platform text
     public function update(Request $request, $id)
     {
@@ -95,7 +125,8 @@ class PlatformTextController extends Controller
             'location' => 'nullable|string',
         ]);
         $text->update($validated);
-        return response()->json($text);
+         return redirect()->route('platformtext.index')
+            ->with('success', 'Platform text Update successfully.');
     }
 
     // Delete a platform text

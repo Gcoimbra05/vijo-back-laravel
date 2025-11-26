@@ -210,8 +210,8 @@
                             <label for="status">Status</label>
                                 <select name="status" id="status" class="form-control @error('status') is-invalid @enderror" style="cursor: pointer; appearance: menulist">
                                     <option value="" disabled selected>Select</option>
-                                    <option value="1" {{ old('status', $info[0]['status'] ?? '') == 1 ? 'selected' : '' }}>Activate</option>
-                                    <option value="0" {{ old('status', $info[0]['status'] ?? '') == 0 ? 'selected' : '' }}>Deactivate</option>
+                                    <option value="1" {{ (string) old('status', $info[0]['status'] ?? '') === "1" ? 'selected' : '' }}>Activate</option>
+                                    <option value="0" {{ (string) old('status', $info[0]['status'] ?? '') === "0" ? 'selected' : '' }}>Deactivate</option>
                                 </select>
                         </div>
                         
