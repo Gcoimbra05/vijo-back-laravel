@@ -526,6 +526,19 @@ class UserController extends Controller
         return "{$greetingTime}, {$user->first_name}!";
     }
 
+    public function getActivityData(EmloInsightsService $emlo)
+    {
+        $user = Auth::user();
+        $userId = $user->id;
+
+        $activity = $emlo->getCondensedUserActivity($userId);
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Activity data retrieved successfully.',
+            'data' => $activity
+        ]);
+    }
+
     public function getDashboardData(Request $request, EmloInsightsService $emlo)
     {
         $user = Auth::user();

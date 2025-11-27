@@ -499,6 +499,12 @@ class EmloInsightsService
         ];
     }
 
+    public function getCondensedUserActivity($userId)
+    {
+        $stats = $this->insightsV2Service->getUserActivityStats($userId);
+        return $stats;
+    }
+
     private function getTimestampsOfBaselines($baseline1, $baseline2)
     {
 

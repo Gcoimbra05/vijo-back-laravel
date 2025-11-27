@@ -103,7 +103,7 @@ class PlatformTextController extends Controller
             'pageTitle' => $pageTitle,
             'nav_bar' => $nav_bar,
             'breadcrumbs' => $breadcrumbs,
-            'platformText' => $text,  // igual ao create
+            'platformText' => $text,
         ]);
     }
 
@@ -125,8 +125,9 @@ class PlatformTextController extends Controller
             'location' => 'nullable|string',
         ]);
         $text->update($validated);
+
          return redirect()->route('platformtext.index')
-            ->with('success', 'Platform text Update successfully.');
+            ->with('success', 'Platform text updated successfully.');
     }
 
     // Delete a platform text
