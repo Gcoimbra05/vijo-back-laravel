@@ -27,7 +27,8 @@ use App\Http\Controllers\FailedJobsController;
 use App\Http\Controllers\UserLoginController;
 use App\Http\Controllers\UserFeedbackController;
 use App\Http\Controllers\UserFeedbackReplyController;
-use App\Http\Controllers\InsightsFilterControllerr;
+use App\Http\Controllers\InsightsFilterController;
+use App\Http\Controllers\VijoPlansController;
 
 Route::get('/', function () {
     return view('welcome');
@@ -192,6 +193,13 @@ Route::prefix('admin')->group(function () {
 
             Route::get('admin/memberships/deactivate/{id}', [MembershipPlanController::class, 'deactivate'])->name('membership.deactivate');
             Route::get('admin/memberships/activate/{id}', [MembershipPlanController::class, 'activate'])->name('membership.activate');
+        });
+    
+        Route::prefix('vijoplans')->group(function () {
+            Route::get('/', [VijoPlansController::class, 'index'])->name('vijoplan.index');
+            Route::post('/', [VijoPlansController::class, 'store'])->name('vijoplan.store');
+            Route::put('/{id}', [VijoPlansController::class, 'update'])->name('vijoplan.update');
+            Route::get('/delete/{id}', [VijoPlansController::class, 'destroy'])->name('vijoplan.delete');
         });
 });
 
