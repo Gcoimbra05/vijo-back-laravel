@@ -44,18 +44,17 @@ right: 1rem;
                                 </button>
 
                                 <div class="dropdown-menu">
-                                    <a class="dropdown-item" href="<?php echo route('users.edit', $user->id); ?>"><i class="bx bx-user me-1"></i> User Data</a>
-                                    <a class="dropdown-item" href="<?php echo route('users.journalHistory', $user->id); ?>"><i class="bx bx-history me-1"></i> Journal History</a>
-                                    <a class="dropdown-item" href="<?php echo route('users.auditLogs', $user->id); ?>"><i class="bx bxl-blogger me-1"></i> Audit Logs</a>
+                                    <a class="dropdown-item" href="<?php echo route('admin.users.edit', $user->id); ?>"><i class="bx bx-user me-1"></i> User Data</a>
+                                    <a class="dropdown-item" href="<?php echo route('admin.users.journalHistory', $user->id); ?>"><i class="bx bx-history me-1"></i> Journal History</a>
+                                    <a class="dropdown-item" href="<?php echo route('admin.users.auditLogs', $user->id); ?>"><i class="bx bxl-blogger me-1"></i> Audit Logs</a>
 
                                     <?php if ($user->status == 1) { ?>
-                                        <a class="dropdown-item" href="<?php echo route('users.deactivate', $user->id); ?>"><i class="bx bx-x me-1"></i> Deactivate</a>
+                                        <a class="dropdown-item" href="<?php echo route('admin.users.deactivate', $user->id); ?>"><i class="bx bx-x me-1"></i> Deactivate</a>
                                     <?php } else if ($user->status == 0) { ?>
-                                        <a class="dropdown-item" href="<?php echo route('users.activate', $user->id); ?>"><i class="bx bx-check me-1"></i> Activate</a>
+                                        <a class="dropdown-item" href="<?php echo route('admin.users.activate', $user->id); ?>"><i class="bx bx-check me-1"></i> Activate</a>
                                     <?php } ?>
 
-                                    <!-- lets user form here.. -->
-                                    <form action="{{ route('users.destroy', $user->id) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this record?');">
+                                    <form action="{{ route('admin.users.destroy', $user->id) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this record?');">
                                         @csrf
                                         @method('DELETE')
                                         <button type="submit" class="dropdown-item"><i class="bx bx-trash me-1"></i> Delete</button>

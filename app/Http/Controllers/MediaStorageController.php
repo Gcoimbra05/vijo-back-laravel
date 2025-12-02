@@ -108,114 +108,365 @@ class MediaStorageController extends Controller
 
     /**
      * Upload video to the configured storage (S3 or local).
+     * Robust version with granular error handling and cleanup.
      */
     public function uploadVideo(Request $request, $userId = null)
     {
-        Log::info('Starting uploadVideo process');
-
-        $validator = Validator::make($request->all(), [
-            'file' => 'required|file|mimes:mp4,mov,ogg,qt,webm,mkv|max:512000', // up to 500MB
-            'video_duration' => 'nullable|integer',
+        $startTime = microtime(true);
+        $tempFiles = [];
+        
+        Log::info('MediaStorage: Starting uploadVideo process', [
+            'file_path' => $request->file_path ?? 'unknown'
         ]);
 
-        if ($validator->fails()) {
-            Log::info('Validation failed in uploadVideo', [
-                'errors' => $validator->errors()->all(),
-                'input' => $request->all()
+        try {
+            // Step 1: Validation
+            $validator = Validator::make($request->all(), [
+                'file' => 'required|file|mimes:mp4,mov,ogg,qt,webm,mkv|max:512000',
+                'video_duration' => 'nullable|integer',
             ]);
+
+            if ($validator->fails()) {
+                Log::error('MediaStorage: Validation failed', [
+                    'errors' => $validator->errors()->all()
+                ]);
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Validation failed',
+                    'errors' => $validator->errors()->all(),
+                ], 422);
+            }
+
+            // Step 2: Prepare variables and validate file
+            $file = $request->file('file');
+            $fileName = $file->getClientOriginalName();
+            $fileExtension = $file->getClientOriginalExtension();
+            $localVideoPath = $request->file_path;
+
+            // Validate source file
+            if (!file_exists($localVideoPath)) {
+                throw new \Exception('Source video file not found: ' . $localVideoPath);
+            }
+
+            if (!is_readable($localVideoPath)) {
+                throw new \Exception('Source video file is not readable: ' . $localVideoPath);
+            }
+
+            $originalSize = filesize($localVideoPath);
+            if ($originalSize === 0) {
+                throw new \Exception('Source video file is empty');
+            }
+
+            Log::info('MediaStorage: File validated', [
+                'size' => $originalSize,
+                'extension' => $fileExtension
+            ]);
+
+            $tempFolderPath = 'app' . DIRECTORY_SEPARATOR . 'temp';
+            $thumbnailName = Str::of($fileName)->basename('.' . $fileExtension) . '.jpg';
+            $thumbnailPath = storage_path($tempFolderPath . DIRECTORY_SEPARATOR . $thumbnailName);
+            $tempFiles[] = $thumbnailPath;
+
+            // Remove existing thumbnail if exists
+            if (file_exists($thumbnailPath)) {
+                @unlink($thumbnailPath);
+            }
+
+            // Step 3: Generate thumbnail with retry
+            $thumbnailGenerated = $this->generateThumbnail($localVideoPath, $thumbnailPath);
+            if (!$thumbnailGenerated) {
+                Log::warning('MediaStorage: Thumbnail generation failed, continuing without thumbnail');
+            }
+
+            // Step 4: Video conversion (if needed)
+            $needsConversion = !(strtolower($fileExtension) === 'mp4' && $originalSize < 30000000);
+            $outputFile = $localVideoPath;
+            
+            if ($needsConversion) {
+                Log::info('MediaStorage: Video needs conversion', [
+                    'originalSize' => $originalSize,
+                    'extension' => $fileExtension
+                ]);
+                
+                $outputFile = str_replace('.' . $fileExtension, '_converted.mp4', $localVideoPath);
+                $tempFiles[] = $outputFile;
+                
+                if (file_exists($outputFile)) {
+                    @unlink($outputFile);
+                }
+                
+                $conversionSuccess = $this->convertVideo($localVideoPath, $outputFile);
+                
+                if (!$conversionSuccess) {
+                    throw new \Exception('Video conversion failed');
+                }
+                
+                Log::info('MediaStorage: Video converted successfully');
+            } else {
+                Log::info('MediaStorage: Video does not need conversion');
+            }
+
+            // Step 5: Get video duration
+            $duration = $request->input('video_duration');
+            if (empty($duration)) {
+                $duration = $this->getVideoDuration($outputFile);
+                if (!$duration) {
+                    Log::warning('MediaStorage: Could not determine video duration, using default');
+                    $duration = 0;
+                }
+            }
+
+            Log::info('MediaStorage: Video duration determined', ['duration' => $duration]);
+
+            // Step 6: Replace original with converted file if needed
+            if ($outputFile !== $localVideoPath && file_exists($outputFile)) {
+                $fileSize = filesize($outputFile);
+                if ($fileSize === 0) {
+                    throw new \Exception('Converted file is empty');
+                }
+                
+                @unlink($localVideoPath);
+                rename($outputFile, $localVideoPath);
+                $outputFile = $localVideoPath;
+                
+                Log::info('MediaStorage: Replaced original with converted file');
+            }
+
+            // Step 7: Upload to storage (S3 or local)
+            $disk = config('filesystems.default', 's3');
+            $videoStoragePath = 'videos/' . basename($outputFile);
+            $thumbnailStoragePath = 'thumbnails/' . $thumbnailName;
+            
+            Log::info('MediaStorage: Uploading to storage', ['disk' => $disk]);
+            
+            $videoUrl = $thumbnailUrl = '';
+            
+            // Upload video
+            if (!file_exists($outputFile)) {
+                throw new \Exception('Output file does not exist before upload');
+            }
+            
+            try {
+                Storage::disk($disk)->putFileAs('videos', new File($outputFile), basename($outputFile));
+                $videoUrl = Storage::disk($disk)->url($videoStoragePath);
+                Log::info('MediaStorage: Video uploaded successfully');
+            } catch (\Exception $e) {
+                Log::error('MediaStorage: Video upload failed', ['error' => $e->getMessage()]);
+                throw new \Exception('Failed to upload video to storage: ' . $e->getMessage());
+            }
+            
+            // Upload thumbnail (optional)
+            if (file_exists($thumbnailPath)) {
+                try {
+                    Storage::disk($disk)->putFileAs('thumbnails', new File($thumbnailPath), $thumbnailName);
+                    $thumbnailUrl = Storage::disk($disk)->url($thumbnailStoragePath);
+                    Log::info('MediaStorage: Thumbnail uploaded successfully');
+                } catch (\Exception $e) {
+                    Log::warning('MediaStorage: Thumbnail upload failed', ['error' => $e->getMessage()]);
+                    // Don't throw - thumbnail is optional
+                }
+            }
+
+            $duration = round(microtime(true) - $startTime, 2);
+            Log::info('MediaStorage: Upload process completed', [
+                'totalDuration' => $duration . 's',
+                'videoSize' => filesize($outputFile)
+            ]);
+
+            return response()->json([
+                'success'         => true,
+                'message'         => 'Video uploaded successfully',
+                'video_name'      => basename($outputFile),
+                'video_url'       => $videoUrl,
+                'video_duration'  => $request->input('video_duration') ?? $duration,
+                'thumbnail_name'  => $thumbnailName,
+                'thumbnail_url'   => $thumbnailUrl,
+            ]);
+            
+        } catch (\Exception $e) {
+            Log::error('MediaStorage: Upload process failed', [
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
+            ]);
+            
             return response()->json([
                 'success' => false,
-                'message' => 'Validation failed',
-                'errors' => $validator->errors()->all(),
-            ], 422);
-        }
-
-        // Prepare variables
-        $file = $request->file('file');
-        $fileName = $file->getClientOriginalName();
-        $fileExtension = $file->getClientOriginalExtension();
-
-        $tempFolderPath = 'app' . DIRECTORY_SEPARATOR . 'temp';
-
-        $localVideoPath = $request->file_path;
-
-        $thumbnailName = Str::of($fileName)->basename('.' . $fileExtension) . '.jpg';
-        $thumbnailPath = storage_path($tempFolderPath . DIRECTORY_SEPARATOR . $thumbnailName);
-
-        // Remove existing thumbnail if it exists to prevent FFmpeg prompt
-        if (file_exists($thumbnailPath)) {
-            @unlink($thumbnailPath);
-            Log::info('Removed existing thumbnail: ' . $thumbnailPath);
-        }
-
-        // Generate thumbnail
-        $thumbnailCommand = "ffmpeg -y -i " . escapeshellarg($localVideoPath) . " -frames:v 1 -update 1 " . escapeshellarg($thumbnailPath) . " 2>&1";
-        $thumbnailResult = shell_exec($thumbnailCommand);
-        Log::info('Thumbnail generation result: ' . $thumbnailResult);
-
-        $originalSize = filesize($localVideoPath);
-
-        // Always write to a new output file to avoid FFmpeg in-place overwrite errors
-        $outputFile = $localVideoPath;
-        $needsConversion = !(strtolower($fileExtension) === 'mp4' && $originalSize < 30000000);
-        if ($needsConversion) {
-            $outputFile = str_replace('.' . $fileExtension, '_converted.mp4', $localVideoPath);
-            if (file_exists($outputFile)) {
-                @unlink($outputFile);
-                Log::info('Removed existing output file: ' . $outputFile);
+                'message' => 'Video upload failed: ' . $e->getMessage(),
+                'errors' => [$e->getMessage()],
+            ], 500);
+            
+        } finally {
+            // Always cleanup temporary files
+            $this->cleanupTempFiles($tempFiles);
+            if (file_exists($localVideoPath)) {
+                @unlink($localVideoPath);
             }
-            $ffmpegCommand = "ffmpeg -y -i " . escapeshellarg($localVideoPath) . " -c:v libx264 -profile:v baseline -level 3.0 -pix_fmt yuv420p -vf 'scale=trunc(iw/2)*2:trunc(ih/2)*2' -r 30 -b:v 1000k -c:a aac -b:a 128k -movflags +faststart " . escapeshellarg($outputFile) . " 2>&1";
-            $conversionResult = shell_exec($ffmpegCommand);
-            Log::info('Video conversion result: ' . $conversionResult);
         }
+    }
 
-        // Get video duration BEFORE uploading/cleanup (while file still exists)
-        $duration = $request->input('video_duration');
-        if (empty($duration)) {
-            $ffprobe = "ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 " . escapeshellarg($outputFile) . " 2>&1";
-            $durationOutput = shell_exec($ffprobe);
-            Log::info('FFprobe duration result: ' . $durationOutput);
-            if ($durationOutput) {
-                $duration = (int) floatval($durationOutput);
+    /**
+     * Generate thumbnail from video with retry logic
+     */
+    protected function generateThumbnail(string $videoPath, string $thumbnailPath, int $maxRetries = 2): bool
+    {
+        for ($attempt = 1; $attempt <= $maxRetries; $attempt++) {
+            try {
+                Log::info('MediaStorage: Generating thumbnail', [
+                    'attempt' => $attempt,
+                    'videoPath' => $videoPath
+                ]);
+
+                $command = sprintf(
+                    'ffmpeg -y -i %s -vf "thumbnail,scale=640:360" -frames:v 1 -update 1 %s 2>&1',
+                    escapeshellarg($videoPath),
+                    escapeshellarg($thumbnailPath)
+                );
+
+                $output = shell_exec($command);
+
+                if (file_exists($thumbnailPath) && filesize($thumbnailPath) > 0) {
+                    Log::info('MediaStorage: Thumbnail generated successfully');
+                    return true;
+                }
+
+                Log::warning('MediaStorage: Thumbnail generation attempt failed', [
+                    'attempt' => $attempt,
+                    'output' => substr($output, -500)
+                ]);
+
+                sleep(1); // Wait before retry
+
+            } catch (\Exception $e) {
+                Log::error('MediaStorage: Thumbnail generation error', [
+                    'attempt' => $attempt,
+                    'error' => $e->getMessage()
+                ]);
             }
         }
 
-        // If conversion happened, replace original with converted file
-        if ($outputFile !== $localVideoPath && file_exists($outputFile)) {
-            @unlink($localVideoPath); // Remove original
-            rename($outputFile, $localVideoPath); // Move converted to original path
-            $outputFile = $localVideoPath;
+        return false;
+    }
+
+    /**
+     * Convert video with optimized settings and error handling
+     */
+    protected function convertVideo(string $inputPath, string $outputPath, int $maxRetries = 2): bool
+    {
+        for ($attempt = 1; $attempt <= $maxRetries; $attempt++) {
+            try {
+                Log::info('MediaStorage: Converting video', [
+                    'attempt' => $attempt,
+                    'inputSize' => filesize($inputPath)
+                ]);
+
+                // Optimized FFmpeg command with error recovery
+                $command = sprintf(
+                    'ffmpeg -y -i %s -c:v libx264 -preset fast -profile:v baseline -level 3.0 ' .
+                    '-pix_fmt yuv420p -vf "scale=trunc(iw/2)*2:trunc(ih/2)*2" -r 30 -b:v 1000k ' .
+                    '-c:a aac -b:a 128k -movflags +faststart -max_muxing_queue_size 1024 %s 2>&1',
+                    escapeshellarg($inputPath),
+                    escapeshellarg($outputPath)
+                );
+
+                $output = shell_exec($command);
+
+                // Validate output
+                if (file_exists($outputPath)) {
+                    $outputSize = filesize($outputPath);
+                    
+                    if ($outputSize === 0) {
+                        @unlink($outputPath);
+                        throw new \Exception('Converted file is empty');
+                    }
+
+                    Log::info('MediaStorage: Video converted successfully', [
+                        'inputSize' => filesize($inputPath),
+                        'outputSize' => $outputSize,
+                        'compressionRatio' => round(($outputSize / filesize($inputPath)) * 100, 2) . '%'
+                    ]);
+
+                    return true;
+                }
+
+                Log::warning('MediaStorage: Conversion attempt failed', [
+                    'attempt' => $attempt,
+                    'output' => substr($output, -500)
+                ]);
+
+                sleep(2); // Wait before retry
+
+            } catch (\Exception $e) {
+                Log::error('MediaStorage: Video conversion error', [
+                    'attempt' => $attempt,
+                    'error' => $e->getMessage()
+                ]);
+
+                if (file_exists($outputPath)) {
+                    @unlink($outputPath);
+                }
+            }
         }
 
-        // Upload to S3 or local
-        $disk = config('filesystems.default', 's3');
-        $videoStoragePath = 'videos/' . basename($outputFile);
-        $thumbnailStoragePath = 'thumbnails/' . $thumbnailName;
-        Log::info('Uploading video to disk: ' . $disk);
-        $videoUrl = $thumbnailUrl = '';
-        if (file_exists($outputFile)) {
-            Storage::disk($disk)->putFileAs('videos', new File($outputFile), basename($outputFile));
-            $videoUrl = Storage::disk($disk)->url($videoStoragePath);
-        }
-        if (file_exists($thumbnailPath)) {
-            Storage::disk($disk)->putFileAs('thumbnails', new File($thumbnailPath), $thumbnailName);
-            $thumbnailUrl = Storage::disk($disk)->url($thumbnailStoragePath);
+        return false;
+    }
+
+    /**
+     * Get video duration using ffprobe with retry
+     */
+    protected function getVideoDuration(string $videoPath, int $maxRetries = 2): ?int
+    {
+        for ($attempt = 1; $attempt <= $maxRetries; $attempt++) {
+            try {
+                $command = sprintf(
+                    'ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 %s 2>&1',
+                    escapeshellarg($videoPath)
+                );
+
+                $output = shell_exec($command);
+
+                if ($output && is_numeric(trim($output))) {
+                    $duration = (int) floatval(trim($output));
+                    Log::info('MediaStorage: Duration determined', ['duration' => $duration]);
+                    return $duration;
+                }
+
+                Log::warning('MediaStorage: Duration probe attempt failed', [
+                    'attempt' => $attempt,
+                    'output' => $output
+                ]);
+
+                sleep(1);
+
+            } catch (\Exception $e) {
+                Log::error('MediaStorage: Duration probe error', [
+                    'attempt' => $attempt,
+                    'error' => $e->getMessage()
+                ]);
+            }
         }
 
-        // Clean up local temporary files (ONLY ONCE, AT THE END)
-        Log::info('Cleaning up temporary files: ' . $localVideoPath . ', ' . $thumbnailPath);
-        @unlink($localVideoPath);
-        @unlink($thumbnailPath);
+        return null;
+    }
 
-        return response()->json([
-            'success'         => true,
-            'message'         => 'Video uploaded successfully',
-            'video_name'      => basename($outputFile),
-            'video_url'       => $videoUrl,
-            'video_duration'  => $duration,
-            'thumbnail_name'  => $thumbnailName,
-            'thumbnail_url'   => $thumbnailUrl,
-        ]);
+    /**
+     * Cleanup temporary files safely
+     */
+    protected function cleanupTempFiles(array $files): void
+    {
+        foreach ($files as $file) {
+            if (file_exists($file)) {
+                try {
+                    @unlink($file);
+                    Log::info('MediaStorage: Cleaned up temp file', ['file' => basename($file)]);
+                } catch (\Exception $e) {
+                    Log::warning('MediaStorage: Failed to cleanup temp file', [
+                        'file' => basename($file),
+                        'error' => $e->getMessage()
+                    ]);
+                }
+            }
+        }
     }
 
     public static function uploadThumbnail(Request $request)

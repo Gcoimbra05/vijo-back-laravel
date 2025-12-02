@@ -33,6 +33,7 @@ use Illuminate\Support\Facades\Validator;
 use App\Services\CredScore\CredScoreService;
 use App\Services\Emlo\EmloInsights\SnapshotService;
 use App\Services\VideoDetailServices\EmotionService;
+use Carbon\Carbon;
 use Exception;
 
 class VideoRequestController extends Controller
@@ -925,6 +926,7 @@ class VideoRequestController extends Controller
     {
         $user = Auth::user();
         $userId = $user->id;
+        $timezone = $user->timezone ?? config('app.timezone', 'America/New_York');
 
         $sharedRequestIds = VideoRequestShare::where(function($query) use ($user) {
             $query->where('recipient_user_id', $user->id)
@@ -950,7 +952,7 @@ class VideoRequestController extends Controller
             ->orderBy('created_at', 'desc')
             ->get();
 
-        $requestData = $allRequests->map(function($req) use ($userId, $sharedRequestIds) {
+        $requestData = $allRequests->map(function($req) use ($userId, $sharedRequestIds, $timezone) {
             $video = $req->latestVideo;
             $catalog = $req->catalog;
             $user = $req->user;
@@ -1012,8 +1014,8 @@ class VideoRequestController extends Controller
                 'catalogEmoji'        => $catalog->emoji ?? '',
                 'category_name'       => $catalog && $catalog->category ? $catalog->category->name : '',
                 'cp_id'               => $catalog->cp_id ?? 0,
-                'created_at'          => $req->created_at ? date('M d, Y H:i', strtotime($req->created_at)) : '',
-                'date'                => $req->created_at ? date('M d, Y g:iA', strtotime($req->created_at)) : '',
+                'created_at'          => $req->created_at ? Carbon::parse($req->created_at)->setTimezone($timezone)->format('M d, Y H:i') : '',
+                'date'                => $req->created_at ? Carbon::parse($req->created_at)->setTimezone($timezone)->format('M d, Y g:iA') : '',
                 'id'                  => $req->id,
                 'is_private'          => $req->is_private ?? 0,
                 'journal_title'       => $req->title ?? ($catalog->title ?? ''),
@@ -1043,7 +1045,8 @@ class VideoRequestController extends Controller
 
     public function getVideoDetail(Request $request, $id = 0)
     {
-        $userId = Auth::id();
+        $user = Auth::user();
+        $userId = $user->id;
 
         if ($id <= 0) {
             return response()->json([
@@ -1065,7 +1068,6 @@ class VideoRequestController extends Controller
           ->first();
 
         if (!$videoRequest) {
-            $user = Auth::user();
             $shareVideoRequest = VideoRequestShare::where(function($query) use ($user) {
                 $query->where('recipient_user_id', $user->id)
                     ->orWhere('email', $user->email)
@@ -1190,6 +1192,7 @@ class VideoRequestController extends Controller
         if ($isEmotionalCategory && $videoRequest->user_id == $userId) {
             $snapshot = app(SnapshotService::class)->getEmotionalSnapshot($videoRequest->id);
         }
+        $timezone = $user->timezone ?? config('app.timezone', 'America/New_York');
 
         $data = [
             'catalog_id'              => $catalog->id ?? '',
@@ -1199,7 +1202,7 @@ class VideoRequestController extends Controller
             'catalog_emoji'           => $catalog->emoji ?? '',
             'category_name'           => $category ? $category->name : '',
             'contacts'                => $contacts,
-            'created_at'              => $videoRequest->created_at ? $videoRequest->created_at->format('M d, Y g:iA') : '',
+            'created_at'              => $videoRequest->created_at ? Carbon::parse($videoRequest->created_at)->setTimezone($timezone)->format('M d, Y g:iA') : '',
             'cred_score'              => $credScore ?? 75,
             'perceived_score'         => $perceivedScore ?? 0,
             'actual_score'            => $measuredScore ?? 0,

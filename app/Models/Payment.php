@@ -3,9 +3,14 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use OwenIt\Auditing\Contracts\Auditable as AuditableContract;
+use OwenIt\Auditing\Auditable;
 
-class Payment extends Model
+class Payment extends Model implements AuditableContract
 {
+    use HasFactory, Auditable;
+
     protected $fillable = [
         'subscription_id',
         'customerID',

@@ -79,7 +79,7 @@ use Carbon\Carbon;
                                     </button>
                                     <div class="dropdown-menu">
                                         {{-- directs to users.upgrade of the specific user --}}
-                                        <a class="dropdown-item" href="{{ route('users.edit', optional($userlogin->user)->id) }}">
+                                        <a class="dropdown-item" href="{{ route('admin.users.edit', optional($userlogin->user)->id) }}">
                                             <i class="bx bx-user me-1"></i> View User
                                         </a>
                                     </div>
