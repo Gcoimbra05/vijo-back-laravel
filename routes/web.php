@@ -67,6 +67,11 @@ Route::prefix('admin')->group(function () {
     Route::post('/logout', [AdminLoginController::class, 'logout'])->name('logout');
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
+    Route::get('/forgot-password', [AdminLoginController::class, 'forgot'])->name('password.forgot');
+    Route::get('/validate-token', [AdminLoginController::class, 'validatetoken'])->name('password.validatetoken');
+    Route::get('/reset-password', [AdminLoginController::class, 'resetpassword'])->name('password.resetpassword');
+
+
     // admin/users
     Route::get('users', [UserController::class, 'adminIndex'])->name('users.adminIndex');
     Route::get('users/{id}/deactivate', [UserController::class, 'deactivate'])->name('users.deactivate');
@@ -86,6 +91,7 @@ Route::prefix('admin')->group(function () {
         Route::put('/{id}', [UserLoginController::class, 'update'])->name('userlogin.update');
         Route::get('/delete/{id}', [UserLoginController::class, 'destroy'])->name('userlogin.delete');
     });
+
 
     // User Feedback
     Route::prefix('userfeedbacks')->group(function () {
