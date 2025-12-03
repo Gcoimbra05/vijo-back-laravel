@@ -6,8 +6,8 @@
     $isEdit = ($action === 'edit');
     $pageAction = $isEdit ? 'emailtemplate.update' : 'emailtemplate.store';
     $formAction = $isEdit
-        ? route('emailtemplate.update', $emailTemplate->id)
-        : route('emailtemplate.store');
+        ? route('admin.emailtemplate.update', $emailTemplate->id)
+        : route('admin.emailtemplate.store');
     $formMethod = $isEdit ? 'PUT' : 'POST';
 @endphp
 

@@ -41,7 +41,7 @@ class EmailTemplateController extends Controller
         $pageTitle = "Add Email Template";
         $nav_bar = "emailtemplate";
         $breadcrumbs = [
-            ['label' => 'Email Templates', 'url' => route('emailtemplate.index')],
+            ['label' => 'Email Templates', 'url' => route('admin.emailtemplate.index')],
             ['label' => 'Add Email Template', 'url' => null],
         ];
 
@@ -72,7 +72,7 @@ class EmailTemplateController extends Controller
 
         EmailTemplate::create($validated);
 
-        return redirect()->route('emailtemplate.index')
+        return redirect()->route('admin.emailtemplate.index')
             ->with('success', 'Email Template created successfully.');
     }
 
@@ -86,7 +86,7 @@ class EmailTemplateController extends Controller
         $pageTitle = "Edit Email Template";
         $nav_bar = "emailtemplate";
         $breadcrumbs = [
-            ['label' => 'Email Templates', 'url' => route('emailtemplate.index')],
+            ['label' => 'Email Templates', 'url' => route('admin.emailtemplate.index')],
             ['label' => 'Edit Email Template', 'url' => null],
         ];
 
@@ -124,7 +124,7 @@ class EmailTemplateController extends Controller
             'created_at' => $request->created_at,
         ]);
 
-        return redirect()->route('emailtemplate.index')
+        return redirect()->route('admin.emailtemplate.index')
             ->with('success', 'Email Template updated successfully.');
     }
 
@@ -136,13 +136,13 @@ class EmailTemplateController extends Controller
         $emailTemplate = EmailTemplate::find($id);
 
         if (!$emailTemplate) {
-            return redirect()->route('emailtemplate.index')
+            return redirect()->route('admin.emailtemplate.index')
                 ->with('error', 'Email Template not found.');
         }
 
         $emailTemplate->delete();
 
-        return redirect()->route('emailtemplate.index')
+        return redirect()->route('admin.emailtemplate.index')
             ->with('success', 'Email Template deleted successfully.');
     }
 
@@ -152,7 +152,7 @@ class EmailTemplateController extends Controller
         $template->status = 1; // ativo
         $template->save();
 
-        return redirect()->route('emailtemplate.index')
+        return redirect()->route('admin.emailtemplate.index')
                         ->with('success', 'Email Template activated successfully.');
     }
 
@@ -162,7 +162,7 @@ class EmailTemplateController extends Controller
         $template->status = 0; // desativado
         $template->save();
 
-        return redirect()->route('emailtemplate.index')
+        return redirect()->route('admin.emailtemplate.index')
                         ->with('success', 'Email Template deactivated successfully.');
     }
 

@@ -36,7 +36,7 @@ class PlatformTextController extends Controller
         $pageTitle = "Add Platform Text";
         $nav_bar = "platformtext";
         $breadcrumbs = [
-            ['label' => 'Platform Texts', 'url' => route('platformtext.index')],
+            ['label' => 'Platform Texts', 'url' => route('admin.platformtext.index')],
             ['label' => 'Add Platform Text', 'url' => null],
         ];
 
@@ -82,7 +82,7 @@ class PlatformTextController extends Controller
         ]);
         PlatformText::create($validated);
 
-        return redirect()->route('platformtext.index')
+        return redirect()->route('admin.platformtext.index')
             ->with('success', 'Platform text created successfully.');
     }
 
@@ -94,7 +94,7 @@ class PlatformTextController extends Controller
         $nav_bar = "platformtext";
 
         $breadcrumbs = [
-            ['label' => 'Platform Texts', 'url' => route('platformtext.index')],
+            ['label' => 'Platform Texts', 'url' => route('admin.platformtext.index')],
             ['label' => 'Edit Platform Text', 'url' => null],
         ];
 
@@ -126,7 +126,7 @@ class PlatformTextController extends Controller
         ]);
         $text->update($validated);
 
-         return redirect()->route('platformtext.index')
+         return redirect()->route('admin.platformtext.index')
             ->with('success', 'Platform text updated successfully.');
     }
 
@@ -138,7 +138,7 @@ class PlatformTextController extends Controller
             return response()->json(['message' => 'Text not found'], 404);
         }
         $text->delete();
-        return redirect()->route('platformtext.index')
+        return redirect()->route('admin.platformtext.index')
             ->with('success', 'Platform text created successfully.');
     }
 
@@ -148,7 +148,7 @@ class PlatformTextController extends Controller
         $template->status = 1; // ativo
         $template->save();
 
-        return redirect()->route('emailtemplate.index')
+        return redirect()->route('admin.emailtemplate.index')
                         ->with('success', 'Email Template activated successfully.');
     }
 
@@ -158,7 +158,7 @@ class PlatformTextController extends Controller
         $template->status = 0; // desativado
         $template->save();
 
-        return redirect()->route('emailtemplate.index')
+        return redirect()->route('admin.emailtemplate.index')
                         ->with('success', 'Email Template deactivated successfully.');
     }
 }

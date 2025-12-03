@@ -106,8 +106,8 @@
     $isEdit = ($action === 'edit');
     $pageAction = $isEdit ? 'platformtext.update' : 'platformtext.store';
     $formAction = $isEdit
-        ? route('platformtext.update', $platformText->id)
-        : route('platformtext.store');
+        ? route('admin.platformtext.update', $platformText->id)
+        : route('admin.platformtext.store');
     $formMethod = $isEdit ? 'PUT' : 'POST';
 @endphp
 

@@ -98,7 +98,7 @@ class UserFeedbackController extends Controller
             ]);
         }
 
-        return redirect()->route('userfeedbacks.index')
+        return redirect()->route('admin.userfeedbacks.index')
                         ->with('success', 'User feedback marked as read successfully.');
     }
 
@@ -118,7 +118,7 @@ class UserFeedbackController extends Controller
             ]);
         }
 
-        return redirect()->route('userfeedbacks.index')
+        return redirect()->route('admin.userfeedbacks.index')
                         ->with('success', 'User feedback marked as unread successfully.');
     }
 }

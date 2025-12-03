@@ -49,18 +49,18 @@
                                     </button>
                                     <div class="dropdown-menu">
                                         <?php if ($catalog->status == 1) { ?>
-                                            <a class="dropdown-item" href="{{ route('catalog.deactivate', $catalog->id) }}">
+                                            <a class="dropdown-item" href="{{ route('admin.catalog.deactivate', $catalog->id) }}">
                                                 <i class="bx bx-x me-1"></i> Deactivate
                                             </a>
                                         <?php } else if ($catalog->status == 0) { ?>
-                                            <a class="dropdown-item" href="{{ route('catalog.activate', $catalog->id) }}">
+                                            <a class="dropdown-item" href="{{ route('admin.catalog.activate', $catalog->id) }}">
                                                 <i class="bx bx-check me-1"></i> Activate
                                             </a>
                                         <?php } ?>
-                                        <a class="dropdown-item" href="{{ route('catalog.edit', $catalog->id) }}">
+                                        <a class="dropdown-item" href="{{ route('admin.catalogs.edit', $catalog->id) }}">
                                             <i class="bx bx-edit-alt me-1"></i> Edit
                                         </a>
-                                        <a class="dropdown-item" href="{{ route('catalog.delete', $catalog->id) }}" onClick="return confirm('Are you sure you want to delete this record?');">
+                                        <a class="dropdown-item" href="{{ route('admin.catalogs.destroy', $catalog->id) }}" onClick="return confirm('Are you sure you want to delete this record?');">
                                             <i class="bx bx-trash me-1"></i> Delete
                                         </a>
                                     </div>
