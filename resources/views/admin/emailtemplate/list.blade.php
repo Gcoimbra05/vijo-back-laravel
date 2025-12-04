@@ -15,7 +15,7 @@
 <div class="card">
     <div class="card-header d-flex align-items-center justify-content-between">
         <h5 class="card-title m-0 me-2">{{ $pageTitle }}</h5>
-        <a class="btn btn-label-primary btn-sm" type="button" href="{{ route('emailtemplate.create') }}" style="margin-bottom: 10px;">
+        <a class="btn btn-label-primary btn-sm" type="button" href="{{ route('admin.emailtemplate.create') }}" style="margin-bottom: 10px;">
             <span class="tf-icons bx bx-plus me-1"></span> Add New
         </a>
     </div>
@@ -58,20 +58,20 @@
                                     </button>
                                     <div class="dropdown-menu">
                                         @if($emailtemplate->status == 1)
-                                            <a class="dropdown-item" href="{{ route('emailtemplate.deactivate', $emailtemplate->id) }}">
+                                            <a class="dropdown-item" href="{{ route('admin.emailtemplate.deactivate', $emailtemplate->id) }}">
                                                 <i class="bx bx-x me-1"></i> Deactivate
                                             </a>
                                         @else
-                                            <a class="dropdown-item" href="{{ route('emailtemplate.activate', $emailtemplate->id) }}">
+                                            <a class="dropdown-item" href="{{ route('admin.emailtemplate.activate', $emailtemplate->id) }}">
                                                 <i class="bx bx-check me-1"></i> Activate
                                             </a>
                                         @endif
 
-                                        <a class="dropdown-item" href="{{ route('emailtemplate.show', $emailtemplate->id) }}">
+                                        <a class="dropdown-item" href="{{ route('admin.emailtemplate.show', $emailtemplate->id) }}">
                                             <i class="bx bx-edit-alt me-1"></i> Edit
                                         </a>
 
-                                        <a class="dropdown-item" href="{{ route('emailtemplate.delete', $emailtemplate->id) }}" onclick="return confirm('Are you sure you want to delete this record?');">
+                                        <a class="dropdown-item" href="{{ route('admin.emailtemplate.delete', $emailtemplate->id) }}" onclick="return confirm('Are you sure you want to delete this record?');">
                                             <i class="bx bx-trash me-1"></i> Delete
                                         </a>
                                     </div>

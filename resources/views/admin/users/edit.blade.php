@@ -499,7 +499,7 @@
 
                     <!-- Conteúdo Coupons -->
                     <div class="tab-pane fade" id="coupons" role="tabpanel">
-                        <p>Aqui vai o conteúdo da aba <strong>Coupons</strong></p>
+                        <!-- <p>Aqui vai o conteúdo da aba <strong>Coupons</strong></p> -->
                     </div>
 
                     <!-- Conteúdo Sent Emails -->

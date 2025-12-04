@@ -25,10 +25,12 @@ use Symfony\Component\Intl\Countries;
 use App\Models\Contact;
 use App\Models\ContactGroup;
 use App\Models\Affiliate;
+use App\Models\VideoRequest;
 use App\Models\VijoPlan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
+use OwenIt\Auditing\Models\Audit;
 
 class UserController extends Controller
 {
@@ -686,11 +688,20 @@ class UserController extends Controller
             return response()->json(['message' => 'User not found'], 404);
         }
 
-        $auditLogs = [];
+        $auditLogs = Audit::where(function($query) use ($id) {
+            $query->where('user_id', $id)
+                  ->orWhere(function($q) use ($id) {
+                      $q->where('auditable_type', 'App\\Models\\User')
+                        ->where('auditable_id', $id);
+                  });
+        })
+        ->orderBy('created_at', 'desc')
+        ->paginate(50);
+
         $nav_bar = 'users';
 
         $breadcrumbs = [
-            ['label' => 'Users', 'url' => route('users.adminIndex')],
+            ['label' => 'Users', 'url' => route('admin.users.index')],
             ['label' => 'Audit Logs', 'url' => null]
         ];
 
@@ -704,15 +715,26 @@ class UserController extends Controller
             return response()->json(['message' => 'User not found'], 404);
         }
 
-        $journalHistory = [];
+        $journalHistory = VideoRequest::where('user_id', $id)
+            ->with(['catalog', 'videos'])
+            ->orderBy('created_at', 'desc')
+            ->paginate(50);
+
+        $stats = [
+            'total_journals' => VideoRequest::where('user_id', $id)->count(),
+            'completed_journals' => VideoRequest::where('user_id', $id)->where('status', 'completed')->count(),
+            'pending_journals' => VideoRequest::where('user_id', $id)->where('status', 'pending')->count(),
+            'total_videos' => 0, // Video::where('user_id', $id)->count(),
+        ];
+
         $nav_bar = 'users';
 
         $breadcrumbs = [
-            ['label' => 'Users', 'url' => route('users.adminIndex')],
+            ['label' => 'Users', 'url' => route('admin.users.index')],
             ['label' => 'Journal History', 'url' => null]
         ];
 
-        return view('admin.users.journal_history', compact('user', 'journalHistory', 'nav_bar', 'breadcrumbs'));
+        return view('admin.users.journal_history', compact('user', 'journalHistory', 'stats', 'nav_bar', 'breadcrumbs'));
     }
 
     public function edit(User $user)
@@ -720,7 +742,7 @@ class UserController extends Controller
         $pageTitle = "Edit Person";
         $nav_bar = "Users";
         $breadcrumbs = [
-            ['label' => 'Users', 'url' => route('users.adminIndex')],
+            ['label' => 'Users', 'url' => route('admin.users.index')],
             ['label' => 'Edit Person', 'url' => null],
         ];
         $countries = Countries::getNames();

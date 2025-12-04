@@ -15,7 +15,7 @@
 <div class="card">
     <div class="card-header d-flex align-items-center justify-content-between">
         <h5 class="card-title m-0 me-2">{{ $pageTitle }}</h5>
-        <a class="btn btn-label-primary btn-sm" type="button" href="{{ route('platformtext.create') }}" style="margin-bottom: 10px;">
+        <a class="btn btn-label-primary btn-sm" type="button" href="{{ route('admin.platformtext.create') }}" style="margin-bottom: 10px;">
             <span class="tf-icons bx bx-plus me-1"></span> Add New
         </a>
     </div>
@@ -56,20 +56,20 @@
                                     </button>
                                     <div class="dropdown-menu">
                                         @if($platformtext->status == 1)
-                                            <a class="dropdown-item" href="{{ route('platformtext.deactivate', $platformtext->id) }}">
+                                            <a class="dropdown-item" href="{{ route('admin.platformtext.deactivate', $platformtext->id) }}">
                                                 <i class="bx bx-x me-1"></i> Deactivate
                                             </a>
                                         @else
-                                            <a class="dropdown-item" href="{{ route('platformtext.activate', $platformtext->id) }}">
+                                            <a class="dropdown-item" href="{{ route('admin.platformtext.activate', $platformtext->id) }}">
                                                 <i class="bx bx-check me-1"></i> Activate
                                             </a>
                                         @endif
 
-                                        <a class="dropdown-item" href="{{ route('platformtext.edit', $platformtext->id) }}">
+                                        <a class="dropdown-item" href="{{ route('admin.platformtext.edit', $platformtext->id) }}">
                                             <i class="bx bx-edit-alt me-1"></i> Edit
                                         </a>
 
-                                        <a class="dropdown-item" href="{{ route('platformtext.delete', $platformtext->id) }}" onclick="return confirm('Are you sure you want to delete this record?');">
+                                        <a class="dropdown-item" href="{{ route('admin.platformtext.delete', $platformtext->id) }}" onclick="return confirm('Are you sure you want to delete this record?');">
                                             <i class="bx bx-trash me-1"></i> Delete
                                         </a>
                                     </div>

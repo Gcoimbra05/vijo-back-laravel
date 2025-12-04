@@ -39,7 +39,7 @@ class UserLoginController extends Controller
         $pageTitle = "ADD User Login";
         $nav_bar = "userlogin";
         $breadcrumbs = [
-            ['label' => 'UserLogins', 'url' => route('userlogin.index')],
+            ['label' => 'UserLogins', 'url' => route('admin.userlogin.index')],
             ['label' => 'Add User Login', 'url' => null],
         ];
 
@@ -68,7 +68,7 @@ class UserLoginController extends Controller
 
         UserLogin::create($validated);
 
-        return redirect()->route('userlogin.index')
+        return redirect()->route('admin.userlogin.index')
             ->with('success', 'User Login created successfully.');
     }
 
@@ -80,7 +80,7 @@ class UserLoginController extends Controller
         $pageTitle = "Edit User Login";
         $nav_bar = "userlogin";
         $breadcrumbs = [
-            ['label' => 'UserLogins', 'url' => route('userlogin.index')],
+            ['label' => 'UserLogins', 'url' => route('admin.userlogin.index')],
             ['label' => 'Edit User Login', 'url' => null],
         ];
 
@@ -116,7 +116,7 @@ class UserLoginController extends Controller
             'created_at' => $request->created_at,
         ]);
 
-        return redirect()->route('userlogin.index')
+        return redirect()->route('admin.userlogin.index')
             ->with('success', 'User Login updated successfully.');
     }
 
@@ -126,13 +126,13 @@ class UserLoginController extends Controller
         $UserLogin= UserLogin::find($id);
 
         if (!$UserLogin) {
-            return redirect()->route('userlogin.index')
+            return redirect()->route('admin.userlogin.index')
                 ->with('error', 'User Login not found.');
         }
 
         $UserLogin->delete();
 
-        return redirect()->route('userlogin.index')
+        return redirect()->route('admin.userlogin.index')
             ->with('success', 'User Login deleted successfully.');
     }
 

@@ -27,8 +27,7 @@ use App\Http\Controllers\FailedJobsController;
 use App\Http\Controllers\UserLoginController;
 use App\Http\Controllers\UserFeedbackController;
 use App\Http\Controllers\UserFeedbackReplyController;
-use App\Http\Controllers\InsightsFilterController;
-use App\Http\Controllers\VijoPlansController;
+use App\Http\Controllers\InsightsFilterControllerr;
 
 Route::get('/', function () {
     return view('welcome');
@@ -58,147 +57,137 @@ Route::get('pdf/{filename}', function (Request $request, $filename) {
     return MediaStorageController::handlePublicFiles($request, 'pdf', $filename);
 });
 
-Route::prefix('admin')->group(function () {
+Route::prefix('admin')->name('admin.')->group(function () {
+    // Public routes (login)
     Route::get('/', [AdminLoginController::class, 'showLoginForm'])->name('home');
     Route::get('/login', [AdminLoginController::class, 'showLoginForm'])->name('login');
-    Route::post('/login', [AdminLoginController::class, 'login']);
+    Route::post('/login', [AdminLoginController::class, 'login'])->name('login.post');
     Route::get('/validate-otp', [AdminLoginController::class, 'showOtpForm'])->name('validate-otp');
-    Route::post('/validate-otp', [AdminLoginController::class, 'processOtp']);
-    Route::post('/logout', [AdminLoginController::class, 'logout'])->name('logout');
-    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::post('/validate-otp', [AdminLoginController::class, 'processOtp'])->name('validate-otp.post');
 
     Route::get('/forgot-password', [AdminLoginController::class, 'forgot'])->name('password.forgot');
     Route::get('/validate-token', [AdminLoginController::class, 'validatetoken'])->name('password.validatetoken');
     Route::get('/reset-password', [AdminLoginController::class, 'resetpassword'])->name('password.resetpassword');
+    
+    // Protected routes (require admin authentication)
+    Route::middleware(['auth', 'admin'])->group(function () {
+        Route::post('/logout', [AdminLoginController::class, 'logout'])->name('logout');
+        Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+
+        
+        // Users Management
+        Route::get('users', [UserController::class, 'adminIndex'])->name('users.index');
+        Route::get('users/{id}/deactivate', [UserController::class, 'deactivate'])->name('users.deactivate');
+        Route::get('users/{id}/activate', [UserController::class, 'activate'])->name('users.activate');
+        Route::get('users/{id}/journal-history', [UserController::class, 'journalHistoryView'])->name('users.journalHistory');
+        Route::get('users/{id}/auditLogs', [UserController::class, 'auditLogsView'])->name('users.auditLogs');
+        Route::get('users/{userId}/contacts', [UserController::class, 'contactsByUser'])->name('users.contacts');
+        Route::resource('users', UserController::class)->except(['index']);
+
+        // User Logins
+        Route::prefix('userlogin')->name('userlogin.')->group(function () {
+            Route::get('/', [UserLoginController::class, 'index'])->name('index');
+            Route::get('/create', [UserLoginController::class, 'create'])->name('create');
+            Route::post('/', [UserLoginController::class, 'store'])->name('store');
+            Route::get('/show/{id}', [UserLoginController::class, 'show'])->name('show');
+            Route::put('/{id}', [UserLoginController::class, 'update'])->name('update');
+            Route::get('/delete/{id}', [UserLoginController::class, 'destroy'])->name('delete');
+        });
 
 
-    // admin/users
-    Route::get('users', [UserController::class, 'adminIndex'])->name('users.adminIndex');
-    Route::get('users/{id}/deactivate', [UserController::class, 'deactivate'])->name('users.deactivate');
-    Route::get('users/{id}/activate', [UserController::class, 'activate'])->name('users.activate');
-    Route::get('users/{id}/journal-history', [UserController::class, 'journalHistoryView'])->name('users.journalHistory');
-    Route::get('users/{id}/auditLogs', [UserController::class, 'auditLogsView'])->name('users.auditLogs');
-    Route::resource('users', UserController::class)->except(['index']);
-    Route::get('admin/users/{user:name}/edit', [UserController::class, 'edit']);
-    Route::get('users/{userId}/contacts', [UserController::class, 'contactsByUser'])->name('users.contacts');
- 
-    // User Logins
-    Route::prefix('userlogin')->group(function () {
-        Route::get('/', [UserLoginController::class, 'index'])->name('userlogin.index');
-        Route::get('/create', [UserLoginController::class, 'create'])->name('userlogin.create');
-        Route::post('/', [UserLoginController::class, 'store'])->name('userlogin.store');
-        Route::get('/show/{id}', [UserLoginController::class, 'show'])->name('userlogin.show');
-        Route::put('/{id}', [UserLoginController::class, 'update'])->name('userlogin.update');
-        Route::get('/delete/{id}', [UserLoginController::class, 'destroy'])->name('userlogin.delete');
-    });
+        // User Feedback
+        Route::prefix('userfeedbacks')->name('userfeedbacks.')->group(function () {
+            Route::get('/', [UserFeedbackController::class, 'index'])->name('index');
+            Route::get('/create', [UserFeedbackController::class, 'create'])->name('create');
+            Route::post('/', [UserFeedbackController::class, 'store'])->name('store');
+            Route::get('/show/{id}', [UserFeedbackController::class, 'show'])->name('show');
+            Route::put('/{id}', [UserFeedbackController::class, 'update'])->name('update');
+            Route::get('/delete/{id}', [UserFeedbackController::class, 'destroy'])->name('delete');
+            Route::get('/read/{id}', [UserFeedbackController::class, 'read'])->name('read');
+            Route::get('/unread/{id}', [UserFeedbackController::class, 'unread'])->name('unread');
+        });
 
+        // User Feedback Reply
+        Route::prefix('userfeedbackreply')->name('userfeedbackreply.')->group(function () {
+            Route::get('/', [UserFeedbackReplyController::class, 'index'])->name('index');
+            Route::get('/create', [UserFeedbackReplyController::class, 'create'])->name('create');
+            Route::post('/', [UserFeedbackReplyController::class, 'store'])->name('store');
+            Route::get('/show/{id}', [UserFeedbackReplyController::class, 'show'])->name('show');
+        });
 
-    // User Feedback
-    Route::prefix('userfeedbacks')->group(function () {
-        Route::get('/', [UserFeedbackController::class, 'index'])->name('userfeedbacks.index');
-        Route::get('/create', [UserFeedbackController::class, 'create'])->name('userfeedbacks.create');
-        Route::post('/', [UserFeedbackController::class, 'store'])->name('userfeedbacks.store');
-        Route::get('/show/{id}', [UserFeedbackController::class, 'show'])->name('userfeedbacks.show');
-        Route::put('/{id}', [UserFeedbackController::class, 'update'])->name('userfeedbacks.update');
-        Route::get('/delete/{id}', [UserFeedbackController::class, 'destroy'])->name('userfeedbacks.delete');
-
-        Route::get('/read/{id}', [UserFeedbackController::class, 'read'])->name('userfeedbacks.read');
-        Route::get('/unread/{id}', [UserFeedbackController::class, 'unread'])->name('userfeedbacks.unread');
-    });
-
-    // User Feedback Reply
-    Route::prefix('userfeedbackreply')->group(function () {
-        Route::get('/', [UserFeedbackReplyController::class, 'index'])->name('userfeedbackreply.index');
-        Route::get('/create', [UserFeedbackReplyController::class, 'create'])->name('userfeedbackreply.create');
-        Route::post('/', [UserFeedbackReplyController::class, 'store'])->name('userfeedbackreply.store');
-        Route::get('/show/{id}', [UserFeedbackReplyController::class, 'show'])->name('userfeedbackreply.show');
-    });
-
-    // email templates
-    Route::prefix('emailtemplate')->group(function () {
-        Route::get('/', [EmailTemplateController::class, 'index'])->name('emailtemplate.index');
-        Route::get('/create', [EmailTemplateController::class, 'create'])->name('emailtemplate.create');
-        Route::post('/', [EmailTemplateController::class, 'store'])->name('emailtemplate.store');
-        Route::get('/show/{id}', [EmailTemplateController::class, 'show'])->name('emailtemplate.show');
-        Route::put('/{id}', [EmailTemplateController::class, 'update'])->name('emailtemplate.update');
-        Route::get('/delete/{id}', [EmailTemplateController::class, 'destroy'])->name('emailtemplate.delete');
-
-        Route::get('/activate/{id}', [EmailTemplateController::class, 'activate'])->name('emailtemplate.activate');
-        Route::get('/deactivate/{id}', [EmailTemplateController::class, 'deactivate'])->name('emailtemplate.deactivate');
-    });
+        // Email Templates
+        Route::prefix('emailtemplate')->name('emailtemplate.')->group(function () {
+            Route::get('/', [EmailTemplateController::class, 'index'])->name('index');
+            Route::get('/create', [EmailTemplateController::class, 'create'])->name('create');
+            Route::post('/', [EmailTemplateController::class, 'store'])->name('store');
+            Route::get('/show/{id}', [EmailTemplateController::class, 'show'])->name('show');
+            Route::put('/{id}', [EmailTemplateController::class, 'update'])->name('update');
+            Route::get('/delete/{id}', [EmailTemplateController::class, 'destroy'])->name('delete');
+            Route::get('/activate/{id}', [EmailTemplateController::class, 'activate'])->name('activate');
+            Route::get('/deactivate/{id}', [EmailTemplateController::class, 'deactivate'])->name('deactivate');
+        });
 
         // Platform Texts
-        Route::prefix('platformtext')->group(function () {
-            Route::get('/', [PlatformTextController::class, 'index'])->name('platformtext.index');
-            Route::get('/create', [PlatformTextController::class, 'create'])->name('platformtext.create');
-            Route::post('/', [PlatformTextController::class, 'store'])->name('platformtext.store');
-            Route::get('/show/{id}', [PlatformTextController::class, 'show'])->name('platformtext.show');
-            Route::put('/{id}', [PlatformTextController::class, 'update'])->name('platformtext.update');
-            Route::get('/delete/{id}', [PlatformTextController::class, 'destroy'])->name('platformtext.delete');
+        Route::prefix('platformtext')->name('platformtext.')->group(function () {
+            Route::get('/', [PlatformTextController::class, 'index'])->name('index');
+            Route::get('/create', [PlatformTextController::class, 'create'])->name('create');
+            Route::post('/', [PlatformTextController::class, 'store'])->name('store');
+            Route::get('/show/{id}', [PlatformTextController::class, 'show'])->name('show');
+            Route::put('/{id}', [PlatformTextController::class, 'update'])->name('update');
+            Route::get('/delete/{id}', [PlatformTextController::class, 'destroy'])->name('delete');
+            Route::get('/activate/{id}', [PlatformTextController::class, 'activate'])->name('activate');
+            Route::get('/deactivate/{id}', [PlatformTextController::class, 'deactivate'])->name('deactivate');
+        });
 
-        Route::get('/activate/{id}', [PlatformTextController::class, 'activate'])->name('platformtext.activate');
-        Route::get('/deactivate/{id}', [PlatformTextController::class, 'deactivate'])->name('platformtext.deactivate');
-    });
+        // Catalogs (Resource)
+        Route::resource('catalogs', CatalogController::class);
 
-    // catalogs routes
-    Route::resource('catalogs', CatalogController::class); // ->except(['index']);
+        // Video Types (Journal Types)
+        Route::get('journal_types', [VideoTypeController::class, 'journalTypesIndex'])->name('journalTypes.index');
+        Route::get('journal_type/add', [VideoTypeController::class, 'add'])->name('journalTypes.add');
+        Route::get('journal_type/edit/{id}', [VideoTypeController::class, 'edit'])->name('journalTypes.edit');
+        Route::get('journal_type/deactivate/{id}', [VideoTypeController::class, 'deactivate'])->name('journalTypes.deactivate');
+        Route::get('journal_type/activate/{id}', [VideoTypeController::class, 'activate'])->name('journalTypes.activate');
+        Route::get('journal_type/delete/{id}', [VideoTypeController::class, 'destroy'])->name('journalTypes.destroy');
+        Route::resource('journal_types', VideoTypeController::class)->except(['index', 'show', 'edit', 'destroy']);
 
-    // Video Types
-    Route::resource('journal_types', VideoTypeController::class)->except(['index']);
-    Route::get('journal_types', [VideoTypeController::class, 'journalTypesIndex'])->name('videoTypes.list');
-    Route::get('journal_type/add', [VideoTypeController::class, 'add'])->name('videoTypes.form');
+        // Journal Categories
+        Route::get('journal_categories', [CategoryController::class, 'index'])->name('journalCategories.index');
+        Route::get('journal_category/add', [CategoryController::class, 'add'])->name('journalCategories.add');
+        Route::get('journal_category/edit/{id}', [CategoryController::class, 'edit'])->name('journalCategories.edit');
+        Route::get('journal_category/deactivate/{id}', [CategoryController::class, 'deactivate'])->name('journalCategories.deactivate');
+        Route::get('journal_category/activate/{id}', [CategoryController::class, 'activate'])->name('journalCategories.activate');
+        Route::get('journal_category/delete/{id}', [CategoryController::class, 'destroy'])->name('journalCategories.destroy');
+        Route::resource('journal_categories', CategoryController::class)->except(['index', 'show', 'edit', 'destroy']);
 
-    Route::get('journal_type/edit/{id}', [VideoTypeController::class, 'edit'])->name('videoTypes.edit');
-    Route::get('journal_type/deactivate/{id}', [VideoTypeController::class, 'deactivate'])->name('videoTypes.deactivate');
-    Route::get('journal_type/activate/{id}', [VideoTypeController::class, 'activate'])->name('videoTypes.activate');
-    Route::get('journal_type/delete/{id}', [VideoTypeController::class, 'destroy'])->name('videoTypes.destroy');
+        // Catalog Custom Routes (in addition to resource routes)
+        Route::prefix('catalog')->name('catalog.')->group(function () {
+            Route::get('/activate/{id}', [CatalogController::class, 'activate'])->name('activate');
+            Route::get('/deactivate/{id}', [CatalogController::class, 'deactivate'])->name('deactivate');
+        });
 
-    // Journal Categories
-    Route::resource('journal_categories', CategoryController::class)->except(['index']);
-    Route::get('journal_categories', [CategoryController::class, 'index'])->name('journalCategories.list');
-    Route::get('journal_category/add', [CategoryController::class, 'add'])->name('journalCategories.form');
-    Route::get('journal_category/edit/{id}', [CategoryController::class, 'edit'])->name('journalCategories.edit');
-    Route::get('journal_category/deactivate/{id}', [CategoryController::class, 'deactivate'])->name('journalCategories.deactivate');
-    Route::get('journal_category/activate/{id}', [CategoryController::class, 'activate'])->name('journalCategories.activate');
-    Route::get('journal_category/delete/{id}', [CategoryController::class, 'destroy'])->name('journalCategories.destroy');
+        // Tags
+        Route::prefix('tags')->name('tags.')->group(function () {
+            Route::get('/', [TagController::class, 'index'])->name('index');
+            Route::get('/add', [TagController::class, 'add'])->name('add');
+            Route::post('/', [TagController::class, 'store'])->name('store');
+            Route::get('/edit/{id}', [TagController::class, 'edit'])->name('edit');
+            Route::put('/{id}', [TagController::class, 'update'])->name('update');
+            Route::get('/delete/{id}', [TagController::class, 'destroy'])->name('delete');
+            Route::get('/deactivate/{id}', [TagController::class, 'deactivate'])->name('deactivate');
+            Route::get('/activate/{id}', [TagController::class, 'activate'])->name('activate');
+        });
 
-    // Platform Texts
-    Route::resource('platform_texts', PlatformTextController::class);
-
-    Route::prefix('catalog')->group(function () {
-        Route::get('/', [CatalogController::class, 'index'])->name('catalog.index');
-        Route::get('/add', [CatalogController::class, 'add'])->name('catalog.add');
-        Route::post('/', [CatalogController::class, 'store'])->name('catalog.store');
-        Route::get('/edit/{id}', [CatalogController::class, 'edit'])->name('catalog.edit');
-        Route::put('/{id}', [CatalogController::class, 'update'])->name('catalog.update');
-        Route::get('/delete/{id}', [CatalogController::class, 'destroy'])->name('catalog.delete');
-
-        Route::get('/activate/{id}', [CatalogController::class, 'activate'])->name('catalog.activate');
-        Route::get('/deactivate/{id}', [CatalogController::class, 'deactivate'])->name('catalog.deactivate');
-    });
-
-    Route::prefix('tags')->group(function () {
-        Route::get('/', [TagController::class, 'index'])->name('tag.index');
-        Route::get('/add', [TagController::class, 'add'])->name('tag.add');
-        Route::post('/', [TagController::class, 'store'])->name('tag.store');
-        Route::get('/edit/{id}', [TagController::class, 'edit'])->name('tag.edit');
-        Route::put('/{id}', [TagController::class, 'update'])->name('tag.update');
-        Route::get('/delete/{id}', [TagController::class, 'destroy'])->name('tag.delete');
-
-        Route::get('admin/tags/deactivate/{id}', [TagController::class, 'deactivate'])->name('tag.deactivate');
-        Route::get('admin/tags/activate/{id}', [TagController::class, 'activate'])->name('tag.activate');
-    });
-
-    Route::prefix('memberships')->group(function () {
-        Route::get('/', [MembershipPlanController::class, 'index'])->name('membership.index');
-        Route::get('/add', [MembershipPlanController::class, 'add'])->name('membership.add');
-        Route::post('/', [MembershipPlanController::class, 'store'])->name('membership.store');
-        Route::get('/edit/{id}', [MembershipPlanController::class, 'show'])->name('membership.edit');
-        Route::put('/{id}', [MembershipPlanController::class, 'update'])->name('membership.update');
-        Route::get('/delete/{id}', [MembershipPlanController::class, 'destroy'])->name('membership.delete');
-
-            Route::get('admin/memberships/deactivate/{id}', [MembershipPlanController::class, 'deactivate'])->name('membership.deactivate');
-            Route::get('admin/memberships/activate/{id}', [MembershipPlanController::class, 'activate'])->name('membership.activate');
+        // Memberships
+        Route::prefix('memberships')->name('memberships.')->group(function () {
+            Route::get('/', [MembershipPlanController::class, 'index'])->name('index');
+            Route::get('/add', [MembershipPlanController::class, 'add'])->name('add');
+            Route::post('/', [MembershipPlanController::class, 'store'])->name('store');
+            Route::get('/edit/{id}', [MembershipPlanController::class, 'show'])->name('edit');
+            Route::put('/{id}', [MembershipPlanController::class, 'update'])->name('update');
+            Route::get('/delete/{id}', [MembershipPlanController::class, 'destroy'])->name('delete');
+            Route::get('/deactivate/{id}', [MembershipPlanController::class, 'deactivate'])->name('deactivate');
+            Route::get('/activate/{id}', [MembershipPlanController::class, 'activate'])->name('activate');
         });
     
         Route::prefix('vijoplans')->group(function () {
@@ -207,7 +196,8 @@ Route::prefix('admin')->group(function () {
             Route::put('/{id}', [VijoPlansController::class, 'update'])->name('vijoplan.update');
             Route::get('/delete/{id}', [VijoPlansController::class, 'destroy'])->name('vijoplan.delete');
         });
-});
+    }); // End of protected admin routes
+}); // End of admin prefix
 
 // Fallback Route
 Route::fallback(function () {

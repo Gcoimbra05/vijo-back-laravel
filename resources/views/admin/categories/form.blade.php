@@ -96,7 +96,7 @@
 
 @php
     $isEdit = $action === 'Edit';
-    $pageAction = $isEdit ? 'journal_categories.update' : 'journal_categories.store';
+    $pageAction = $isEdit ? 'admin.journalCategories.edit' : 'admin.journalCategories.store';
     $formAction = $isEdit
         ? route($pageAction, $info[0]['id'] ?? null)
         : route($pageAction);

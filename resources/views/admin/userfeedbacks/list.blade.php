@@ -89,7 +89,7 @@
                         @include('admin.userfeedbacks.modalfeedback', [
                             'userfeedback' => $userfeedback,
                             'userfeedbackreply' => $userfeedback->replies->last() ?? null,
-                            'formAction' => route('userfeedbackreply.store')
+                            'formAction' => route('admin.userfeedbackreply.store')
                         ])
                     @endforeach
                 @else

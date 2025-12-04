@@ -77,7 +77,7 @@ class CategoryController extends Controller
             'icon'  => 'bx bx-check'
         ));
 
-        return redirect()->route('journalCategories.list');
+        return redirect()->route('admin.journalCategories.index');
     }
 
     public function update(Request $request, $id)
@@ -115,7 +115,7 @@ class CategoryController extends Controller
             'icon'  => 'bx bx-check'
         ));
 
-        return redirect()->route('journalCategories.list');
+        return redirect()->route('admin.journalCategories.index');
     }
 
     public function destroy($id)
@@ -145,7 +145,7 @@ class CategoryController extends Controller
             'icon'  => 'bx bx-check'
         ));
 
-        return redirect()->route('journalCategories.list');
+        return redirect()->route('admin.journalCategories.index');
     }
 
     public static function getCategories()
@@ -168,7 +168,7 @@ class CategoryController extends Controller
         $pageTitle = 'Add Journal Category';
 
         $breadcrumbs = [
-            ['label' => 'Journal Categories', 'url' => route('journalCategories.list')],
+            ['label' => 'Journal Categories', 'url' => route('admin.journalCategories.index')],
             ['label' => 'Add Category', 'url' => null],
         ];
 
@@ -179,11 +179,11 @@ class CategoryController extends Controller
     {
         $category = Category::find($id);
         if (!$category) {
-            return redirect()->route('journalCategories.list')->withErrors(['Category not found.']);
+            return redirect()->route('admin.journalCategories.index')->withErrors(['Category not found.']);
         }
 
         $breadcrumbs = [
-            ['label' => 'Journal Categories', 'url' => route('journalCategories.list')],
+            ['label' => 'Journal Categories', 'url' => route('admin.journalCategories.index')],
             ['label' => 'Edit Category', 'url' => null],
         ];
 
@@ -192,7 +192,7 @@ class CategoryController extends Controller
         $pageTitle = 'Edit Journal Category';
 
         $breadcrumbs = [
-            ['label' => 'Journal Categories', 'url' => route('journalCategories.list')],
+            ['label' => 'Journal Categories', 'url' => route('admin.journalCategories.index')],
             ['label' => $action . ' Journal Category', 'url' => null],
         ];
 
@@ -217,7 +217,7 @@ class CategoryController extends Controller
             'icon'  => 'bx bx-check'
         ));
 
-        return redirect()->route('journalCategories.list');
+        return redirect()->route('admin.journalCategories.index');
     }
 
     public function activate($id)
@@ -236,6 +236,6 @@ class CategoryController extends Controller
             'icon'  => 'bx bx-check'
         ));
 
-        return redirect()->route('journalCategories.list');
+        return redirect()->route('admin.journalCategories.index');
     }
 }

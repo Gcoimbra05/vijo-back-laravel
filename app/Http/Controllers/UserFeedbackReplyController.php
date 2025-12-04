@@ -24,7 +24,7 @@ class UserFeedbackReplyController extends Controller
         $nav_bar = 'userfeedbackreply';
         $pageTitle = 'User Feedback Replies';
 
-        return redirect()->route('userfeedbacks.index');
+        return redirect()->route('admin.userfeedbacks.index');
     }
 
     /**
@@ -35,7 +35,7 @@ class UserFeedbackReplyController extends Controller
         $pageTitle = "Add Feedback Reply";
         $nav_bar = "userfeedbackreply";
         $breadcrumbs = [
-            ['label' => 'Feedback Replies', 'url' => route('userfeedbackreply.index')],
+            ['label' => 'Feedback Replies', 'url' => route('admin.userfeedbackreply.index')],
             ['label' => 'Add Feedback Reply', 'url' => null],
         ];
 
@@ -95,7 +95,7 @@ class UserFeedbackReplyController extends Controller
 
         // fallback para acessos normais
         return redirect()
-            ->route('userfeedbacks.index')
+            ->route('admin.userfeedbacks.index')
             ->with('success', 'Feedback reply created successfully.');
     }
 
@@ -111,7 +111,7 @@ class UserFeedbackReplyController extends Controller
         $pageTitle = "View Feedback Reply";
         $nav_bar = "userfeedbackreply";
         $breadcrumbs = [
-            ['label' => 'Feedback Replies', 'url' => route('userfeedbackreply.index')],
+            ['label' => 'Feedback Replies', 'url' => route('admin.userfeedbackreply.index')],
             ['label' => 'View Feedback Reply', 'url' => null],
         ];
 
