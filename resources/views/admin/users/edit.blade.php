@@ -87,6 +87,10 @@
             <li class="nav-item" role="presentation">
                 <button class="nav-link" id="insights_filter-tab" data-bs-toggle="tab" data-bs-target="#insights_filter" type="button" role="tab">Insights Filters</button>
             </li>
+            <!-- My Plans -->
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="vijo_plans-tab" data-bs-toggle="tab" data-bs-target="#vijo_plans" type="button" role="tab">My Plans</button>
+            </li>
         </ul>
             <form action="{{ route('users.update', $user->id) }}" method="POST">
                 @csrf
@@ -612,6 +616,67 @@
                             </table>
                         </div>
                     </div>
+
+                     <!-- Conteúdo My Plans -->
+                    <div class="tab-pane fade" id="vijo_plans" role="tabpanel">
+                        <h5>My Plans</h5>
+                        <hr class="line" style="border:1px solid #d3d8dc;">
+                        <div class="table-responsive text-nowrap p-0 pt-0">
+                            <table class="table table-striped table-hover dataTableList">
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Description</th>
+                                        <th>Length (weeks)</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="vijoPlansTbody" class="table-border-bottom-0">
+                                    @if(isset($vijoplans) && count($vijoplans) > 0)
+                                        @foreach($vijoplans as $vijoplan)
+                                            <tr>
+                                                <td>{{ $vijoplan->name }}</td>
+                                                <td>{{ $vijoplan->description }}</td>
+                                                <td>{{ $vijoplan->length_in_weeks }}</td>
+
+                                                <td>
+                                                    <div class="dropdown">
+                                                        <button type="button" class="btn p-0 dropdown-toggle hide-arrow" data-bs-toggle="dropdown">
+                                                            <i class="bx bx-dots-vertical-rounded"></i>
+                                                        </button>
+
+                                                        <div class="dropdown-menu">
+
+                                                            <!-- EDIT -->
+                                                            <a class="dropdown-item" href="{{ route('vijoplan.index') }}?edit={{ $vijoplan->id }}">
+                                                                <i class="bx bx-edit-alt me-1"></i> Edit
+                                                            </a>
+
+                                                            <!-- DELETE -->
+                                                            <a class="dropdown-item" 
+                                                            href="{{ route('vijoplan.delete', $vijoplan->id) }}" 
+                                                            onclick="return confirm('Are you sure you want to delete this record?');">
+                                                                <i class="bx bx-trash me-1"></i> Delete
+                                                            </a>
+
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        @endforeach
+
+                                    @else
+                                        <tr>
+                                            <td colspan="7" class="text-center">No records found.</td>
+                                        </tr>
+                                    @endif
+
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+  
                 </div>
                         
                 <div class="mb-3 col-md-12">
@@ -740,5 +805,82 @@ function populateTimezones(countryCode) {
     });
 
 
+    // Fetch and render Vijo plans for the user being viewed
+document.addEventListener('DOMContentLoaded', function () {
+    const userId = {{ (int) $user->id }};
+    const tbody = document.getElementById('vijoPlansTbody');
+    if (!tbody) return;
+
+    async function loadVijoPlans() {
+        try {
+            const resp = await fetch(`{{ url('admin/vijoplans/user') }}/${userId}`, {
+                method: 'GET',
+                headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
+            });
+            if (!resp.ok) throw new Error('Network error fetching plans');
+            const json = await resp.json();
+            tbody.innerHTML = '';
+            const plans = Array.isArray(json.data) ? json.data : [];
+            if (plans.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" class="text-center">No records found.</td></tr>';
+                return;
+            }
+            plans.forEach(plan => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${escapeHtml(plan.name || '')}</td>
+                    <td>${escapeHtml(plan.description || '')}</td>
+                    <td>${escapeHtml(plan.length_in_weeks ?? '')}</td>
+                    <td>
+                        <div class="dropdown">
+                            <button type="button" class="btn p-0 dropdown-toggle hide-arrow" data-bs-toggle="dropdown">
+                                <i class="bx bx-dots-vertical-rounded"></i>
+                            </button>
+                            <div class="dropdown-menu">
+                                <a class="dropdown-item" href="{{ route('vijoplan.index') }}?edit=${plan.id}">
+                                    <i class="bx bx-edit-alt me-1"></i> Edit
+                                </a>
+                                <a class="dropdown-item" href="{{ url('admin/vijoplans/delete') }}/${plan.id}" onclick="return confirm('Are you sure you want to delete this record?');">
+                                    <i class="bx bx-trash me-1"></i> Delete
+                                </a>
+                            </div>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        } catch (err) {
+            console.error('Error loading Vijo plans:', err);
+            tbody.innerHTML = '<tr><td colspan="4" class="text-center">Failed to load plans.</td></tr>';
+        }
+    }
+
+    function escapeHtml(str) {
+        return String(str).replace(/[&<>"'`=\/]/g, function (s) {
+            return ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#39;',
+                '`': '&#96;',
+                '=': '&#61;',
+                '/': '&#47;'
+            })[s];
+        });
+    }
+
+    // Load when the tab is shown (so it's fresh), also load immediately if tab already visible
+    const tabEl = document.querySelector('#vijo_plans');
+    if (tabEl) {
+        tabEl.addEventListener('shown.bs.tab', loadVijoPlans);
+        // If tab is active on load, fetch immediately
+        if (tabEl.classList.contains('show') || tabEl.classList.contains('active')) {
+            loadVijoPlans();
+        }
+    } else {
+        loadVijoPlans();
+    }
+});
 </script>
 @endsection

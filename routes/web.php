@@ -27,6 +27,8 @@ use App\Http\Controllers\FailedJobsController;
 use App\Http\Controllers\UserLoginController;
 use App\Http\Controllers\UserFeedbackController;
 use App\Http\Controllers\UserFeedbackReplyController;
+use App\Http\Controllers\InsightsFilterController;
+use App\Http\Controllers\VijoPlansController;
 
 Route::get('/', function () {
     return view('welcome');
@@ -63,12 +65,17 @@ Route::prefix('admin')->name('admin.')->group(function () {
     Route::post('/login', [AdminLoginController::class, 'login'])->name('login.post');
     Route::get('/validate-otp', [AdminLoginController::class, 'showOtpForm'])->name('validate-otp');
     Route::post('/validate-otp', [AdminLoginController::class, 'processOtp'])->name('validate-otp.post');
+
+    Route::get('/forgot-password', [AdminLoginController::class, 'forgot'])->name('password.forgot');
+    Route::get('/validate-token', [AdminLoginController::class, 'validatetoken'])->name('password.validatetoken');
+    Route::get('/reset-password', [AdminLoginController::class, 'resetpassword'])->name('password.resetpassword');
     
     // Protected routes (require admin authentication)
     Route::middleware(['auth', 'admin'])->group(function () {
         Route::post('/logout', [AdminLoginController::class, 'logout'])->name('logout');
         Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
+        
         // Users Management
         Route::get('users', [UserController::class, 'adminIndex'])->name('users.index');
         Route::get('users/{id}/deactivate', [UserController::class, 'deactivate'])->name('users.deactivate');
@@ -87,6 +94,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::put('/{id}', [UserLoginController::class, 'update'])->name('update');
             Route::get('/delete/{id}', [UserLoginController::class, 'destroy'])->name('delete');
         });
+
 
         // User Feedback
         Route::prefix('userfeedbacks')->name('userfeedbacks.')->group(function () {
@@ -181,6 +189,13 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('/delete/{id}', [MembershipPlanController::class, 'destroy'])->name('delete');
             Route::get('/deactivate/{id}', [MembershipPlanController::class, 'deactivate'])->name('deactivate');
             Route::get('/activate/{id}', [MembershipPlanController::class, 'activate'])->name('activate');
+        });
+    
+        Route::prefix('vijoplans')->group(function () {
+            Route::get('/', [VijoPlansController::class, 'index'])->name('vijoplan.index');
+            Route::post('/', [VijoPlansController::class, 'store'])->name('vijoplan.store');
+            Route::put('/{id}', [VijoPlansController::class, 'update'])->name('vijoplan.update');
+            Route::get('/delete/{id}', [VijoPlansController::class, 'destroy'])->name('vijoplan.delete');
         });
     }); // End of protected admin routes
 }); // End of admin prefix

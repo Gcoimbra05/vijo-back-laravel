@@ -49,4 +49,19 @@ class AdminLoginController extends Controller
         Auth::logout();
         return redirect('/admin/login');
     }
+
+    public function forgot()
+    {
+        return view('admin.login.forgot');
+    }
+
+    public function validatetoken()
+    {
+        return view('admin.login.validatetoken');
+    }
+
+    public function resetpassword()
+    {
+        return view('admin.login.resetpassword');
+    }
 }

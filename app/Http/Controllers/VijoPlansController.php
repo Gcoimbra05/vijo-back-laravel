@@ -17,18 +17,30 @@ class VijoPlansController {
 
     public function index(Request $request)
     {
+        $user = Auth::user() ?? (object)['id' => 14];
+        $editId = $request->edit ?? null;
+        $vijo_plans = VijoPlan::where('user_id', $user->id)->get();
+        $editing = $editId ? VijoPlan::find($editId) : null;
+        $action = $editing ? 'Edit' : 'Create';
+        $pageTitle = 'Vijo Plans';
+        $nav_bar = 'Vijo Plans';
+        $breadcrumbs = [
+            ['label' => 'Vijo Plans', 'url' => null],
+        ];
+
+        return view('admin.vijoplans.form', compact('vijo_plans', 'editing', 'action', 'pageTitle', 'nav_bar', 'breadcrumbs'));
+    }
+
+
+
+    /*public function plansPage()
+    {
         $user = Auth::user();
 
-        $vijoPlans = VijoPlan::select('id', 'user_id', 'name', 'description', 'length_in_weeks', 'created_at', 'updated_at')
-            ->where('user_id', $user?->id)
-            ->get();
+        $vijo_plans = VijoPlan::where('user_id', $user->id)->get();
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Vijo plans fetched successfully.',
-            'data' => $vijoPlans,
-        ], 201);
-    }
+        return view('insights.plans', compact('vijo_plans'));
+    }*/
 
     public function show($vijoPlanId)
     {
@@ -186,12 +198,9 @@ class VijoPlansController {
     public function update(Request $request, $id)
     {
         $vijoPlan = VijoPlan::find($id);
+
         if (!$vijoPlan) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Vijo plan not found.',
-                'data' => null,
-            ], 404);
+            return redirect()->back()->with('error', 'Vijo plan not found.');
         }
 
         $request->validate([
@@ -201,12 +210,12 @@ class VijoPlansController {
         ]);
 
         $vijoPlan->update($request->all());
-        return response()->json([
-            'success' => true,
-            'message' => 'Vijo plan updated successfully.',
-            'data' => $vijoPlan,
-        ]);
+
+        return redirect()
+            ->route('users.edit', ['user' => $vijoPlan->user_id])
+            ->with('success', 'Plan updated successfully.');
     }
+
 
     public function destroy($id)
     {
@@ -225,4 +234,5 @@ class VijoPlansController {
             'data' => null,
         ]);
     }
+
 }

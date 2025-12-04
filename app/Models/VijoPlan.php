@@ -23,4 +23,9 @@ class VijoPlan extends Model implements AuditableContract
     public function catalogs() {
         return $this->hasMany(Catalog::class);
     }
+
+    public static function getByUser($userId)
+    {
+        return self::where('user_id', $userId)->get();
+    }
 }

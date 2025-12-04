@@ -26,6 +26,7 @@ use App\Models\Contact;
 use App\Models\ContactGroup;
 use App\Models\Affiliate;
 use App\Models\VideoRequest;
+use App\Models\VijoPlan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
@@ -749,13 +750,14 @@ class UserController extends Controller
         $contacts = Contact::getByUser($user->id);
         $contactgroups = ContactGroup::getByUser($user->id);
         $affiliates = Affiliate::getByUser($user->id);
+        $vijoplans = VijoPlan::getByUser($user->id);
 
         $timezonesByCountry = [];
         foreach (array_keys($countries) as $code) {
             $timezonesByCountry[$code] = \DateTimeZone::listIdentifiers(\DateTimeZone::PER_COUNTRY, $code);
         }
 
-        return view('admin.users.edit', compact('user', 'pageTitle', 'nav_bar', 'breadcrumbs', 'countries', 'timezonesByCountry', 'membershipPlans', 'contacts', 'contactgroups', 'affiliates'));
+        return view('admin.users.edit', compact('user', 'pageTitle', 'nav_bar', 'breadcrumbs', 'countries', 'timezonesByCountry', 'membershipPlans', 'contacts', 'contactgroups', 'affiliates', 'vijoplans'));
     }
 
     public function contactsByUser($userId)
@@ -763,10 +765,11 @@ class UserController extends Controller
         $contacts = Contact::getByUser($userId);
         $contactgroups = ContactGroup::getByUser($userId);
         $affiliates = Affiliate::getByUser($userId);
+        $vijoplans = VijoPlan::getByUser($user->id);
 
         $user = User::findOrFail($userId);
 
-        return view('admin.users.contacts', compact('contacts', 'user', 'contactgroups', 'affiliates'));
+        return view('admin.users.contacts', compact('contacts', 'user', 'contactgroups', 'affiliates', 'vijoplans'));
     }
 
     public function handleVijoOfDay($timezone = 'America/New_York')
