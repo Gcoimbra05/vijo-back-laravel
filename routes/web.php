@@ -27,7 +27,6 @@ use App\Http\Controllers\FailedJobsController;
 use App\Http\Controllers\UserLoginController;
 use App\Http\Controllers\UserFeedbackController;
 use App\Http\Controllers\UserFeedbackReplyController;
-use App\Http\Controllers\InsightsFilterController;
 use App\Http\Controllers\VijoPlansController;
 
 Route::get('/', function () {
@@ -74,7 +73,6 @@ Route::prefix('admin')->name('admin.')->group(function () {
     Route::middleware(['auth', 'admin'])->group(function () {
         Route::post('/logout', [AdminLoginController::class, 'logout'])->name('logout');
         Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
-
         
         // Users Management
         Route::get('users', [UserController::class, 'adminIndex'])->name('users.index');
@@ -94,7 +92,6 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::put('/{id}', [UserLoginController::class, 'update'])->name('update');
             Route::get('/delete/{id}', [UserLoginController::class, 'destroy'])->name('delete');
         });
-
 
         // User Feedback
         Route::prefix('userfeedbacks')->name('userfeedbacks.')->group(function () {

@@ -804,83 +804,82 @@ function populateTimezones(countryCode) {
         populateTimezones(this.value);
     });
 
-
     // Fetch and render Vijo plans for the user being viewed
-document.addEventListener('DOMContentLoaded', function () {
-    const userId = {{ (int) $user->id }};
-    const tbody = document.getElementById('vijoPlansTbody');
-    if (!tbody) return;
+    document.addEventListener('DOMContentLoaded', function () {
+        const userId = {{ (int) $user->id }};
+        const tbody = document.getElementById('vijoPlansTbody');
+        if (!tbody) return;
 
-    async function loadVijoPlans() {
-        try {
-            const resp = await fetch(`{{ url('admin/vijoplans/user') }}/${userId}`, {
-                method: 'GET',
-                headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
-            });
-            if (!resp.ok) throw new Error('Network error fetching plans');
-            const json = await resp.json();
-            tbody.innerHTML = '';
-            const plans = Array.isArray(json.data) ? json.data : [];
-            if (plans.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="4" class="text-center">No records found.</td></tr>';
-                return;
-            }
-            plans.forEach(plan => {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td>${escapeHtml(plan.name || '')}</td>
-                    <td>${escapeHtml(plan.description || '')}</td>
-                    <td>${escapeHtml(plan.length_in_weeks ?? '')}</td>
-                    <td>
-                        <div class="dropdown">
-                            <button type="button" class="btn p-0 dropdown-toggle hide-arrow" data-bs-toggle="dropdown">
-                                <i class="bx bx-dots-vertical-rounded"></i>
-                            </button>
-                            <div class="dropdown-menu">
-                                <a class="dropdown-item" href="{{ route('vijoplan.index') }}?edit=${plan.id}">
-                                    <i class="bx bx-edit-alt me-1"></i> Edit
-                                </a>
-                                <a class="dropdown-item" href="{{ url('admin/vijoplans/delete') }}/${plan.id}" onclick="return confirm('Are you sure you want to delete this record?');">
-                                    <i class="bx bx-trash me-1"></i> Delete
-                                </a>
+        async function loadVijoPlans() {
+            try {
+                const resp = await fetch(`{{ url('admin/vijoplans/user') }}/${userId}`, {
+                    method: 'GET',
+                    headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
+                });
+                if (!resp.ok) throw new Error('Network error fetching plans');
+                const json = await resp.json();
+                tbody.innerHTML = '';
+                const plans = Array.isArray(json.data) ? json.data : [];
+                if (plans.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="4" class="text-center">No records found.</td></tr>';
+                    return;
+                }
+                plans.forEach(plan => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${escapeHtml(plan.name || '')}</td>
+                        <td>${escapeHtml(plan.description || '')}</td>
+                        <td>${escapeHtml(plan.length_in_weeks ?? '')}</td>
+                        <td>
+                            <div class="dropdown">
+                                <button type="button" class="btn p-0 dropdown-toggle hide-arrow" data-bs-toggle="dropdown">
+                                    <i class="bx bx-dots-vertical-rounded"></i>
+                                </button>
+                                <div class="dropdown-menu">
+                                    <a class="dropdown-item" href="{{ route('vijoplan.index') }}?edit=${plan.id}">
+                                        <i class="bx bx-edit-alt me-1"></i> Edit
+                                    </a>
+                                    <a class="dropdown-item" href="{{ url('admin/vijoplans/delete') }}/${plan.id}" onclick="return confirm('Are you sure you want to delete this record?');">
+                                        <i class="bx bx-trash me-1"></i> Delete
+                                    </a>
+                                </div>
                             </div>
-                        </div>
-                    </td>
-                `;
-                tbody.appendChild(tr);
-            });
-        } catch (err) {
-            console.error('Error loading Vijo plans:', err);
-            tbody.innerHTML = '<tr><td colspan="4" class="text-center">Failed to load plans.</td></tr>';
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } catch (err) {
+                console.error('Error loading Vijo plans:', err);
+                tbody.innerHTML = '<tr><td colspan="4" class="text-center">Failed to load plans.</td></tr>';
+            }
         }
-    }
 
-    function escapeHtml(str) {
-        return String(str).replace(/[&<>"'`=\/]/g, function (s) {
-            return ({
-                '&': '&amp;',
-                '<': '&lt;',
-                '>': '&gt;',
-                '"': '&quot;',
-                "'": '&#39;',
-                '`': '&#96;',
-                '=': '&#61;',
-                '/': '&#47;'
-            })[s];
-        });
-    }
+        function escapeHtml(str) {
+            return String(str).replace(/[&<>"'`=\/]/g, function (s) {
+                return ({
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    '"': '&quot;',
+                    "'": '&#39;',
+                    '`': '&#96;',
+                    '=': '&#61;',
+                    '/': '&#47;'
+                })[s];
+            });
+        }
 
-    // Load when the tab is shown (so it's fresh), also load immediately if tab already visible
-    const tabEl = document.querySelector('#vijo_plans');
-    if (tabEl) {
-        tabEl.addEventListener('shown.bs.tab', loadVijoPlans);
-        // If tab is active on load, fetch immediately
-        if (tabEl.classList.contains('show') || tabEl.classList.contains('active')) {
+        // Load when the tab is shown (so it's fresh), also load immediately if tab already visible
+        const tabEl = document.querySelector('#vijo_plans');
+        if (tabEl) {
+            tabEl.addEventListener('shown.bs.tab', loadVijoPlans);
+            // If tab is active on load, fetch immediately
+            if (tabEl.classList.contains('show') || tabEl.classList.contains('active')) {
+                loadVijoPlans();
+            }
+        } else {
             loadVijoPlans();
         }
-    } else {
-        loadVijoPlans();
-    }
-});
+    });
 </script>
 @endsection

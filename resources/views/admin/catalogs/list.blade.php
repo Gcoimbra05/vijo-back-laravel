@@ -5,7 +5,7 @@
 <div class="card">
     <div class="card-header d-flex align-items-center justify-content-between">
         <h5 class="card-title m-0 me-2"><?= $pageTitle; ?></h5>
-        <a class="btn btn-label-primary btn-sm" type="button" href="{{ route('catalog.add') }}" style="margin-bottom: 10px;"><span class="tf-icons bx bx-plus me-1"></span> Add New</a>
+        <a class="btn btn-label-primary btn-sm" type="button" href="" style="margin-bottom: 10px;"><span class="tf-icons bx bx-plus me-1"></span> Add New</a>
     </div>
 
     <hr class="m-0">

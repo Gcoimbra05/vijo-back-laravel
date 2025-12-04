@@ -765,8 +765,7 @@ class UserController extends Controller
         $contacts = Contact::getByUser($userId);
         $contactgroups = ContactGroup::getByUser($userId);
         $affiliates = Affiliate::getByUser($userId);
-        $vijoplans = VijoPlan::getByUser($user->id);
-
+        $vijoplans = VijoPlan::getByUser($userId);
         $user = User::findOrFail($userId);
 
         return view('admin.users.contacts', compact('contacts', 'user', 'contactgroups', 'affiliates', 'vijoplans'));

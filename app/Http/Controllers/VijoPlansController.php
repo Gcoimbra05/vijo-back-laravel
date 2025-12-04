@@ -216,7 +216,6 @@ class VijoPlansController {
             ->with('success', 'Plan updated successfully.');
     }
 
-
     public function destroy($id)
     {
         $vijoPlan = VijoPlan::find($id);
@@ -234,5 +233,4 @@ class VijoPlansController {
             'data' => null,
         ]);
     }
-
 }
