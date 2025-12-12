@@ -15,8 +15,10 @@
     </tr>
     <tr>
         <td style="padding-top: 16px; font-size: 16px; font-weight: 500; line-height: 140%;">
-            To create a new password, click the button below:
+            This ís your token: <strong>{{ $token }}</strong>
         </td>
+
+        <td>For your safety, do not share this token with anyone.</td>
     </tr>
     <tr>
         <td style="padding-top: 24px;">

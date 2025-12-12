@@ -40,8 +40,8 @@
             <div class="mb-3">
                     <button class="btn btn-primary d-grid w-100" type="submit">Sign in</button>
             </div>
-            <div style="text-align: right;">
-                <a href="{{ route('password.forgot') }}" class="modal-subtitle" style="font-size:0.8rem;">I forgot my password.</a>
-            </div>
     </form>
+        <div style="text-align: right;">
+                <a href="{{ route('admin.forgot.view') }}" class="modal-subtitle" style="font-size:0.8rem;">I forgot my password.</a>
+        </div>
 @endsection

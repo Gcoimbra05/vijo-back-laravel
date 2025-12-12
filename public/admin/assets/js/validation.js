@@ -10,6 +10,7 @@ $(document).ready(function () {
     $("#signinForm").validate({
         onfocusout: false,
         errorClass: 'js_error',
+        
         rules: {
             email: {
                 required: true,
@@ -26,6 +27,27 @@ $(document).ready(function () {
             },
             password: {
                 required: "Please enter password",
+            },
+        },
+
+        submitHandler: function(form) {
+            form.submit(); 
+        },
+    });
+
+    $("#signinForm2").validate({
+        onfocusout: false,
+        errorClass: 'js_error',
+        rules: {
+            email: {
+                required: true,
+                email: true
+            },
+        },
+        messages: {
+            email: {
+                required: "Please enter email",
+                email: "Please enter a valid email address",
             },
         },
 

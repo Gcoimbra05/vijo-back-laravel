@@ -61,13 +61,18 @@ Route::prefix('admin')->name('admin.')->group(function () {
     // Public routes (login)
     Route::get('/', [AdminLoginController::class, 'showLoginForm'])->name('home');
     Route::get('/login', [AdminLoginController::class, 'showLoginForm'])->name('login');
-    Route::post('/login', [AdminLoginController::class, 'login'])->name('login.post');
+    Route::post('/login', [AdminLoginController::class, 'login'])->name('login');
     Route::get('/validate-otp', [AdminLoginController::class, 'showOtpForm'])->name('validate-otp');
     Route::post('/validate-otp', [AdminLoginController::class, 'processOtp'])->name('validate-otp.post');
 
-    Route::get('/forgot-password', [AdminLoginController::class, 'forgot'])->name('password.forgot');
-    Route::get('/validate-token', [AdminLoginController::class, 'validatetoken'])->name('password.validatetoken');
-    Route::get('/reset-password', [AdminLoginController::class, 'resetpassword'])->name('password.resetpassword');
+    Route::get('/forgot-password', [AdminLoginController::class, 'forgotview'])->name('forgot.view');
+    Route::post('/forgot-password', [AdminLoginController::class, 'forgot'])->name('password.forgot');
+
+    Route::get('/validate-token', [AdminLoginController::class, 'showvalidatetoken'])->name('validatetoken.show');
+    Route::post('/validate-token', [AdminLoginController::class, 'validatetoken'])->name('password.validatetoken');
+
+    Route::get('/reset-password', [AdminLoginController::class, 'showresetpassword'])->name('resetpassword.show');
+    Route::post('/reset-password', [AdminLoginController::class, 'resetpassword'])->name('password.resetpassword');
     
     // Protected routes (require admin authentication)
     Route::middleware(['auth', 'admin'])->group(function () {

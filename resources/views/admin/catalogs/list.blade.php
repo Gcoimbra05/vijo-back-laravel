@@ -29,7 +29,13 @@
                         <tr>
                             <td><?= $key + 1; ?></td>
                             <td><?= $catalog->title; ?></td>
-                            <td>{!! $catalog->emoji_rendered !!}</td>
+                            <td>
+                                <?php
+                                    // Render emoji: accept hex code (e.g. "1F600"), HTML entity (e.g. "&#x1F600;") or the character itself
+                                    $emojiVal = $catalog->emoji_rendered ?? '';
+                                    echo $emojiVal;
+                                ?>
+                            </td>
                             <td><?= $catalog->is_premium ? 'Yes' : 'No'; ?></td>
                             <td><?= $catalog->is_promotional ? 'Yes' : 'No'; ?></td>
                             <td><?= $catalog->is_multipart ? 'Yes' : 'No'; ?></td>

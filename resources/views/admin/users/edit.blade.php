@@ -701,11 +701,11 @@
 @section('scripts')
 <script>
 
-///Funções do Personal Data
+/// Personal Data Functions
 
 document.getElementById('mobile').addEventListener('input', function (e) {
-    let value = e.target.value.replace(/\D/g, ''); // remove tudo que não for número
-    if (value.length > 10) value = value.slice(0, 10); // limita a 10 dígitos
+    let value = e.target.value.replace(/\D/g, ''); // Remove all non-numeric characters
+    if (value.length > 10) value = value.slice(0, 10); // Limit to 10 digits
 
     if (value.length > 6) {
         value = `(${value.slice(0,3)}) ${value.slice(3,6)}-${value.slice(6,10)}`;
@@ -720,7 +720,7 @@ document.getElementById('mobile').addEventListener('input', function (e) {
 
 document.querySelectorAll('.toggle-password').forEach(span => {
     span.addEventListener('click', () => {
-        // pega o input correspondente ao ícone clicado
+        // Get the input corresponding to the clicked icon
         const input = span.closest('.input-group').querySelector('.password-field');
         const icon = span.querySelector('i');
 
@@ -744,7 +744,7 @@ const timezones = @json($timezonesByCountry);
 const countrySelect = document.getElementById('country_code');
 const timezoneSelect = document.getElementById('timezone');
 
-// Monitora quando o usuário começa a digitar no repeat
+// Monitor when user starts typing in repeat field
 repeatPassword.addEventListener('input', function () {
     if (repeatPassword.value.length > 0) {
         if (newPassword.value !== repeatPassword.value) {
@@ -755,18 +755,18 @@ repeatPassword.addEventListener('input', function () {
             repeatPassword.classList.add('is-valid');
         }
     } else {
-        // Se apagou tudo, remove o erro
+        // If cleared, remove error
         repeatPassword.classList.remove('is-invalid');
     }
 });
 
 document.getElementById('savePasswordBtn').addEventListener('click', function () {
-    // Validação final
+    // Final validation
     if (newPassword.value !== repeatPassword.value) {
         alert("Enter the same password in both fields!");
         return;
     }
-    // Fecha o modal se estiver correto
+    // Close the modal if correct
     const modalElement = document.getElementById('myModal');
     const modal = bootstrap.Modal.getInstance(modalElement);
     repeatPassword.classList.remove('is-valid');
@@ -774,7 +774,7 @@ document.getElementById('savePasswordBtn').addEventListener('click', function ()
     modal.hide();
 });
 
-  // Timezones por país vindos do backend
+// Populate timezones by country (data from backend)
 function populateTimezones(countryCode) {
     timezoneSelect.innerHTML = '<option value="">Select</option>';
     if (!timezones[countryCode]) return;
@@ -784,7 +784,7 @@ function populateTimezones(countryCode) {
         option.value = tz;
         option.textContent = tz;
 
-        // Mantém a seleção anterior
+        // Maintain previous selection
         if (tz === "{{ old('timezone', $user->timezone) }}") {
             option.selected = true;
         }
@@ -794,12 +794,12 @@ function populateTimezones(countryCode) {
 
     }
 
-    // Se já tiver um país selecionado no carregamento, popula
+    // If a country is already selected on load, populate timezones
     if (countrySelect.value) {
         populateTimezones(countrySelect.value);
     }
 
-    // Atualiza ao mudar o país
+    // Update on country change
     countrySelect.addEventListener('change', function () {
         populateTimezones(this.value);
     });
@@ -869,7 +869,7 @@ function populateTimezones(countryCode) {
             });
         }
 
-        // Load when the tab is shown (so it's fresh), also load immediately if tab already visible
+        // Load when tab is shown (fresh data), also load immediately if tab is already active
         const tabEl = document.querySelector('#vijo_plans');
         if (tabEl) {
             tabEl.addEventListener('shown.bs.tab', loadVijoPlans);

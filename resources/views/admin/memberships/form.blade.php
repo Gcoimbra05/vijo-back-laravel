@@ -260,11 +260,11 @@
             return;
         }
 
-        // Remove barras no final e pega o último trecho
+        // Remove trailing slashes and get the last part
         const parts = url.replace(/\/+$/, '').split('/');
         const slug = parts[parts.length - 1];
 
-        // Preenche o campo slug
+        // Fill slug field
         slugInput.value = slug;
     });
 
@@ -273,7 +273,7 @@
         if(copyButton.classList.contains('copied')) return;
 
         slugInput.select();
-        slugInput.setSelectionRange(0, 99999); // Para dispositivos móveis
+        slugInput.setSelectionRange(0, 99999); // For mobile devices
 
         navigator.clipboard.writeText(slugInput.value).then(() => {
             copyButton.innerHTML = 'Copied! ✓';
