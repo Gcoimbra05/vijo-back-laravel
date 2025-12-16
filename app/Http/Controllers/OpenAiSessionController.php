@@ -2,12 +2,21 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\RealtimeSession;
+use App\Models\CreditTransaction;
+use App\Models\UserCredit;
+use App\Services\OpenAiSessionInteractionService;
+use App\Services\CreditService;
+
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Auth;
 
 class OpenAiSessionController
 {
+    public function __construct(protected OpenAiSessionInteractionService $openAiSessionInteractionService){}
+
     private function getEncryptedApiKey()
     {
         $key = env('OPENAI_API_KEY');
@@ -27,15 +36,28 @@ class OpenAiSessionController
 
     public function createRealTimeSession()
     {
+        $userId = Auth::id();
+        if (!$userId) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized access.',
+                'data' => null,
+            ], 401);
+        }
+
         try {
             $response = $this->makeOpenAiRequest(
                 'post',
                 'https://api.openai.com/v1/realtime/sessions',
                 ['model' => 'gpt-4o-realtime-preview-2025-06-03']
             );
-
+            
             $responseData = $response->json();
+
+            $realtimeSession = RealtimeSession::create(['openai_session_id' => $responseData['id'], 'user_id' => $userId]);
+
             $responseData['api_key_encrypted'] = $this->getEncryptedApiKey();
+            $responseData['primary_id'] = $realtimeSession->id;
 
             return response()->json($responseData, $response->status());
         } catch (\Exception $e) {
@@ -45,6 +67,112 @@ class OpenAiSessionController
                 'error' => 'Internal Server Error'
             ], 500);
         }
+    }
+
+    public function checkSessionsCreditBalance(Request $request)
+    {
+        $userId = Auth::id();
+        if (!$userId) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized access.',
+                'data' => null,
+            ], 401);
+        }
+
+        $creditBalance = UserCredit::select('ai_credit_balance')
+            ->where('user_id', $userId)
+            ->first();
+        if (!$creditBalance) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Internal server error',
+                'data' => null,
+            ], 500);
+        } 
+
+        $amountUsed = 0;
+
+        $sessionId = $request->query('session');
+        if ($sessionId) {
+            $session = RealtimeSession::find($sessionId);
+            if (!$session) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Session not found',
+                    'data' => null,
+                ], 404);
+            }
+
+            $tokensUsed = $this->openAiSessionInteractionService->calculateTokenUsageOfSession($sessionId);
+            $creditsUsed = $this->openAiSessionInteractionService->convertTokenUsageIntoCreditCost($tokensUsed);
+
+            $amountUsed = $creditsUsed;
+        } else {
+            $amountUsed = 100; // we need to define this, this will be the minimum amount
+        }
+
+        if ($amountUsed >= $creditBalance->ai_credit_balance) {
+            return response()->json([
+                'success' => true,
+                'message' => 'No credits to proceed with.',
+                'data' => null,
+            ], 403);
+        } else {
+            return response()->json([
+                'success' => true,
+                'message' => 'Enough credits to proceed with.',
+                'data' => null,
+            ], 200);
+        }
+    }
+
+    public function updateSessionStatus(Request $request, $sessionId)
+    {
+        $request->validate([
+            'status' => 'required|in:completed,failed'
+        ]);
+
+        $userId = Auth::id();
+        if (!$userId) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized access.',
+                'data' => null,
+            ], 401);
+        }
+
+        $session = RealtimeSession::find($sessionId);
+        if (!$session) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Realtime session not found.',
+                'data' => null,
+            ], 404);
+        }
+
+        $session->status = $request->status;
+        $session->save();
+
+        if ($request->status === 'completed') {
+            $tokensUsed = $this->openAiSessionInteractionService->calculateTokenUsageOfSession($sessionId);
+            $creditsUsed = $this->openAiSessionInteractionService->convertTokenUsageIntoCreditCost($tokensUsed);
+
+            $transaction = new CreditTransaction;
+            $transaction->type = 'deduct';
+            $transaction->amount = $creditsUsed;
+            $transaction->reference = 'realtime-session-completed';
+            $transaction->credit_type = 'ai_credits';
+            
+            $creditService = new CreditService;
+            $creditService->handleCreditsTransaction($userId, $transaction);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Successfully updated session status.',
+            'data' => $session,
+        ], 200);
     }
 
     public function createCompletion(Request $request)

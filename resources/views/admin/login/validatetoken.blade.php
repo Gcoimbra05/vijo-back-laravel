@@ -25,7 +25,7 @@
     }
 
     .resend-active {
-    color: #7367f0 !important; 
+    color: #7367f0 !important;
     cursor: pointer !important;
     text-decoration: underline;
     }
@@ -59,7 +59,7 @@
 
         <div class="mb-3 mt-3">
             <a href="" class="btn btn-primary d-grid w-100" type="submit">Send</a>
-            <a href="{{ route('password.forgot') }}" class="btn btn-secondary d-grid w-100 mt-2">Back </a>
+            <a href="{{ route('admin.password.forgot') }}" class="btn btn-secondary d-grid w-100 mt-2">Back </a>
         </div>
     </form>
 @endsection
@@ -119,7 +119,7 @@
                 resend.style.pointerEvents = "auto";
 
                 resend.addEventListener("click", function () {
-                    console.log("Token reenviado!"); 
+                    console.log("Token reenviado!");
                     // aqui você chama a rota para reenviar o email
                 });
             }

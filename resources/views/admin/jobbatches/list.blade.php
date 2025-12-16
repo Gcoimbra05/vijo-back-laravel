@@ -6,11 +6,11 @@
 <div class="card">
     <div class="card-header d-flex align-items-center justify-content-between">
         <h5 class="card-title m-0 me-2">{{ $pageTitle }}</h5>
-        
+
     </div>
 
     <hr class="m-0">
-    <div class="table-responsive text-nowrap p-2">
+    <div class="table-responsive text-nowrap">
         <table class="table table-striped table-hover dataTableList">
             <thead>
                 <tr>
@@ -41,7 +41,7 @@
                             <td>{{ date('Y-m-d H:i:s', $job_batch->cancelled_at) }}</td>
                             <td>{{ date('Y-m-d H:i:s', $job_batch->finished_at) }}</td>
                             <td>{{ $job_batch->options }}</td>
-                           
+
                         </tr>
                     @endforeach
                 @else

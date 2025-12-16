@@ -1,63 +1,54 @@
-<!DOCTYPE html>
-<html lang="en" class="light-style layout-wide customizer-hide" dir="ltr" data-theme="theme-default" data-assets-path="../assets/" data-template="vertical-menu-template-free">
+<!doctype html>
+<html
+    lang="en"
+    class="layout-wide customizer-hide"
+    dir="ltr" data-skin="default" data-bs-theme="light"
+    data-template="vertical-menu-template"
+>
 
 <head>
-    <meta charset="utf-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0" />
+    <meta name="robots" content="noindex, nofollow" />
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
     <title>@yield('title', 'Admin Panel - vijo')</title>
 
-    <!-- Favicon -->
     <link rel="shortcut icon" href="{{ asset('assets/images/group.svg') }}" type="image/x-icon">
 
-    <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Public+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500;1,600;1,700&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&ampdisplay=swap" rel="stylesheet" />
 
-    <link rel="stylesheet" href="{{ asset('admin/assets/vendor/fonts/boxicons.css') }}" />
-    <link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
-
-    <!-- Core CSS -->
-    <link rel="stylesheet" href="{{ asset('admin/assets/vendor/css/core.css') }}" class="template-customizer-core-css" />
-    <link rel="stylesheet" href="{{ asset('admin/assets/vendor/css/theme-default.css') }}" class="template-customizer-theme-css" />
-    <link rel="stylesheet" href="{{ asset('admin/assets/css/demo.css') }}" />
-
-    <!-- Vendors CSS -->
-    <link rel="stylesheet" href="{{ asset('admin/assets/vendor/libs/perfect-scrollbar/perfect-scrollbar.css') }}" />
-
-    <!-- Page CSS -->
-    <link rel="stylesheet" href="{{ asset('admin/assets/vendor/css/pages/page-auth.css') }}" />
-    <link rel="stylesheet" href="{{ asset('admin/assets/css/custom.css') }}" />
-
-    <!-- Helpers -->
-    <script src="{{ asset('admin/assets/vendor/js/helpers.js') }}"></script>
-    <!--! Template customizer & Theme config files MUST be included after core stylesheets and helpers.js in the <head> section -->
-    <!--? Config:  Mandatory theme config file contain global vars & default theme options, Set your preferred theme option in this file.  -->
-    <script src="{{ asset('admin/assets/js/config.js') }}"></script>
+    <link rel="stylesheet" href="{{ asset('dist/css/core.css') }}" />
+    <link rel="stylesheet" href="{{ asset('dist/css/pages/page-auth.css') }}" />
 </head>
 
 <body>
-    <div class="container-xxl">
+    <div class="position-relative">
         <div class="authentication-wrapper authentication-basic container-p-y">
-            <div class="authentication-inner mb-5">
-                <div class="card">
-                    <div class="card-body">
-                        <div class="app-brand justify-content-center">
-                            <a href="{{ url('admin') }}" class="app-brand-link gap-2">
-                                <span class="app-brand-logo demo">
-                                    <img src="{{ asset('assets/images/group.svg') }}" style="width: 100px;" />
-                                </span>
-                            </a>
-                        </div>
+            <div class="authentication-inner py-6 mx-4">
 
+                <div class="card p-sm-7 p-2">
+                    <div class="app-brand justify-content-center mt-5">
+                        <a href="{{ url('admin') }}" class="app-brand-link gap-2">
+                            <span class="app-brand-logo demo">
+                                <img src="{{ asset('assets/images/group.svg') }}" style="width: 100px;" />
+                            </span>
+                        </a>
+                    </div>
+
+                    <div class="card-body mt-1">
                         @yield('content')
                         @yield('scripts')
                     </div>
                 </div>
+
+                <img src="{{ asset('admin/assets/img/illustrations/tree-3.png') }}" alt="auth-tree" class="authentication-image-object-left d-none d-lg-block" />
+                <img src="{{ asset('admin/assets/img/illustrations/auth-basic-mask-light.png') }}" class="authentication-image d-none d-lg-block scaleX-n1-rtl" height="172" alt="triangle-bg" data-app-light-img="illustrations/auth-basic-mask-light.png" data-app-dark-img="illustrations/auth-basic-mask-dark.png" />
+                <img src="{{ asset('admin/assets/img/illustrations/tree.png') }}" alt="auth-tree" class="authentication-image-object-right d-none d-lg-block" />
             </div>
         </div>
     </div>
 </body>
+</html>

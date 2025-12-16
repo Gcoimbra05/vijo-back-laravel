@@ -10,11 +10,11 @@ use Carbon\Carbon;
 <div class="card">
     <div class="card-header d-flex align-items-center justify-content-between">
         <h5 class="card-title m-0 me-2">{{ $pageTitle }}</h5>
-        
+
     </div>
 
     <hr class="m-0">
-    <div class="table-responsive text-nowrap p-2">
+    <div class="table-responsive text-nowrap">
         <table class="table table-striped table-hover dataTableList">
             <thead>
                 <tr>
@@ -75,7 +75,7 @@ use Carbon\Carbon;
                             <td>
                                 <div class="dropdown">
                                     <button type="button" class="btn p-0 dropdown-toggle hide-arrow" data-bs-toggle="dropdown" style="overflow: visible !important">
-                                        <i class="bx bx-dots-vertical-rounded"></i>
+                                        <i class="icon-base ri ri-more-2-line icon-18px"></i>
                                     </button>
                                     <div class="dropdown-menu">
                                         {{-- directs to users.upgrade of the specific user --}}
@@ -85,8 +85,8 @@ use Carbon\Carbon;
                                     </div>
                                 </div>
                             </td>
-                            
-                           
+
+
                         </tr>
                     @endforeach
                 @else

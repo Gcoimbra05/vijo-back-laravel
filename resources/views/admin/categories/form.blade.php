@@ -119,7 +119,7 @@
 
                     <input type="hidden" name="from" value="{{ $from ?? 'category' }}">
 
-                    
+
                     <!-- Nav Tabs -->
                     <ul class="nav nav-pills" id="editTabs" role="tablist" style="border-bottom: 1px solid #d3d8dcff;">
                         <!-- Category Data -->
@@ -132,13 +132,13 @@
                         </li>
                     </ul>
 
-                    
+
                     <!-- Conteúdo das Abas -->
                     <div class="tab-content" id="editTabsContent">
 
                         <!-- Conteúdo Category Data -->
                         <div class="tab-pane fade show active" id="category" role="tabpanel">
-                            
+
                             <div class="row">
                                 <div class="mb-3 col-md-6">
                                     <label for="name" class="form-label">Name</label>
@@ -218,14 +218,14 @@
                                                     <td>
                                                         <div class="dropdown">
                                                             <button type="button" class="btn p-0 dropdown-toggle hide-arrow" data-bs-toggle="dropdown" style="overflow: visible !important">
-                                                                <i class="bx bx-dots-vertical-rounded"></i>
+                                                                <i class="icon-base ri ri-more-2-line icon-18px"></i>
                                                             </button>
                                                             <div class="dropdown-menu">
-                                                                
+
                                                                 <a class="dropdown-item" href="{{ route('catalog.edit', $catalog->id) }}">
-                                                                    <i class="bx bx-edit-alt me-1"></i> Edit
+                                                                    <i class="icon-base ri ri-edit-line me-1"></i> Edit
                                                                 </a>
-                                                                
+
                                                             </div>
                                                         </div>
                                                     </td>
@@ -241,7 +241,7 @@
                                 </table>
                             </div>
                         </div>
-                    
+
                             <!-- buttons -->
                         <div class="mt-3">
                             <button type="submit" class="btn btn-primary me-2" id="btn_save">Save changes</button>

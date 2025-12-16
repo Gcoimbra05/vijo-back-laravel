@@ -52,10 +52,10 @@
         display: grid;
         grid-auto-flow: column;
     }
-    .wide-input { 
-        width: 150%; 
+    .wide-input {
+        width: 150%;
     }
-    
+
     .input-container {
         position: relative;
         display: flex;
@@ -76,7 +76,7 @@
         position: absolute;
         right: 0.5rem;
         top: 50%;
-        transform: translateY(-50%); 
+        transform: translateY(-50%);
         padding: 0.25rem 0.5rem;
         font-size: 1rem;
         cursor: pointer;
@@ -87,7 +87,7 @@
     }
 
     .copy-btn:hover {
-        transform: translateY(-50%) scale(1.05); 
+        transform: translateY(-50%) scale(1.05);
     }
 
     .copy-btn.copied {
@@ -101,7 +101,7 @@
         position: absolute;
         left: 0.5rem;
         top: 50%;
-        transform: translateY(-30%); 
+        transform: translateY(-30%);
         padding: 0.25rem 0.5rem;
         font-size: 1rem;
         cursor: pointer;
@@ -112,7 +112,7 @@
     }
 
     .copy-btn2:hover {
-        transform: translateY(-30%) scale(1.1); 
+        transform: translateY(-30%) scale(1.1);
     }
 
 
@@ -123,10 +123,10 @@
 
 @php
     $isEdit = $action === 'Edit';
-    $pageAction = $isEdit ? 'membership.update' : 'membership.store';
+    $pageAction = $isEdit ? 'admin.memberships.update' : 'admin.memberships.store';
     $formAction = $isEdit
-        ? route('membership.update', $info[0]['id'] ?? '')
-        : route('membership.store');
+        ? route('admin.memberships.update', $info[0]['id'] ?? '')
+        : route('admin.memberships.store');
     $formMethod = $isEdit ? 'PUT' : 'POST';
 @endphp
 
@@ -156,7 +156,7 @@
                                 <span class="invalid-feedback" role="alert"><strong>{{ $message }}</strong></span>
                             @enderror
                         </div>
-                        
+
                         <div class="mb-3 col-md-6">
                             <label for="payment_link" class="form-label">Payment Link</label>
                             <input class="form-control @error('payment_link') is-invalid @enderror" type="text" id="payment_link" name="payment_link" placeholder="Ex: https://example.com/payments" autocomplete="off" value="{{ old('payment_link', $info[0]['payment_link'] ?? '') }}" autofocus required />
@@ -164,7 +164,7 @@
                                 <span class="invalid-feedback" role="alert"><strong>{{ $message }}</strong></span>
                             @enderror
                         </div>
-                        
+
                     </div>
 
 
@@ -184,7 +184,7 @@
                         </div>
 
                     </div>
-                    
+
 
                     <div class="selects">
                         <div class="mb-3 col-md-6">
@@ -203,7 +203,7 @@
                             @enderror
                         </div>
                     </div>
-                    
+
 
                     <div class="selects">
                         <div class="mb-3 col-md-6">
@@ -214,7 +214,7 @@
                                     <option value="0" {{ (string) old('status', $info[0]['status'] ?? '') === "0" ? 'selected' : '' }}>Deactivate</option>
                                 </select>
                         </div>
-                        
+
                         <div class="mb-3 col-md-6">
                             <label for="payment_mode">Payment Mode</label>
                                 <select name="payment_mode" id="payment_mode" class="form-control @error('payment_mode') is-invalid @enderror" style="cursor: pointer; appearance: menulist">
@@ -224,7 +224,7 @@
                                 </select>
                         </div>
                     </div>
-                                    
+
                     <div class="row">
                         <div class="mb-3 col-md-12">
                             <label for="description" class="form-label">Description</label>
@@ -254,7 +254,7 @@
 
     generateButton.addEventListener('click', () => {
         const url = paymentInput.value.trim();
-        
+
         if (!url) {
             alert('Please fill in Payment Link before generating the slug');
             return;

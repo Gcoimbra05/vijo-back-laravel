@@ -20,8 +20,8 @@
                     @enderror
             </div>
             <div class="mb-3">
-                    <a href="{{ route('password.validatetoken') }}" class="btn btn-primary d-grid w-100" type="submit">Send</a>
-                    <a href="{{ route('login') }}" class="btn btn-secondary d-grid w-100 mt-2">Back </a>
+                    <a href="{{ route('admin.password.validatetoken') }}" class="btn btn-primary d-grid w-100" type="submit">Send</a>
+                    <a href="{{ route('admin.login') }}" class="btn btn-secondary d-grid w-100 mt-2">Back </a>
             </div>
     </form>
 @endsection

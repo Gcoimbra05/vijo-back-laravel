@@ -21,7 +21,7 @@
     </div>
 
     <hr class="m-0">
-    <div class="table-responsive text-nowrap p-2">
+    <div class="table-responsive text-nowrap">
         <table class="table table-striped table-hover dataTableList">
             <thead>
                 <tr>
@@ -52,25 +52,25 @@
                         <td>
                                 <div class="dropdown">
                                     <button type="button" class="btn p-0 dropdown-toggle hide-arrow" data-bs-toggle="dropdown" style="overflow: visible !important">
-                                        <i class="bx bx-dots-vertical-rounded"></i>
+                                        <i class="icon-base ri ri-more-2-line icon-18px"></i>
                                     </button>
                                     <div class="dropdown-menu">
                                         @if($platformtext->status == 1)
                                             <a class="dropdown-item" href="{{ route('admin.platformtext.deactivate', $platformtext->id) }}">
-                                                <i class="bx bx-x me-1"></i> Deactivate
+                                                <i class="icon-base ri ri-close-line me-1"></i> Deactivate
                                             </a>
                                         @else
                                             <a class="dropdown-item" href="{{ route('admin.platformtext.activate', $platformtext->id) }}">
-                                                <i class="bx bx-check me-1"></i> Activate
+                                                <i class="icon-base ri ri-check-line me-1"></i> Activate
                                             </a>
                                         @endif
 
                                         <a class="dropdown-item" href="{{ route('admin.platformtext.edit', $platformtext->id) }}">
-                                            <i class="bx bx-edit-alt me-1"></i> Edit
+                                            <i class="icon-base ri ri-edit-line me-1"></i> Edit
                                         </a>
 
                                         <a class="dropdown-item" href="{{ route('admin.platformtext.delete', $platformtext->id) }}" onclick="return confirm('Are you sure you want to delete this record?');">
-                                            <i class="bx bx-trash me-1"></i> Delete
+                                            <i class="icon-base ri ri-delete-bin-line me-1"></i> Delete
                                         </a>
                                     </div>
                                 </div>

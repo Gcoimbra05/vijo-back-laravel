@@ -8,16 +8,19 @@ use Illuminate\Support\Facades\Log;
 use App\Models\Subscription;
 use App\Models\Payment;
 use App\Models\User;
+use App\Services\CreditService;
+use App\Services\MembershipManagementService;
 use Illuminate\Support\Facades\Auth;
 use Stripe\Webhook;
 use Stripe\Stripe;
 use Stripe\BillingPortal\Session;
 
+use Exception;
+
 class StripeWebhookController extends Controller
 {
     public function handle(Request $request)
     {
-        Log::info('Stripe Webhook Received: ' . $request->getContent());
         $stripeSecret = config('services.stripe.secret');
         $webhookSecret = config('services.stripe.webhook_secret');
 
@@ -33,43 +36,20 @@ class StripeWebhookController extends Controller
                 $webhookSecret
             );
             Log::info('Stripe Webhook Event Type: ' . $event->type);
+            Log::info('Stripe Webhook Received: ' . $request->getContent());
+            
             switch ($event->type) {
                 case 'customer.subscription.created':
                     $subscription = $event->data->object;
-
-                    // Tente obter o user_id do metadata do Stripe
-                    $userId = null;
-                    if (!empty($subscription->metadata) && isset($subscription->metadata->user_id)) {
-                        $userId = $subscription->metadata->user_id;
-                    }
-                    // Se não veio no metadata, tente buscar na tabela subscriptions pelo stripe_customer_id
-                    if (!$userId && !empty($subscription->customer)) {
-                        $existingSubscription = Subscription::where('stripe_customer_id', $subscription->customer)
-                            ->whereNotNull('user_id')
-                            ->first();
-                        if ($existingSubscription) {
-                            $userId = $existingSubscription->user_id;
-                        }
-                    }
-
-                    $planId = null;
-                    $plan = MembershipPlan::where('slug', 'vijoplus')->first();
-                    if ($plan) {
-                        $planId = $plan->id;
-                    }
-                    /* if (!empty($subscription->items->data[0]->price->id)) {
-                        $plan = MembershipPlan::where('slug', $subscription->items->data[0]->price->id)->first();
-                        if ($plan) {
-                            $planId = $plan->id;
-                        }
-                    } */
+                    $userId = $this->getUserIdFromSubscription($subscription);
+                    $planId = $this->getPlanIdFromSubscription($subscription);
 
                     Subscription::create([
                         'user_id'                => $userId,
-                        'plan_id'                => $planId,
+                        'pending_plan_id'        => $planId,
                         'stripe_customer_id'     => $subscription->customer,
                         'stripe_subscription_id' => $subscription->id,
-                        'status'                 => 1, // 1: active
+                        'status'                 => 2, // 2: incomplete/pending until invoice.paid
                         'start_date'             => $subscription->start_date ? date('Y-m-d H:i:s', $subscription->start_date) : null,
                         'end_date'               => $subscription->current_period_end ? date('Y-m-d H:i:s', $subscription->current_period_end) : null,
                         'cancel_at'              => $subscription->cancel_at ? date('Y-m-d H:i:s', $subscription->cancel_at) : null,
@@ -77,27 +57,19 @@ class StripeWebhookController extends Controller
                         'reason'                 => $subscription->cancellation_details->reason ?? null,
                         'cancel_at_period_end'   => $subscription->cancel_at_period_end ? 1 : 0,
                     ]);
-                    Log::info('Subscription Created: ' . $subscription->id);
-
-                    if ($userId && $planId) {
-                        User::where('id', $userId)->update(['plan_id' => $planId]);
-                    }
+                    Log::info('Subscription Created (pending payment): ' . $subscription->id);
                     break;
 
                 case 'customer.subscription.updated':
                     $subscription = $event->data->object;
-
-                    $planId = null;
-                    $plan = MembershipPlan::where('slug', 'vijoplus')->first();
-                    if ($plan) {
-                        $planId = $plan->id;
-                    }
-                    /* if (!empty($subscription->items->data[0]->price->id)) {
-                        $plan = MembershipPlan::where('slug', $subscription->items->data[0]->price->id)->first();
-                        if ($plan) {
-                            $planId = $plan->id;
-                        }
-                    } */
+                    $previousAttributes = $event->data->previous_attributes ?? null;
+                    $planId = $this->getPlanIdFromSubscription($subscription);
+                    
+                    // Check if this update requires payment confirmation
+                    $requiresPaymentConfirmation = $this->subscriptionUpdateRequiresPayment(
+                        $subscription, 
+                        $previousAttributes
+                    );
 
                     $statusMap = [
                         'active' => 1,
@@ -108,32 +80,50 @@ class StripeWebhookController extends Controller
                     ];
                     $status = $statusMap[$subscription->status] ?? 2;
 
-                    Subscription::where('stripe_subscription_id', $subscription->id)
-                        ->update([
-                            'plan_id'      => $planId,
-                            'status'       => $status,
-                            'start_date'   => $subscription->start_date ? date('Y-m-d H:i:s', $subscription->start_date) : null,
-                            'end_date'     => $subscription->current_period_end ? date('Y-m-d H:i:s', $subscription->current_period_end) : null,
-                            'cancel_at'    => $subscription->cancel_at ? date('Y-m-d H:i:s', $subscription->cancel_at) : null,
-                            'cancelled_at' => $subscription->canceled_at ? date('Y-m-d H:i:s', $subscription->canceled_at) : null,
-                            'reason'       => $subscription->cancellation_details->reason ?? null,
-                            'cancel_at_period_end' => $subscription->cancel_at_period_end ? 1 : 0,
-                        ]);
-                    Log::info('Subscription Updated: ' . $subscription->id);
+                    // If payment is required, mark as pending upgrade
+                    if ($requiresPaymentConfirmation) {
+                        Log::info('Update requires payment confirmation - marking as pending');
+                        
+                        // Store the pending plan change but don't provision yet
+                        Subscription::where('stripe_subscription_id', $subscription->id)
+                            ->update([
+                                'pending_plan_id' => $planId, // Store intended plan
+                                'status'          => $status,
+                                'start_date'      => $subscription->start_date ? date('Y-m-d H:i:s', $subscription->start_date) : null,
+                                'end_date'        => $subscription->current_period_end ? date('Y-m-d H:i:s', $subscription->current_period_end) : null,
+                                'cancel_at'       => $subscription->cancel_at ? date('Y-m-d H:i:s', $subscription->cancel_at) : null,
+                                'cancelled_at'    => $subscription->canceled_at ? date('Y-m-d H:i:s', $subscription->canceled_at) : null,
+                                'reason'          => $subscription->cancellation_details->reason ?? null,
+                                'cancel_at_period_end' => $subscription->cancel_at_period_end ? 1 : 0,
+                            ]);
+                        
+                        // Wait for invoice.paid to provision the upgrade
+                        Log::info('Waiting for invoice.paid to provision upgrade');
+                    } else {
+                        // Safe to update immediately (downgrade, metadata change, etc.)
+                        Log::info('No payment required - updating immediately');
+                        
+                        Subscription::where('stripe_subscription_id', $subscription->id)
+                            ->update([
+                                'plan_id'      => $planId,
+                                'status'       => $status,
+                                'start_date'   => $subscription->start_date ? date('Y-m-d H:i:s', $subscription->start_date) : null,
+                                'end_date'     => $subscription->current_period_end ? date('Y-m-d H:i:s', $subscription->current_period_end) : null,
+                                'cancel_at'    => $subscription->cancel_at ? date('Y-m-d H:i:s', $subscription->cancel_at) : null,
+                                'cancelled_at' => $subscription->canceled_at ? date('Y-m-d H:i:s', $subscription->canceled_at) : null,
+                                'reason'       => $subscription->cancellation_details->reason ?? null,
+                                'cancel_at_period_end' => $subscription->cancel_at_period_end ? 1 : 0,
+                                'pending_plan_id' => null, // Clear any pending changes
+                            ]);
 
-                    // Busca o user_id pela subscription (não pelo user)
-                    $dbSubscription = Subscription::where('stripe_subscription_id', $subscription->id)->first();
-                    if ($dbSubscription && $dbSubscription->user_id) {
-                        $user = User::find($dbSubscription->user_id);
-                        if ($user) {
-                            if ($status == 1 && $planId) { // 1: active
-                                $user->plan_id = $planId;
-                            } else {
-                                $user->plan_id = 1;
-                            }
-                            $user->save();
+                        // Update user's plan immediately for safe changes
+                        $dbSubscription = Subscription::where('stripe_subscription_id', $subscription->id)->first();
+                        if ($dbSubscription && $dbSubscription->user_id) {
+                            $this->updateUserPlan($dbSubscription->user_id, $status, $planId);
                         }
                     }
+
+                    Log::info('Subscription Updated: ' . $subscription->id);
                     break;
 
                 case 'customer.subscription.deleted':
@@ -143,45 +133,102 @@ class StripeWebhookController extends Controller
                             'cancelled_at' => $subscription->canceled_at ? date('Y-m-d H:i:s', $subscription->canceled_at) : null,
                             'reason'       => $subscription->cancellation_details->reason ?? null,
                             'status'       => 3,
+                            'plan_id'      => null,
+                            'pending_plan_id' => null,
                         ]);
-                    Log::error('Subscriptions Cancelled: ' . $subscription->id);
+                    Log::info('Subscription Cancelled: ' . $subscription->id);
 
-                    // Busca o user_id pela subscription (não pelo user)
+                    $freePlan = MembershipPlan::where('slug', 'free')->first();
+
+                    // Revert user to free plan
                     $dbSubscription = Subscription::where('stripe_subscription_id', $subscription->id)->first();
-                    if ($dbSubscription && $dbSubscription->user_id) {
-                        $user = User::find($dbSubscription->user_id);
-                        if ($user) {
-                            $user->plan_id = 1;
-                            $user->save();
-                        }
+                    if ($dbSubscription && $dbSubscription->user_id && $freePlan) {
+                        $this->updateUserPlan($dbSubscription->user_id, 3, $freePlan->id);
                     }
                     break;
 
-                case 'checkout.session.completed':
-                    $session = $event->data->object;
-                    Subscription::create([
-                        'stripe_subscription_id' => $session->subscription,
-                        'customerID'             => $session->customer,
-                        'user_id'                => $session->client_reference_id,
-                        'status'                 => 1,
+                case 'invoice.paid':
+                    $invoice = $event->data->object;
+                    $dbSubscription = Subscription::where('stripe_subscription_id', $invoice->subscription)->first();
+                    if ($dbSubscription) {
+                        $planIdToProvision = $dbSubscription->pending_plan_id ?? $dbSubscription->plan_id;
+                        
+                        $dbSubscription->update([
+                            'status' => 1, // Active
+                            'plan_id' => $planIdToProvision,
+                            'pending_plan_id' => null,
+                        ]);
+
+                        Log::info('Subscription activated with plan', [
+                            'subscription_id' => $dbSubscription->id,
+                            'plan_id' => $planIdToProvision
+                        ]);
+
+                        // NOW provision access to the user
+                        if ($dbSubscription->user_id && $planIdToProvision) {
+                            $user = User::find($dbSubscription->user_id);
+                            if ($user) {
+                               $this->updateUserPlan($user->id, 1, $planIdToProvision);
+                            }
+                        }
+                    }
+
+                    // Record the payment
+                    Payment::create([
+                        'subscription_id'          => $dbSubscription ? $dbSubscription->id : null,
+                        'customerID'               => $invoice->customer,
+                        'stripe_payment_intent_id' => $invoice->payment_intent ?? $invoice->id,
+                        'amount'                   => $invoice->amount_paid / 100,
+                        'status'                   => 1, // paid
                     ]);
-                    Log::info('Checkout Completed: ' . $session->id);
+                    
+                    Log::info('Invoice Payment succeeded and access provisioned: ' . $invoice->id);
                     break;
 
-                case 'invoice.payment_succeeded':
+                case 'invoice.payment_failed':
                     $invoice = $event->data->object;
+                    $status = 4;
+                
+                    $dbSubscription = Subscription::where('stripe_subscription_id', $invoice->subscription)->first();
+                    if ($dbSubscription) {
+                        $dbSubscription->update([
+                            'status' => $status, // past_due
+                            'pending_plan_id' => null,
+                        ]);
+                    }
 
-                    // Find the subscription by stripe_subscription_id
-                    $subscription = Subscription::where('stripe_subscription_id', $invoice->subscription)->first();
+                    $freePlan = MembershipPlan::where('slug', 'free')->first();
+                    $this->updateUserPlan($dbSubscription->user_id, $status, $freePlan->id);
 
+                    // Record the failed payment
                     Payment::create([
-                        'subscription_id'         => $subscription ? $subscription->id : null,
-                        'customerID'              => $invoice->customer,
-                        'stripe_payment_intent_id'=> $invoice->payment_intent ?? $invoice->id,
-                        'amount'                  => $invoice->amount_paid / 100, // Stripe sends in cents
-                        'status'                  => 1, // 1: paid
+                        'subscription_id'          => $dbSubscription ? $dbSubscription->id : null,
+                        'customerID'               => $invoice->customer,
+                        'stripe_payment_intent_id' => $invoice->payment_intent ?? $invoice->id,
+                        'amount'                   => $invoice->amount_due / 100,
+                        'status'                   => 2, // failed
                     ]);
-                    Log::info('Invoice Payment succeeded: ' . $invoice->id);
+                    break;
+
+                case 'invoice.payment_action_required':
+                    // Payment requires additional action (like 3D Secure)
+                    $invoice = $event->data->object;
+                    
+                    Log::warning('Invoice Payment Action Required', [
+                        'invoice_id' => $invoice->id,
+                        'subscription_id' => $invoice->subscription
+                    ]);
+
+                    $dbSubscription = Subscription::where('stripe_subscription_id', $invoice->subscription)->first();
+                    
+                    if ($dbSubscription && $dbSubscription->user_id) {
+                        // TODO: Notify user that action is required
+                        // Send them the payment confirmation URL
+                        Log::info('User needs to complete payment action', [
+                            'user_id' => $dbSubscription->user_id,
+                            'hosted_invoice_url' => $invoice->hosted_invoice_url
+                        ]);
+                    }
                     break;
 
                 default:
@@ -191,9 +238,135 @@ class StripeWebhookController extends Controller
 
             return response()->json(['status' => 'success'], 200);
         } catch (\UnexpectedValueException $e) {
+            Log::error('Webhook Invalid Payload: ' . $e->getMessage());
             return response()->json(['error' => 'Invalid payload'], 400);
         } catch (\Stripe\Exception\SignatureVerificationException $e) {
+            Log::error('Webhook Invalid Signature: ' . $e->getMessage());
             return response()->json(['error' => 'Invalid signature'], 400);
+        } catch (\Exception $e) {
+            Log::error('Webhook Processing Error: ' . $e->getMessage());
+            return response()->json(['error' => 'Internal error'], 500);
+        }
+    }
+
+    /**
+     * Extract user_id from subscription metadata or existing records
+     */
+    private function getUserIdFromSubscription($subscription)
+    {
+        // Try metadata first
+        if (!empty($subscription->metadata) && isset($subscription->metadata->user_id)) {
+            return $subscription->metadata->user_id;
+        }
+
+        // Fallback to existing subscription record
+        if (!empty($subscription->customer)) {
+            $existingSubscription = Subscription::where('stripe_customer_id', $subscription->customer)
+                ->whereNotNull('user_id')
+                ->first();
+            if ($existingSubscription) {
+                return $existingSubscription->user_id;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Extract plan_id from subscription items
+     */
+    private function getPlanIdFromSubscription($subscription)
+    {
+        if (!empty($subscription->items->data[0]->price->id)) {
+            $plan = MembershipPlan::where('price_id', $subscription->items->data[0]->price->id)->first();
+            if ($plan) {
+                return $plan->id;
+            }
+        }
+        return null;
+    }
+
+    private function subscriptionUpdateRequiresPayment($subscription, $previousAttributes)
+    {
+       if (!$previousAttributes) {
+            return false;
+        }
+
+        if (isset($previousAttributes->items)) {
+            $oldPrice = $previousAttributes->items->data[0]->price ?? null;
+            $newPrice = $subscription->items->data[0]->price ?? null;
+
+            $oldPriceId = $oldPrice->id ?? null;
+            $newPriceId = $newPrice->id ?? null;
+
+            if ($oldPriceId && $newPriceId && $oldPriceId !== $newPriceId) {
+
+                $oldPlan = MembershipPlan::where('price_id', $oldPriceId)->first();
+                $newPlan = MembershipPlan::where('price_id', $newPriceId)->first();
+
+                if ($oldPlan && $newPlan) {
+
+                    // Determine billing interval from Stripe
+                    $interval = $newPrice->recurring->interval ?? 'monthly';
+
+                    $oldCost = $interval === 'year'
+                        ? $oldPlan->annual_cost
+                        : $oldPlan->monthly_cost;
+
+                    $newCost = $interval === 'year'
+                        ? $newPlan->annual_cost
+                        : $newPlan->monthly_cost;
+
+                    // Upgrade requires payment, downgrade doesn't
+                    if ($newCost > $oldCost) {
+                        Log::info('Upgrade detected - payment required');
+                        return true;
+                    }
+
+                    Log::info('Downgrade detected - no immediate payment');
+                    return false;
+                }
+            }
+        }
+
+        // Status changed from incomplete/past_due to active (payment retry succeeded)
+        if (isset($previousAttributes->status)) {
+            if (in_array($previousAttributes->status, ['incomplete', 'past_due', 'unpaid']) 
+                && $subscription->status === 'active') {
+                Log::info('Status changed to active from incomplete state - payment likely succeeded');
+                return false; // invoice.paid will handle this
+            }
+        }
+
+        // Default: no payment required (metadata changes, cancellations, etc.)
+        return false;
+    }
+
+    /**
+     * Update user's plan based on subscription status
+     */
+    private function updateUserPlan($userId, $status, $planId)
+    {
+        $user = User::find($userId);
+        if (!$user) {
+            return;
+        }
+
+        if ($status == 1 && $planId) { // Active with valid plan
+            $user->plan_id = $planId;
+        } else {
+            // Inactive - revert to free plan
+            $freePlan = MembershipPlan::where('slug', 'free')->first();
+            $user->plan_id = $freePlan ? $freePlan->id : 1;
+        }
+        
+        $user->save();
+
+        try {
+            $membershipManager = new MembershipManagementService(new CreditService);
+            $membershipManager->syncUserCreditsWithPlan($user->id, $user->plan_id);
+        } catch (Exception $e) {
+            Log::error('Failed to sync credits: ' . $e->getMessage());
         }
     }
 
@@ -201,8 +374,10 @@ class StripeWebhookController extends Controller
     {
         \Stripe\Stripe::setApiKey(config('services.stripe.secret'));
 
+        $request->validate(['plan' => 'required|in:grow,explore,thrive']);
+
         $userId = Auth::id();
-        $plan = MembershipPlan::where('slug', 'vijoplus')->first();
+        $plan = MembershipPlan::where('slug', $request->plan)->first();
         if (!$plan) {
             return response()->json(['error' => 'Plan not found'], 404);
         }
@@ -254,10 +429,13 @@ class StripeWebhookController extends Controller
                 'return_url' => $envUrl . '/',
             ]);
 
+            Log::info("Stripe session url: " . $session->url);
+
             return response()->json(['url' => $session->url]);
         } catch (\Exception $e) {
             Log::error('Erro ao criar sessão do portal Stripe: ' . $e->getMessage());
             return response()->json(['error' => 'Erro ao gerar link do portal'], 500);
         }
     }
+
 }

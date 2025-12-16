@@ -13,12 +13,13 @@ use App\Models\VideoRequest;
 use App\Services\ApiService;
 use App\Services\Emlo\EmloHelperService;
 use App\Services\TranscriptionService;
-use App\Services\Emlo\EmloCsvService;
-use App\Services\LlamaService;
 use App\Services\VideoProcessingPipeline;
 
 use App\Services\Emlo\Aggregation\PostRequestAggregation;
 
+use App\Attributes\ConsumesUserCredits;
+
+#[ConsumesUserCredits(cost: 5, feature: 'video_processing')]
 class ProcessVideoRequest implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
@@ -71,11 +72,9 @@ class ProcessVideoRequest implements ShouldQueue
         PostRequestAggregation $postRequestAggregation
 
     ) {
-        $this->videoRequest->update(['status' => 2]);
-
         $context = [
             'videoRequest' => $this->videoRequest,
-            'apiService' => $apiService,
+            'apiService' => $apiService,~
             'emloHelperService' => $emloHelperService,
             'transcriptionService' => $transcriptionService,
             'postRequestAggregation' => $postRequestAggregation
@@ -83,8 +82,5 @@ class ProcessVideoRequest implements ShouldQueue
 
         $pipeline = new VideoProcessingPipeline();
         $pipeline->process($context);
-
-        // The pipeline handles all error cases automatically
-        // Success case is also handled in the pipeline's then() callback
     }
 }

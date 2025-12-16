@@ -31,21 +31,9 @@ class TranscriptionService
         ]);
     }
 
-    /**
-     * Start a transcription job and wait for it to complete
-     * 
-     * @param string $jobName
-     * @param string $mediaUrl
-     * @param string $languageCode
-     * @param int $pollingInterval Seconds between status checks
-     * @param int $maxAttempts Maximum number of polling attempts
-     * @return array|string Transcript text if successful, error array otherwise
-     */
     public function transcribeSync($jobName, $mediaUrl, $languageCode = 'en-US', $pollingInterval = 10, $maxAttempts = 60)
     {
-        // Start the job
         $startResult = $this->startTranscriptionJob($jobName, $mediaUrl, $languageCode);
-        
         if (isset($startResult['error'])) {            
             return ['success' => false,
                     'error' => 'Failed to start transcription job' . $jobName . ':' . $startResult['message']];
@@ -55,37 +43,30 @@ class TranscriptionService
         $attempts = 0;
         while ($attempts < $maxAttempts) {
             $status = $this->getTranscriptionJob($jobName);
-            
             if (isset($status['error'])) {
-                return ['success' => false,
-                        'error' => 'Error checking transcription status:' . $status['message']];
+                return [
+                    'success' => false,
+                    'error' => 'Error checking transcription status:' . $status['message']
+                ];
             }
             
             $jobStatus = $status['TranscriptionJob']['TranscriptionJobStatus'];
-            
             if ($jobStatus === 'COMPLETED') {
-                Log::info("Transcription job completed: {$jobName}");
                 $transcriptUrl = $status['TranscriptionJob']['Transcript']['TranscriptFileUri'];
                 $transcriptContent = $this->fetchTranscriptContent($transcriptUrl);
                 return $transcriptContent;
-            } 
-            
-            if ($jobStatus === 'FAILED') {
+            } else if ($jobStatus === 'FAILED') {
                 $reason = $status['TranscriptionJob']['FailureReason'] ?? 'Unknown reason';
-                Log::error("Transcription job failed: {$jobName}. Reason: {$reason}");
                 return [
                     'success' => false,
                     'error' => "Transcription failed: {$reason}"
                 ];
             }
             
-            // Wait before checking again
             sleep($pollingInterval);
             $attempts++;
         }
         
-        // If we reach here, we've timed out
-        Log::warning("Transcription job timed out: {$jobName}");
         return [
             'success' => false,
             'error' => "Transcription job timed out after " . ($pollingInterval * $maxAttempts) . " seconds"
@@ -171,8 +152,6 @@ class TranscriptionService
     public function formatTranscriptForLlm($requestResponse, $transcriptResponse) {
         if (!empty($requestResponse->response->data) && !empty($requestResponse->response->data->segments) && !empty($requestResponse->response->data->segments->data)) {
             $segments = $requestResponse->response->data->segments->data;
-            Log::info('Number of segments to process: ' . count($segments));
-
             // Initialize constructed_transcript for each segment
             foreach ($segments as &$row) {
                 $row['constructed_transcript'] = '';

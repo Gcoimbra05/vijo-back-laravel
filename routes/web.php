@@ -188,11 +188,11 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('/activate/{id}', [MembershipPlanController::class, 'activate'])->name('activate');
         });
     
-        Route::prefix('vijoplans')->group(function () {
-            Route::get('/', [VijoPlansController::class, 'index'])->name('vijoplan.index');
-            Route::post('/', [VijoPlansController::class, 'store'])->name('vijoplan.store');
-            Route::put('/{id}', [VijoPlansController::class, 'update'])->name('vijoplan.update');
-            Route::get('/delete/{id}', [VijoPlansController::class, 'destroy'])->name('vijoplan.delete');
+        Route::prefix('vijoplans')->name('vijoplan.')->group(function () {
+            Route::get('/', [VijoPlansController::class, 'index'])->name('index');
+            Route::post('/', [VijoPlansController::class, 'store'])->name('store');
+            Route::put('/{id}', [VijoPlansController::class, 'update'])->name('update');
+            Route::get('/delete/{id}', [VijoPlansController::class, 'destroy'])->name('delete');
         });
     }); // End of protected admin routes
 }); // End of admin prefix
