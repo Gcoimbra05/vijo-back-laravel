@@ -16,7 +16,7 @@ class ProcessTranscriptionStep extends VideoProcessingStep
         $videoStoragePath = 'videos/' . $video->video_name;
         $videoUrl = Storage::disk($disk)->url($videoStoragePath);
         if (!$videoUrl) {
-            return ['success' => false, 'error' => 'Video URL not found'];
+            return ['success' => false, 'error' => 'Transcript processing: video URL not found'];
         }
 
         Log::info('Processing transcription for video', [
@@ -31,7 +31,6 @@ class ProcessTranscriptionStep extends VideoProcessingStep
             10,
             10
         );
-
         if (isset($transcriptionResult['error'])) {
             return ['success' => false, 'error' => 'Transcript processing: ' . $transcriptionResult['error']];
         }
@@ -43,7 +42,7 @@ class ProcessTranscriptionStep extends VideoProcessingStep
 
         $this->storeTranscripts($context['videoRequest']->id, $transcriptionResult, $formattedTranscript);
 
-        Log::info('AWS Transcription complete for video request: ' . $context['videoRequest']->id . "content: " . json_encode($transcriptionResult));
+        Log::info('Transcription processing: complete for video request: ' . $context['videoRequest']->id . "content: " . json_encode($transcriptionResult));
 
         return [
             'success' => true,

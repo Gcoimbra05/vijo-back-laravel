@@ -21,11 +21,11 @@
 <div class="card">
     <div class="card-header d-flex align-items-center justify-content-between">
         <h5 class="card-title m-0 me-2">{{ $pageTitle }}</h5>
-        
+
     </div>
 
     <hr class="m-0">
-    <div class="table-responsive text-nowrap p-2">
+    <div class="table-responsive text-nowrap">
         <table class="table table-striped table-hover dataTableList">
             <thead>
                 <tr>
@@ -60,7 +60,7 @@
                             <td>
                                 <div class="dropdown">
                                     <button type="button" class="btn p-0 dropdown-toggle hide-arrow" data-bs-toggle="dropdown" style="overflow: visible !important">
-                                        <i class="bx bx-dots-vertical-rounded"></i>
+                                        <i class="icon-base ri ri-more-2-line icon-18px"></i>
                                     </button>
 
                                     <div class="dropdown-menu">
@@ -71,11 +71,11 @@
 
                                          @if(in_array($userfeedback->status, [1,2]))
                                             <a class="dropdown-item mark-unread" href="#" data-feedback-id="{{ $userfeedback->id }}">
-                                                <i class="bx bx-x me-1"></i> Mark as unread
+                                                <i class="icon-base ri ri-close-line me-1"></i> Mark as unread
                                             </a>
                                         @else
                                             <a class="dropdown-item mark-read" href="#" data-feedback-id="{{ $userfeedback->id }}">
-                                                <i class="bx bx-check me-1"></i> Mark as read
+                                                <i class="icon-base ri ri-check-line me-1"></i> Mark as read
                                             </a>
                                         @endif
 

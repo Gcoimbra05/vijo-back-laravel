@@ -40,7 +40,7 @@
     }
 
     .resend-active {
-    color: #7367f0 !important; 
+    color: #7367f0 !important;
     cursor: pointer !important;
     text-decoration: underline;
     pointer-events: auto !important;

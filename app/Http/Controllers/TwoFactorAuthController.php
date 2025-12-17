@@ -2,11 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\GeneralHelper;
 use App\Models\TrustedDevice;
 use App\Models\User;
 use App\Models\UserLogin;
 use App\Models\UserVerification;
-use App\Services\TwilioService;
+use App\Services\VonageService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
@@ -19,13 +20,13 @@ use Laravel\Sanctum\PersonalAccessToken;
 
 class TwoFactorAuthController extends Controller
 {
-    protected $twilio;
+    protected $vonage;
 
     const EXPIRES_IN = 120; // minutes
 
     public function __construct()
     {
-        $this->twilio = new TwilioService();
+        $this->vonage = new VonageService();
     }
 
     public function sendCode(Request $request)
@@ -44,7 +45,7 @@ class TwoFactorAuthController extends Controller
         if ($request->type === 'email' && !empty($request->email)) {
             $user = User::where('email', $request->email)->first();
         } else if ($request->type === 'phone' && !empty($request->mobile) && !empty($request->country_code)) {
-            $user = User::where('mobile', $request->mobile)->where('country_code', $request->country_code)->first();
+            $user = User::where('mobile', GeneralHelper::onlyNumbers($request->mobile))->where('country_code', GeneralHelper::onlyNumbers($request->country_code))->first();
         }
 
         if (!$user) {
@@ -460,17 +461,29 @@ class TwoFactorAuthController extends Controller
 
     public function sendSms($countryCode, $mobile, $message)
     {
-        // Send SMS
+        // Send SMS via Vonage
         try {
             $fullPhoneNumber = preg_replace('/[^0-9]/', '', $countryCode . $mobile);
             if (strlen($fullPhoneNumber) < 10 || strlen($fullPhoneNumber) > 15) {
+                Log::error('Invalid phone number format: ' . $fullPhoneNumber);
                 return response()->json(['status' => false, 'message' => 'Invalid phone number format.'], 400);
             }
+
             $fullPhoneNumber = '+' . $fullPhoneNumber;
-            $this->twilio->sendSms($fullPhoneNumber, $message);
-            Log::info('SMS sent to ' . $fullPhoneNumber);
+            $result = $this->vonage->sendSms($fullPhoneNumber, $message);
+
+            if ($result['success']) {
+                Log::info('Vonage SMS sent successfully to ' . $fullPhoneNumber, [
+                    'message_id' => $result['message_id'] ?? null
+                ]);
+                return $result;
+            } else {
+                Log::error('Vonage SMS failed: ' . ($result['error'] ?? 'Unknown error'));
+                return $result;
+            }
         } catch (\Exception $e) {
-            Log::error('Error sending SMS: ' . $e->getMessage());
+            Log::error('Error sending SMS via Vonage: ' . $e->getMessage());
+            return ['success' => false, 'error' => $e->getMessage()];
         }
     }
 }

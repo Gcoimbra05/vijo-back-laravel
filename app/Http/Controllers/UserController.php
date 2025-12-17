@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Helpers\GeneralHelper;
 use App\Models\User;
+use App\Services\CreditService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
@@ -12,11 +13,12 @@ use App\Http\Controllers\TwoFactorAuthController;
 use App\Models\Catalog;
 use App\Models\EmloResponse;
 use App\Models\MembershipPlan;
+use App\Models\UserCredit;
 use App\Models\UserLogin;
 use App\Models\UserVerification;
 use App\Models\Video;
 use App\Services\Emlo\EmloInsights\EmloInsightsService;
-use App\Services\TwilioService;
+use App\Services\MembershipManagementService;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Auth\Events\Verified;
 use Illuminate\Support\Facades\Auth;
@@ -31,6 +33,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use OwenIt\Auditing\Models\Audit;
+use Exception;
 
 class UserController extends Controller
 {
@@ -168,6 +171,24 @@ class UserController extends Controller
             'timezone' => $request->timezone,
         ]);
 
+        // HERE
+
+        UserCredit::create([
+            'user_id' => $user->id,
+            'general_credit_balance' => 0,
+            'ai_credit_balance' => 0
+        ]);
+
+        $membershipService = new MembershipManagementService(new CreditService());
+        try {
+            $membershipService->setupFreePlan($user);
+        } catch (Exception) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Failed to setup users free subscription plan.',
+            ], 500);
+        }
+        
         // Send OTP
         $twoFactorAuth = new TwoFactorAuthController();
         $otp_result = $twoFactorAuth->sendCode(new Request([
@@ -608,7 +629,7 @@ class UserController extends Controller
                     ],
                     "timezoneMenus" => SettingsController::getTimezones(),
                     "userPlan" => [
-                        "user_status" => 'active', //SubscriptionController::getUserPlanStatus(),
+                        "user_status" => SubscriptionController::getUserPlanStatus(),
                     ],
                     "userTags" => TagController::getUserTags(),
                     "vijo_of_day" => $vijoOfDay,
@@ -745,7 +766,11 @@ class UserController extends Controller
             ['label' => 'Users', 'url' => route('admin.users.index')],
             ['label' => 'Edit Person', 'url' => null],
         ];
-        $countries = Countries::getNames();
+
+        $countries = self::getCountries()['results']->mapWithKeys(function ($country) {
+            return [$country['code'] => $country['name']];
+        })->toArray();
+
         $membershipPlans = MembershipPlan::all();
         $contacts = Contact::getByUser($user->id);
         $contactgroups = ContactGroup::getByUser($user->id);
@@ -916,18 +941,28 @@ class UserController extends Controller
         }
 
         $code = rand(100000, 999999);
-        $verification = UserVerification::create([
-            'user_id' => $user->id,
-            'code' => $code,
-            'expires_at' => Carbon::now()->addMinutes(10),
-        ]);
+        $verification = null;
 
-        // Send email notification
-        $userEmail = $request->new_email;
-        if ($request->type === 'email' && !empty($userEmail)) {
-            $appUrl = config('app.url');
-            $envUrl = str_replace('.com', '.me', $appUrl);
+        if ($request->type === 'email' && !empty($request->new_email)) {
+            $existingUser = User::where('email', $request->new_email)
+                ->where('id', '!=', $user->id)
+                ->first();
+            if ($existingUser) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'A user with this email already exists.',
+                ], 409);
+            }
+
+            $verification = UserVerification::create([
+                'user_id' => $user->id,
+                'code' => $code,
+                'expires_at' => Carbon::now()->addMinutes(10),
+            ]);
+
             try {
+                $appUrl = config('app.url');
+                $envUrl = str_replace('.com', '.me', $appUrl);
                 Mail::send('emails.template_new', [
                     'title' => 'Your Vijo account verification code',
                     'contentView' => 'emails.verification_code',
@@ -936,26 +971,51 @@ class UserController extends Controller
                         'verificationCode'  => $code,
                         'signUpUrl'         => $envUrl,
                     ]
-                ], function ($message) use ($userEmail, $code) {
-                    $message->to($userEmail)
+                ], function ($message) use ($request, $code) {
+                    $message->to($request->new_email)
                         ->subject('🔑 Your verification code is ' . $code);
                 });
             } catch (\Exception $e) {
                 Log::error('Error sending email: ' . $e->getMessage());
             }
-        } else if (!empty($request->country_code) && !empty($request->mobile)) {
-            // Send SMS
+        } elseif (!empty($request->country_code) && !empty($request->mobile)) {
+            $countryCode = GeneralHelper::onlyNumbers($request->country_code);
+            $mobile = GeneralHelper::onlyNumbers($request->mobile);
+            $existingUser = User::where('country_code', $countryCode)
+                ->where('mobile', $mobile)
+                ->where('id', '!=', $user->id)
+                ->first();
+            if ($existingUser) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'A user with this phone number already exists.',
+                ], 409);
+            }
+
+            $verification = UserVerification::create([
+                'user_id' => $user->id,
+                'code' => $code,
+                'expires_at' => Carbon::now()->addMinutes(10),
+            ]);
+
             $twoFactorController = new TwoFactorAuthController();
-            $twoFactorController->sendSms($request->country_code, $request->mobile, "Vijo verification code: {$code}\n\nReply STOP to opt-out of SMS messages and receive codes via email only. Reply HELP for support. Msg & data rates may apply.");
+            $twoFactorController->sendSms($countryCode, $mobile, "Vijo verification code: {$code}\n\nReply STOP to opt-out of SMS messages and receive codes via email only. Reply HELP for support. Msg & data rates may apply.");
         }
 
-        return response()->json([
-            "status" => true,
-            'message' => 'Verification code has been successfully sent to your mobile number.',
-            'results' => [
-                'otp_id' => $verification->id,
-            ],
-        ]);
+        if ($verification) {
+            return response()->json([
+                "status" => true,
+                'message' => 'Verification code has been successfully sent.',
+                'results' => [
+                    'otp_id' => $verification->id,
+                ],
+            ]);
+        } else {
+            return response()->json([
+                'status' => false,
+                'message' => 'No verification method triggered.'
+            ], 400);
+        }
     }
 
     /**
@@ -967,7 +1027,6 @@ class UserController extends Controller
             'type' => 'required|in:email,phone',
             'password' => 'required|string',
             'confirmation_code' => 'required',
-            'otp_id' => 'required|integer',
             'new_email' => 'required_if:type,email|email',
             'country_code' => 'required_if:type,phone|string',
             'mobile' => 'required_if:type,phone|string',
@@ -980,12 +1039,12 @@ class UserController extends Controller
             return response()->json(['status' => false, 'message' => 'Incorrect password.'], 400);
         }
 
-        $verification = UserVerification::where('id', $request->otp_id)
-            ->where('code', $request->confirmation_code)
+        $verification = UserVerification::where('user_id', $user->id)
             ->where('is_used', false)
             ->where('expires_at', '>', Carbon::now())
+            ->orderByDesc('id')
             ->first();
-        if (!$verification) {
+        if (!$verification || $verification->code !== $request->confirmation_code) {
             return response()->json([
                 'status' => false,
                 'message' => 'The provided code is invalid, expired, or has already been used.'
@@ -1048,5 +1107,26 @@ class UserController extends Controller
         return response()->json(['status' => true, 'message' => '2FA updated.', 'results' => ['enabled' => $user->two_factor_enabled]]);
     }
 
+    /**
+     * Retorna a lista de países com seus códigos ISO.
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getCountries()
+    {
+        $locale = 'en';
+        $names = Countries::getNames($locale);
 
+        $countries = collect($names)
+            ->map(function($name, $code) {
+                return [
+                    'code' => $code,
+                    'name' => $name
+                ];
+            })
+            ->values();
+        return [
+            'status' => true,
+            'results' => $countries
+        ];
+    }
 }

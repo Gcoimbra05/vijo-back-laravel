@@ -79,8 +79,8 @@
         display: grid;
         grid-auto-flow: column;
     }
-    .wide-input { 
-        width: 150%; 
+    .wide-input {
+        width: 150%;
     }
 </style>
 
@@ -88,10 +88,10 @@
 
 @php
     $isEdit = $action === 'Edit';
-    $pageAction = $isEdit ? 'tag.update' : 'tag.store';
+    $pageAction = $isEdit ? 'admin.tags.update' : 'admin.tags.store';
     $formAction = $isEdit
-        ? route('tag.update', $info[0]['id'] ?? '')
-        : route('tag.store');
+        ? route('admin.tags.update', $info[0]['id'] ?? '')
+        : route('admin.tags.store');
     $formMethod = $isEdit ? 'PUT' : 'POST';
 @endphp
 
@@ -121,7 +121,7 @@
                                 <span class="invalid-feedback" role="alert"><strong>{{ $message }}</strong></span>
                             @enderror
                         </div>
-                        
+
                         <div class="mb-3 col-md-6">
                             <label for="created_by_user">Created by user</label>
                             <select name="created_by_user" class="form-control @error('created_by_user') is-invalid @enderror" style="cursor: pointer; appearance: menulist">
@@ -200,6 +200,6 @@
 
 @section('scripts')
 <script>
-    
+
 </script>
 @endsection

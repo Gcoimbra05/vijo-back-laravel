@@ -61,7 +61,7 @@ class User extends Authenticatable implements AuditableContract
         }
     }
 
-    public function plan()
+    public function membershipPlan()
     {
         return $this->belongsTo(MembershipPlan::class, 'plan_id');
     }
@@ -69,6 +69,11 @@ class User extends Authenticatable implements AuditableContract
     public function subscriptions()
     {
         return $this->hasMany(Subscription::class);
+    }
+
+    public function credits()
+    {
+        return $this->hasOne(UserCredit::class);
     }
 
     public function affiliates()
@@ -94,5 +99,10 @@ class User extends Authenticatable implements AuditableContract
     public function quickGoals()
     {
         return $this->hasMany(QuickGoal::class);
+    }
+
+    public function creditTransactions()
+    {
+        return $this->hasMany(CreditTransaction::class);
     }
 }

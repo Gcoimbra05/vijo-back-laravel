@@ -9,7 +9,7 @@
     </div>
 
     <hr class="m-0">
-    <div class="table-responsive text-nowrap p-2">
+    <div class="table-responsive text-nowrap">
         <table class="table table-striped table-hover dataTableList">
             <thead>
                 <tr>
@@ -37,16 +37,16 @@
                             <td>
                                 <div class="dropdown">
                                     <button type="button" class="btn p-0 dropdown-toggle hide-arrow" data-bs-toggle="dropdown">
-                                        <i class="bx bx-dots-vertical-rounded"></i>
+                                        <i class="icon-base ri ri-more-2-line icon-18px"></i>
                                     </button>
                                     <div class="dropdown-menu">
                                         <?php if ($type->status == 1) { ?>
-                                            <a class="dropdown-item" href="<?php echo url('admin/journal_type/deactivate/' . $type->id); ?>"><i class="bx bx-x me-1"></i> Deactivate</a>
+                                            <a class="dropdown-item" href="<?php echo url('admin/journal_type/deactivate/' . $type->id); ?>"><i class="icon-base ri ri-close-line me-1"></i> Deactivate</a>
                                         <?php } else if ($type->status == 0) { ?>
-                                            <a class="dropdown-item" href="<?php echo url('admin/journal_type/activate/' . $type->id); ?>"><i class="bx bx-check me-1"></i> Activate</a>
+                                            <a class="dropdown-item" href="<?php echo url('admin/journal_type/activate/' . $type->id); ?>"><i class="icon-base ri ri-check-line me-1"></i> Activate</a>
                                         <?php } ?>
-                                        <a class="dropdown-item" href="<?php echo url('admin/journal_type/edit/' . $type->id); ?>"><i class="bx bx-edit-alt me-1"></i> Edit</a>
-                                        <a class="dropdown-item" href="<?php echo url('admin/journal_type/delete/' . $type->id); ?>" onClick="return confirm('Are you sure you want to delete this record?');"><i class="bx bx-trash me-1"></i> Delete</a>
+                                        <a class="dropdown-item" href="<?php echo url('admin/journal_type/edit/' . $type->id); ?>"><i class="icon-base ri ri-edit-line me-1"></i> Edit</a>
+                                        <a class="dropdown-item" href="<?php echo url('admin/journal_type/delete/' . $type->id); ?>" onClick="return confirm('Are you sure you want to delete this record?');"><i class="icon-base ri ri-delete-bin-line me-1"></i> Delete</a>
                                     </div>
                                 </div>
                             </td>

@@ -3,6 +3,7 @@
 use App\Http\Controllers\AffiliateController;
 use App\Http\Controllers\AiAgentController;
 use App\Http\Controllers\BaselineController;
+use App\Http\Controllers\BillingController;
 use App\Http\Controllers\ReferralCodeController;
 use App\Http\Controllers\CatalogAnswerController;
 use App\Http\Controllers\CatalogController;
@@ -30,10 +31,13 @@ use App\Http\Controllers\PlatformTextController;
 use App\Http\Controllers\InsightsFilterController;
 use App\Http\Controllers\InsightsController;
 use App\Http\Controllers\OpenAiSessionController;
+use App\Http\Controllers\OpenAiSessionLoggingController;
 use App\Http\Controllers\QuickGoalController;
+use App\Http\Controllers\RealTimeSessionLoggingController;
 use App\Http\Controllers\SkipVijoController;
 use App\Http\Controllers\UserFeedbackController;
 use App\Http\Controllers\VijoPlansController;
+use App\Models\RealtimeSessionLog;
 use App\Services\CredScore\CredScoreService;
 use App\Services\Emlo\EmloInsights\EmloInsightsService;
 
@@ -142,7 +146,11 @@ Route::prefix('v2')->middleware(ForceJsonResponse::class)->group(function () {
         });
 
         Route::get('realtime-session', [OpenAiSessionController::class, 'createRealTimeSession']);
+        Route::post('realtime-session-response', [OpenAiSessionLoggingController::class, 'storeRealtimeSessionResponse']);
+        Route::post('completions-api-response', [OpenAiSessionLoggingController::class, 'storeCompletionsApiResponse']);
+        Route::patch('realtime-session/{id}/status', [OpenAiSessionController::class, 'updateSessionStatus']);
         Route::post('chat/completions', [OpenAiSessionController::class, 'createCompletion']);
+        Route::get('user-credits/balance', [OpenAiSessionController::class, 'checkSessionsCreditBalance']);
 
         Route::prefix('ai-agent')->group(function () {
             Route::get('/emotion-insights/{emotion_name}', [AiAgentController::class, 'getSingleParamEmotionalInsights']);
@@ -174,6 +182,14 @@ Route::prefix('v2')->middleware(ForceJsonResponse::class)->group(function () {
         Route::put('quick-goals', [QuickGoalController::class, 'update']);
         Route::get('quick-goals/{quick_goal}', [QuickGoalController::class, 'show']);
         Route::delete('quick-goals/{quick_goal}', [QuickGoalController::class, 'destroy']);
+
+        // Billing & Credits
+        Route::prefix('billing')->group(function () {
+            Route::get('/overview', [BillingController::class, 'overview']);
+            Route::get('/plans', [BillingController::class, 'plans']);
+            Route::get('/history', [BillingController::class, 'history']);
+            Route::post('/cancel-subscription', [BillingController::class, 'cancelSubscription']);
+        });
     });
 
     // Platform Texts

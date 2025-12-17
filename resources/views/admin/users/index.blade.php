@@ -17,7 +17,7 @@ right: 1rem;
     </div>
 
     <hr class="m-0">
-    <div class="table-responsive text-nowrap p-2">
+    <div class="table-responsive text-nowrap">
         <table class="table table-striped table-hover dataTableList">
             <thead>
                 <tr>
@@ -40,7 +40,7 @@ right: 1rem;
                         <td>
                             <div class="dropdown">
                                 <button type="button" class="btn p-0 dropdown-toggle hide-arrow" data-bs-toggle="dropdown">
-                                    <i class="bx bx-dots-vertical-rounded"></i>
+                                    <i class="icon-base ri ri-more-2-line icon-18px"></i>
                                 </button>
 
                                 <div class="dropdown-menu">
@@ -49,15 +49,15 @@ right: 1rem;
                                     <a class="dropdown-item" href="<?php echo route('admin.users.auditLogs', $user->id); ?>"><i class="bx bxl-blogger me-1"></i> Audit Logs</a>
 
                                     <?php if ($user->status == 1) { ?>
-                                        <a class="dropdown-item" href="<?php echo route('admin.users.deactivate', $user->id); ?>"><i class="bx bx-x me-1"></i> Deactivate</a>
+                                        <a class="dropdown-item" href="<?php echo route('admin.users.deactivate', $user->id); ?>"><i class="icon-base ri ri-close-line me-1"></i> Deactivate</a>
                                     <?php } else if ($user->status == 0) { ?>
-                                        <a class="dropdown-item" href="<?php echo route('admin.users.activate', $user->id); ?>"><i class="bx bx-check me-1"></i> Activate</a>
+                                        <a class="dropdown-item" href="<?php echo route('admin.users.activate', $user->id); ?>"><i class="icon-base ri ri-check-line me-1"></i> Activate</a>
                                     <?php } ?>
 
                                     <form action="{{ route('admin.users.destroy', $user->id) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this record?');">
                                         @csrf
                                         @method('DELETE')
-                                        <button type="submit" class="dropdown-item"><i class="bx bx-trash me-1"></i> Delete</button>
+                                        <button type="submit" class="dropdown-item"><i class="icon-base ri ri-delete-bin-line me-1"></i> Delete</button>
                                     </form>
                                 </div>
                             </div>

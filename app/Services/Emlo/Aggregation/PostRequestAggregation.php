@@ -86,6 +86,7 @@ class PostRequestAggregation {
         } catch (Exception $e)  {
             Log::error("aggregation pipeline failed w/ error: " . $e->getTraceAsString());
             Log::error("aggregation pipeline failed w/ error message : " . $e->getMessage());
+            return ['status' => false, 'error' => 'Interal server error'];   
         }
     }
 }

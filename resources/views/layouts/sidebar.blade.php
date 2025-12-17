@@ -92,7 +92,7 @@
                     </a>
                 </li>
 
-                <li class="menu-item <?php if ($nav_bar == 'tags') { ?>active<?php } ?>">
+                <!-- <li class="menu-item <?php if ($nav_bar == 'tags') { ?>active<?php } ?>">
                     <a href="{{ url('admin/tags') }}" class="menu-link">
                         <div data-i18n="Tags">Tags</div>
                     </a>
@@ -102,7 +102,7 @@
                     <a href="{{ url('admin/memberships') }}" class="menu-link">
                         <div data-i18n="memberships">Membership Plans</div>
                     </a>
-                </li>
+                </li> -->
             </ul>
         </li>
 
@@ -112,7 +112,7 @@
                 <div data-i18n="Jobs">Jobs</div>
             </a>
             <ul class="menu-sub">
-                <li class="menu-item <?php if ($nav_bar == 'job') { ?>active<?php } ?>">
+                <!-- <li class="menu-item <?php if ($nav_bar == 'job') { ?>active<?php } ?>">
                     <a href="{{ url('admin/job') }}" class="menu-link">
                         <div data-i18n="Jobs">Jobs</div>
                     </a>
@@ -128,7 +128,7 @@
                     <a href="{{ url('admin/failedjobs') }}" class="menu-link">
                         <div data-i18n="failed_jobs">Failed Jobs</div>
                     </a>
-                </li>
+                </li> -->
 
             </ul>
         </li>

@@ -13,7 +13,9 @@ class Kernel extends ConsoleKernel
 
     protected function schedule(Schedule $schedule)
     {
-        // Define your scheduled tasks here
+        $schedule->command('credits:topup-free-users')
+             ->daily()
+             ->at('00:00');
     }
 
     protected function commands()

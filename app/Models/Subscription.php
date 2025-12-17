@@ -25,6 +25,7 @@ class Subscription extends Model implements AuditableContract
         'cancelled_at',
         'reason',
         'cancel_at_period_end',
+        'pending_plan_id'
     ];
 
     public function user()
@@ -34,6 +35,6 @@ class Subscription extends Model implements AuditableContract
 
     public function membershipPlan()
     {
-        return $this->belongsTo(MembershipPlan::class);
+        return $this->belongsTo(MembershipPlan::class, 'plan_id');
     }
 }

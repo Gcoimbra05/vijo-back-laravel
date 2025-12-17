@@ -16,19 +16,20 @@ class ProcessInsightsAggregationStep extends VideoProcessingStep {
 
    public function execute($context)
     {
-        Log::debug('postRequestAggregation START');
-
         $userId = VideoRequest::select('user_id')
             ->where('id', $context['videoRequest']->id)
             ->first();
         if (!$userId) {
-            return ['success' => false, 'error' => 'Post request aggregation: internal server error'];
+            return ['success' => false, 'error' => 'Post request aggregation processing: user not found'];
         }
 
-        $context['postRequestAggregation']->aggregationPipeline(
+        $aggregationResult = $context['postRequestAggregation']->aggregationPipeline(
             $context['videoRequest']->id,
             $userId->user_id
         );
+        if (isset($aggregationResult['error'])) {
+            return ['success' => false, 'error' => 'Post request aggregation processing: ' . $aggregationResult['error']];
+        }
 
         Log::info('Post request aggregation complete for video request: ' . $context['videoRequest']->id);
 

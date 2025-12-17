@@ -119,7 +119,7 @@
                                             @enderror
                                     </div>
                                 </div>
-                                
+
                                 <div class="row">
 
                                     <div class="mb-3 col-md-6">
@@ -137,13 +137,13 @@
                                                 <span class="invalid-feedback" role="alert"><strong>{{ $message }}</strong></span>
                                             @enderror
                                     </div>
-                                    
+
                                 </div>
-                        
+
                         <h5 class="section-title">Datatime and Country</h5>
                         <hr class="line" style="border:1px solid #d3d8dc;">
                             <div class="coluns">
-                                
+
                                     <div class="mb-3 col-md-10">
                                         <label for="country_code" class="form-label">Country</label>
                                         <select class="form-select" id="country_code" name="country_code" style="cursor: pointer;" required>
@@ -184,7 +184,7 @@
                                     </div>
                             </div>
 
-                        
+
                         <h5 class="section-title">Status</h5>
                         <hr class="line" style="border:1px solid #d3d8dc;">
                             <div class="coluns">
@@ -235,10 +235,10 @@
                                             <span class="invalid-feedback" role="alert"><strong>{{ $message }}</strong></span>
                                         @enderror
                                     </div>
-                                
+
                             </div>
 
-                       
+
                         <h5 class="section-title">Plan</h5>
                         <hr class="line" style="border:1px solid #d3d8dc;">
                             <div class="row">
@@ -295,12 +295,12 @@
 
                                                     <div class="modal-body">
                                                         <form onsubmit="validateFormNewpassword(event)">
-                                                            
+
                                                             <div class="mb-3">
                                                                 <label for="newpassoword" class="form-label">New Password</label>
                                                                     <div class="input-group">
                                                                         <input class="form-control wide-input password-field @error('newpassoword') is-invalid @enderror" type="password" id="newpassoword" name="newpassoword" placeholder="Ex: New Password" autocomplete="off"  />
-                                                                        
+
                                                                         <span class="input-group-text bg-transparent border-0 p-0.3rem toggle-password">
                                                                             <i class="bx bx-hide"  style="font-size: 1.35rem; cursor: pointer;"></i>
                                                                         </span>
@@ -310,7 +310,7 @@
                                                                 <label for="repeatpassword" class="form-label">Repeat the new password</label>
                                                                     <div class="input-group">
                                                                         <input class="form-control wide-input password-field @error('repeatpassword') is-invalid @enderror" type="password" id="repeatpassword" name="repeatpassword" placeholder="Ex: Repeat the new password" autocomplete="off" />
-                                                            
+
                                                                         <span class="input-group-text bg-transparent border-0 p-0.3rem toggle-password">
                                                                             <i class="bx bx-hide"  style="font-size: 1.35rem; cursor: pointer;"></i>
                                                                         </span>
@@ -321,11 +321,11 @@
                                                                             Passwords match!
                                                                         </div>
                                                                     </div>
-                                                                    
+
                                                             </div>
                                                         </form>
                                                     </div>
-                                                    
+
                                                     <div class="modal-footer">
                                                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Back</button>
                                                         <button type="button" class="btn btn-primary" id="savePasswordBtn" formnovalidate>Save</button>
@@ -334,7 +334,7 @@
                                                 </div>
                                             </div>
                                         </div>
-                                        
+
                                 </div>
                             </div>
 
@@ -370,8 +370,8 @@
                                     </div>
                             </div>
                     </div>
-                    
-                    
+
+
                     <!-- Conteúdo Contacts -->
                         <div class="tab-pane fade" id="contact" role="tabpanel">
                             <h5>Contact list</h5>
@@ -400,7 +400,7 @@
                                                     <td>{{ $contact->first_name }} {{ $contact->last_name }}</td>
                                                     <td>{{ $contact->mobile }}</td>
                                                     <td>{{ $contact->email }}</td>
-                                                    <td>{{ $contact->country_code }}</td>                                                    
+                                                    <td>{{ $contact->country_code }}</td>
                                                     <td>{{ $contact->is_advisor ? 'Yes' : 'No' }}</td>
                                                     <td>{{ $contact->is_administrator ? 'Yes' : 'No' }}</td>
                                                     <td>{{ $contact->status ? 'Active' : 'Inactive' }}</td>
@@ -470,7 +470,7 @@
                                         <th>Status</th>
                                         <th>Created at</th>
                                         <th>Updated at</th>
-                                        
+
                                     </tr>
                                 </thead>
                                 <tbody class="table-border-bottom-0">
@@ -514,14 +514,14 @@
                                         <th>Email Body</th>
                                         <th>Sent in</th>
                                         <th>Open in</th>
-                                        
+
                                     </tr>
                                 </thead>
                                 <tbody class="table-border-bottom-0">
                                     @if(isset($sentEmails) && count($sentEmails) > 0)
                                         @foreach($sentEmails as $sentEmail)
                                             <tr>
-                                                
+
                                             </tr>
                                         @endforeach
                                     @else
@@ -544,14 +544,14 @@
                                     <tr>
                                         <th>Activity</th>
                                         <th>Datatime</th>
-                                        
+
                                     </tr>
                                 </thead>
                                 <tbody class="table-border-bottom-0">
                                     @if(isset($logs) && count($logs) > 0)
                                         @foreach($logs as $log)
                                             <tr>
-                                                
+
                                             </tr>
                                         @endforeach
                                     @else
@@ -592,7 +592,7 @@
                                                 <td>
                                                     <div class="dropdown">
                                                         <button type="button" class="btn p-0 dropdown-toggle hide-arrow" data-bs-toggle="dropdown">
-                                                            <i class="bx bx-dots-vertical-rounded"></i>
+                                                            <i class="icon-base ri ri-more-2-line icon-18px"></i>
                                                         </button>
 
                                                         <div class="dropdown-menu">
@@ -600,7 +600,7 @@
                                                             <form action="{{ route('insightsfilters.destroy', $insight_filter->id) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this record?');">
                                                                 @csrf
                                                                 @method('DELETE')
-                                                                <button type="submit" class="dropdown-item"><i class="bx bx-trash me-1"></i> Delete</button>
+                                                                <button type="submit" class="dropdown-item"><i class="icon-base ri ri-delete-bin-line me-1"></i> Delete</button>
                                                             </form>
                                                         </div>
                                                     </div>
@@ -642,21 +642,21 @@
                                                 <td>
                                                     <div class="dropdown">
                                                         <button type="button" class="btn p-0 dropdown-toggle hide-arrow" data-bs-toggle="dropdown">
-                                                            <i class="bx bx-dots-vertical-rounded"></i>
+                                                            <i class="icon-base ri ri-more-2-line icon-18px"></i>
                                                         </button>
 
                                                         <div class="dropdown-menu">
 
                                                             <!-- EDIT -->
-                                                            <a class="dropdown-item" href="{{ route('vijoplan.index') }}?edit={{ $vijoplan->id }}">
-                                                                <i class="bx bx-edit-alt me-1"></i> Edit
+                                                            <a class="dropdown-item" href="{{ route('admin.vijoplan.index') }}?edit={{ $vijoplan->id }}">
+                                                                <i class="icon-base ri ri-edit-line me-1"></i> Edit
                                                             </a>
 
                                                             <!-- DELETE -->
-                                                            <a class="dropdown-item" 
-                                                            href="{{ route('vijoplan.delete', $vijoplan->id) }}" 
+                                                            <a class="dropdown-item"
+                                                            href="{{ route('vijoplan.delete', $vijoplan->id) }}"
                                                             onclick="return confirm('Are you sure you want to delete this record?');">
-                                                                <i class="bx bx-trash me-1"></i> Delete
+                                                                <i class="icon-base ri ri-delete-bin-line me-1"></i> Delete
                                                             </a>
 
                                                         </div>
@@ -676,9 +676,9 @@
                         </div>
                     </div>
 
-  
+
                 </div>
-                        
+
                 <div class="mb-3 col-md-12">
                     <label for="description" class="form-label">Description</label>
                     <textarea class="form-control wide-input @error('description') is-invalid @enderror" id="description" name="description" placeholder="Ex: Description" autocomplete="off">{{ old('description') }}</textarea>
@@ -693,7 +693,7 @@
                 </div>
             </form>
 
-            
+
     </div>
 </div>
 @endsection
@@ -833,14 +833,14 @@ function populateTimezones(countryCode) {
                         <td>
                             <div class="dropdown">
                                 <button type="button" class="btn p-0 dropdown-toggle hide-arrow" data-bs-toggle="dropdown">
-                                    <i class="bx bx-dots-vertical-rounded"></i>
+                                    <i class="icon-base ri ri-more-2-line icon-18px"></i>
                                 </button>
                                 <div class="dropdown-menu">
-                                    <a class="dropdown-item" href="{{ route('vijoplan.index') }}?edit=${plan.id}">
-                                        <i class="bx bx-edit-alt me-1"></i> Edit
+                                    <a class="dropdown-item" href="{{ route('admin.vijoplan.index') }}?edit=${plan.id}">
+                                        <i class="icon-base ri ri-edit-line me-1"></i> Edit
                                     </a>
                                     <a class="dropdown-item" href="{{ url('admin/vijoplans/delete') }}/${plan.id}" onclick="return confirm('Are you sure you want to delete this record?');">
-                                        <i class="bx bx-trash me-1"></i> Delete
+                                        <i class="icon-base ri ri-delete-bin-line me-1"></i> Delete
                                     </a>
                                 </div>
                             </div>

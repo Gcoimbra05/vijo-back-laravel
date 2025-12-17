@@ -97,6 +97,6 @@ class SubscriptionController extends Controller
         $user = Auth::user();
         $subscription = Subscription::where('user_id', $user->id)->first();
 
-        return $subscription && $subscription->status ? 'active' : 'inactive';
+        return $subscription && ($subscription->status !== 2 && $subscription->status !== 3) ? 'active' : 'inactive';
     }
 }

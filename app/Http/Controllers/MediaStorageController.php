@@ -318,7 +318,7 @@ class MediaStorageController extends Controller
                 ]);
 
                 $command = sprintf(
-                    'ffmpeg -y -i %s -vf "thumbnail,scale=640:360" -frames:v 1 -update 1 %s 2>&1',
+                    'ffmpeg -y -i %s -frames:v 1 -update 1 %s 2>&1', // -vf "thumbnail,scale=640:360"
                     escapeshellarg($videoPath),
                     escapeshellarg($thumbnailPath)
                 );
